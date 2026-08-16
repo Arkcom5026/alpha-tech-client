@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { feedback } from '@/design-system';
 import useCustomerDepositStore from '../store/customerDepositStore';
 
@@ -26,44 +26,63 @@ const PaymentSectionDeposit = () => {
   const [isTransferEnabled, setIsTransferEnabled] = useState(false);
   const [isCardEnabled, setIsCardEnabled] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const customer = useCustomerDepositStore((state) => state.selectedCustomer);
   const createCustomerDepositAction = useCustomerDepositStore((state) => state.createCustomerDepositAction);
   const isSubmitting = useCustomerDepositStore((state) => state.isSubmitting);
+  const mutationBusy = isSubmitting || submitting;
 
   const total = (Number(cashAmount) || 0) + (Number(transferAmount) || 0) + (Number(cardAmount) || 0);
-  const isSubmitDisabled = !customer || total <= 0 || isSubmitting;
+  const isSubmitDisabled = !customer || total <= 0 || mutationBusy;
 
   const handleSubmit = async () => {
-    if (isSubmitting) return;
+    if (mutationBusy || submittingRef.current) return;
     setSubmitError('');
 
-    if (!customer) {
+    const customerSnapshot = customer
+      ? { id: customer.id, phone: customer.phone || '' }
+      : null;
+    const command = {
+      paymentMethod: {
+        cash: isCashEnabled,
+        transfer: isTransferEnabled,
+        card: isCardEnabled,
+      },
+      customerId: customerSnapshot?.id,
+      cashAmount: isCashEnabled ? (Number(cashAmount) || 0) : 0,
+      transferAmount: isTransferEnabled ? (Number(transferAmount) || 0) : 0,
+      cardAmount: isCardEnabled ? (Number(cardAmount) || 0) : 0,
+      totalAmount: total,
+    };
+
+    if (!customerSnapshot?.id) {
       setSubmitError('กรุณาเลือกลูกค้าก่อนบันทึกเงินมัดจำ');
       return;
     }
-    if (total <= 0) {
+    if (command.totalAmount <= 0) {
       setSubmitError('ยอดรวมเงินมัดจำต้องมากกว่า 0');
       return;
     }
 
+    submittingRef.current = true;
+    setSubmitting(true);
+
     try {
-      const created = await createCustomerDepositAction({
-        paymentMethod: {
-          cash: isCashEnabled,
-          transfer: isTransferEnabled,
-          card: isCardEnabled,
-        },
-        customerId: customer.id,
-        cashAmount: isCashEnabled ? (Number(cashAmount) || 0) : 0,
-        transferAmount: isTransferEnabled ? (Number(transferAmount) || 0) : 0,
-        cardAmount: isCardEnabled ? (Number(cardAmount) || 0) : 0,
-        totalAmount: total,
-      });
+      let created;
+      try {
+        created = await createCustomerDepositAction(command);
+      } catch (error) {
+        const message = error?.response?.data?.message || error?.message || 'เกิดข้อผิดพลาดในการบันทึกเงินมัดจำ กรุณาลองอีกครั้ง';
+        setSubmitError(message);
+        feedback.actionError(error, message, `customer-deposit:${customerSnapshot.id}:create:error`);
+        return;
+      }
 
       feedback.actionSuccess(
         'บันทึกเงินมัดจำเรียบร้อยแล้ว',
-        `customer-deposit:${created?.id || customer.id}:create:success`,
+        `customer-deposit:${created?.id || customerSnapshot.id}:create:success`,
       );
 
       setCashAmount('');
@@ -73,22 +92,29 @@ const PaymentSectionDeposit = () => {
       setIsTransferEnabled(false);
       setIsCardEnabled(false);
 
-      if (customer.phone) {
+      if (customerSnapshot.phone) {
         const { loadCustomerDepositByPhoneAction } = useCustomerDepositStore.getState();
-        await loadCustomerDepositByPhoneAction(customer.phone);
-        const refreshError = useCustomerDepositStore.getState().error;
-        if (refreshError) {
+        try {
+          await loadCustomerDepositByPhoneAction(customerSnapshot.phone);
+          const refreshError = useCustomerDepositStore.getState().error;
+          if (refreshError) {
+            feedback.actionError(
+              refreshError,
+              'บันทึกเงินมัดจำสำเร็จแล้ว แต่โหลดยอดล่าสุดไม่สำเร็จ กรุณารีเฟรชอีกครั้ง',
+              `customer-deposit:${customerSnapshot.id}:refresh-after-create:error`,
+            );
+          }
+        } catch (refreshError) {
           feedback.actionError(
             refreshError,
             'บันทึกเงินมัดจำสำเร็จแล้ว แต่โหลดยอดล่าสุดไม่สำเร็จ กรุณารีเฟรชอีกครั้ง',
-            `customer-deposit:${customer.id}:refresh-after-create:error`,
+            `customer-deposit:${customerSnapshot.id}:refresh-after-create:error`,
           );
         }
       }
-    } catch (error) {
-      const message = error?.response?.data?.message || error?.message || 'เกิดข้อผิดพลาดในการบันทึกเงินมัดจำ กรุณาลองอีกครั้ง';
-      setSubmitError(message);
-      feedback.actionError(error, message, 'customer-deposit:create:error');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -103,9 +129,9 @@ const PaymentSectionDeposit = () => {
     <div className="bg-white p-6 rounded-xl shadow-lg border w-full">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="space-y-4">
-          <PaymentMethodInput title="เงินสด" value={cashAmount} onChange={setCashAmount} placeholder="0.00" disabled={isSubmitting} />
-          <PaymentMethodInput title="เงินโอน" value={transferAmount} onChange={setTransferAmount} placeholder="0.00" disabled={isSubmitting} />
-          <PaymentMethodInput title="บัตรเครดิต" value={cardAmount} onChange={setCardAmount} placeholder="0.00" disabled={isSubmitting} />
+          <PaymentMethodInput title="เงินสด" value={cashAmount} onChange={setCashAmount} placeholder="0.00" disabled={mutationBusy} />
+          <PaymentMethodInput title="เงินโอน" value={transferAmount} onChange={setTransferAmount} placeholder="0.00" disabled={mutationBusy} />
+          <PaymentMethodInput title="บัตรเครดิต" value={cardAmount} onChange={setCardAmount} placeholder="0.00" disabled={mutationBusy} />
         </div>
 
         <div className="md:col-span-2 bg-slate-50 p-4 rounded-lg flex flex-col justify-between">
@@ -135,7 +161,7 @@ const PaymentSectionDeposit = () => {
             onClick={handleSubmit}
             className="w-full mt-6 px-4 py-4 bg-blue-600 text-white font-bold text-lg rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-all"
           >
-            {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกเงินมัดจำ'}
+            {mutationBusy ? 'กำลังบันทึก...' : 'บันทึกเงินมัดจำ'}
           </button>
         </div>
       </div>

@@ -8,6 +8,7 @@ const CreatePositionPage = () => {
   const navigate = useNavigate();
   const { createAction, loading, error, message, resetCurrentAction } = usePositionStore();
   const didMountRef = useRef(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     if (!didMountRef.current) {
@@ -19,17 +20,27 @@ const CreatePositionPage = () => {
   }, []);
 
   const handleSubmit = async (payload) => {
-    if (loading) return;
+    if (loading || submittingRef.current) return;
+
+    const payloadSnapshot = {
+      name: String(payload?.name || '').trim(),
+      description: String(payload?.description || '').trim() || null,
+    };
+    if (!payloadSnapshot.name) return;
+
+    submittingRef.current = true;
     try {
-      const ok = await createAction(payload);
+      const ok = await createAction(payloadSnapshot);
       if (ok) {
-        feedback.actionSuccess('เพิ่มตำแหน่งพนักงานเรียบร้อยแล้ว', 'position:create:success');
+        feedback.actionSuccess('เพิ่มตำแหน่งพนักงานเรียบร้อยแล้ว', `position:create:${payloadSnapshot.name}:success`);
         navigate(-1);
       } else {
-        feedback.error(error || 'เพิ่มตำแหน่งพนักงานไม่สำเร็จ', { eventKey: 'position:create:error' });
+        feedback.error(error || 'เพิ่มตำแหน่งพนักงานไม่สำเร็จ', { eventKey: `position:create:${payloadSnapshot.name}:error` });
       }
     } catch (createError) {
-      feedback.actionError(createError, 'เพิ่มตำแหน่งพนักงานไม่สำเร็จ', 'position:create:error');
+      feedback.actionError(createError, 'เพิ่มตำแหน่งพนักงานไม่สำเร็จ', `position:create:${payloadSnapshot.name}:error`);
+    } finally {
+      submittingRef.current = false;
     }
   };
 
@@ -45,8 +56,9 @@ const CreatePositionPage = () => {
         <PositionForm
           initialValues={{ name: '', description: '' }}
           onSubmit={handleSubmit}
-          onCancel={() => !loading && navigate(-1)}
+          onCancel={() => !loading && !submittingRef.current && navigate(-1)}
           submitting={loading}
+          mutationOwnedRef={submittingRef}
           error={error}
         />
       </div>

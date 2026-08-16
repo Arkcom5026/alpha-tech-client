@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,6 +18,7 @@ const EditCategoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [info, setInfo] = useState('');
   const [initial, setInitial] = useState(null);
+  const submittingRef = useRef(false);
 
   const form = useForm({
     resolver: zodResolver(categorySchema),
@@ -51,20 +52,28 @@ const EditCategoryPage = () => {
       feedback.warning(message, { eventKey: 'category:update:locked' });
       return;
     }
-    if (submitting) return;
+    if (submitting || submittingRef.current) return;
 
+    const categoryIdSnapshot = id;
+    const payload = { ...data, name: String(data?.name || '').trim() };
+    const listPathSnapshot = listPath;
+    if (!categoryIdSnapshot || !payload.name) return;
+
+    submittingRef.current = true;
     try {
-      const res = await updateAction(id, data);
+      const res = await updateAction(categoryIdSnapshot, payload);
       if (res?.ok) {
-        feedback.actionSuccess('บันทึกการแก้ไขหมวดหมู่เรียบร้อยแล้ว', 'category:update:success');
-        navigate(listPath);
+        feedback.actionSuccess('บันทึกการแก้ไขหมวดหมู่เรียบร้อยแล้ว', `category:${categoryIdSnapshot}:update:success`);
+        navigate(listPathSnapshot);
       } else {
         const message = res?.message || 'บันทึกการแก้ไขหมวดหมู่ไม่สำเร็จ';
         setInfo(message);
-        feedback.error(message, { eventKey: 'category:update:error' });
+        feedback.error(message, { eventKey: `category:${categoryIdSnapshot}:update:error` });
       }
     } catch (updateError) {
-      feedback.actionError(updateError, 'บันทึกการแก้ไขหมวดหมู่ไม่สำเร็จ', 'category:update:error');
+      feedback.actionError(updateError, 'บันทึกการแก้ไขหมวดหมู่ไม่สำเร็จ', `category:${categoryIdSnapshot}:update:error`);
+    } finally {
+      submittingRef.current = false;
     }
   };
 
@@ -84,7 +93,7 @@ const EditCategoryPage = () => {
         form={form}
         mode="edit"
         onSubmit={onSubmit}
-        onCancel={() => !submitting && navigate(listPath)}
+        onCancel={() => !submitting && !submittingRef.current && navigate(listPath)}
         submitting={submitting || !!initial?.isSystem}
       />
     </div>

@@ -13,6 +13,21 @@ import {
   applyDepositUsage,
 } from '../api/customerDepositApi';
 
+let customerDepositContextRequestSequence = 0;
+let customerDepositListRequestSequence = 0;
+
+const beginCustomerDepositContextRequest = () => ++customerDepositContextRequestSequence;
+const ownsCustomerDepositContextRequest = (requestId) => customerDepositContextRequestSequence === requestId;
+const invalidateCustomerDepositContextRequests = () => {
+  customerDepositContextRequestSequence += 1;
+};
+
+const beginCustomerDepositListRequest = () => ++customerDepositListRequestSequence;
+const ownsCustomerDepositListRequest = (requestId) => customerDepositListRequestSequence === requestId;
+const invalidateCustomerDepositListRequests = () => {
+  customerDepositListRequestSequence += 1;
+};
+
 const useCustomerDepositStore = create((set, get) => ({
   isSubmitting: false,
   isLoading: false,
@@ -25,33 +40,59 @@ const useCustomerDepositStore = create((set, get) => ({
   customerDepositAmount: 0,
   depositUsed: 0,
 
-  setCustomerDepositAmount: (amount) => set({ customerDepositAmount: amount }),
+  setCustomerDepositAmount: (amount) => {
+    invalidateCustomerDepositContextRequests();
+    set({ customerDepositAmount: amount });
+  },
   setDepositUsed: (value) => set({ depositUsed: value }),
-  setSelectedDeposit: (deposit) => set({ selectedDeposit: deposit }),
-  setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
-  setDeposits: (list) => set({ deposits: list }),
-  clearSelectedDeposit: () => set({ selectedDeposit: null }),
-  clearCustomer: () => set({
-    selectedCustomer: null,
-    selectedDeposit: null,
-    customerDeposits: [],
-    customerDepositAmount: 0,
-    depositUsed: 0,
-  }),
-  clearCustomerDeposit: () => set({ selectedDeposit: null, customerDeposits: [], customerDepositAmount: 0, depositUsed: 0 }),
+  setSelectedDeposit: (deposit) => {
+    invalidateCustomerDepositContextRequests();
+    set({ selectedDeposit: deposit });
+  },
+  setSelectedCustomer: (customer) => {
+    invalidateCustomerDepositContextRequests();
+    set({ selectedCustomer: customer });
+  },
+  setDeposits: (list) => {
+    invalidateCustomerDepositListRequests();
+    set({ deposits: list });
+  },
+  clearSelectedDeposit: () => {
+    invalidateCustomerDepositContextRequests();
+    set({ selectedDeposit: null });
+  },
+  clearCustomer: () => {
+    invalidateCustomerDepositContextRequests();
+    set({
+      selectedCustomer: null,
+      selectedDeposit: null,
+      customerDeposits: [],
+      customerDepositAmount: 0,
+      depositUsed: 0,
+    });
+  },
+  clearCustomerDeposit: () => {
+    invalidateCustomerDepositContextRequests();
+    set({ selectedDeposit: null, customerDeposits: [], customerDepositAmount: 0, depositUsed: 0 });
+  },
 
-  clearCustomerAndDeposit: () => set({
-    selectedCustomer: null,
-    selectedDeposit: null,
-    customerDeposits: [],
-    customerDepositAmount: 0,
-    depositUsed: 0,
-  }),
+  clearCustomerAndDeposit: () => {
+    invalidateCustomerDepositContextRequests();
+    set({
+      selectedCustomer: null,
+      selectedDeposit: null,
+      customerDeposits: [],
+      customerDepositAmount: 0,
+      depositUsed: 0,
+    });
+  },
 
   createCustomerDepositAction: async (data) => {
     if (get().isSubmitting) {
       throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
     }
+    invalidateCustomerDepositContextRequests();
+    invalidateCustomerDepositListRequests();
     set({ isSubmitting: true, error: null });
     try {
       return await createCustomerDeposit(data);
@@ -65,29 +106,40 @@ const useCustomerDepositStore = create((set, get) => ({
   },
 
   fetchCustomerDepositsAction: async () => {
-    set({ isLoading: true });
+    const requestId = beginCustomerDepositListRequest();
+    set({ isLoading: true, error: null });
     try {
       const data = await getCustomerDeposits();
+      if (!ownsCustomerDepositListRequest(requestId)) return null;
       console.log('fetchCustomerDepositsAction data :', data);
       set({ deposits: data });
+      return data;
     } catch (err) {
+      if (!ownsCustomerDepositListRequest(requestId)) return null;
       console.error('❌ fetchCustomerDepositsAction error:', err);
       set({ error: err });
+      return null;
     } finally {
-      set({ isLoading: false });
+      if (ownsCustomerDepositListRequest(requestId)) set({ isLoading: false });
     }
   },
 
   fetchCustomerDepositByIdAction: async (id) => {
+    const requestId = beginCustomerDepositContextRequest();
+    const depositIdSnapshot = Number(id);
     set({ isLoadingDetail: true });
     try {
-      const data = await getCustomerDepositById(id);
+      const data = await getCustomerDepositById(depositIdSnapshot);
+      if (!ownsCustomerDepositContextRequest(requestId)) return null;
       set({ selectedDeposit: data });
+      return data;
     } catch (err) {
+      if (!ownsCustomerDepositContextRequest(requestId)) return null;
       console.error('❌ fetchCustomerDepositByIdAction error:', err);
       set({ error: err });
+      return null;
     } finally {
-      set({ isLoadingDetail: false });
+      if (ownsCustomerDepositContextRequest(requestId)) set({ isLoadingDetail: false });
     }
   },
 
@@ -95,6 +147,8 @@ const useCustomerDepositStore = create((set, get) => ({
     if (get().isSubmitting) {
       throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
     }
+    invalidateCustomerDepositContextRequests();
+    invalidateCustomerDepositListRequests();
     set({ isSubmitting: true, error: null });
     try {
       return await updateCustomerDeposit(id, data);
@@ -111,6 +165,8 @@ const useCustomerDepositStore = create((set, get) => ({
     if (get().isSubmitting) {
       throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
     }
+    invalidateCustomerDepositContextRequests();
+    invalidateCustomerDepositListRequests();
     set({ isSubmitting: true, error: null });
     try {
       return await updateCustomerDeposit(id, { status: 'CANCELLED' });
@@ -124,12 +180,17 @@ const useCustomerDepositStore = create((set, get) => ({
   },
 
   fetchCustomerDepositAction: async (customerId) => {
+    if (get().isSubmitting) return 0;
+    const requestId = beginCustomerDepositContextRequest();
+    const customerIdSnapshot = Number(customerId);
     try {
-      const res = await getCustomerDepositTotal(customerId);
+      const res = await getCustomerDepositTotal(customerIdSnapshot);
+      if (!ownsCustomerDepositContextRequest(requestId)) return 0;
       const amount = res?.amount || 0;
       set({ customerDepositAmount: amount });
       return amount;
     } catch (err) {
+      if (!ownsCustomerDepositContextRequest(requestId)) return 0;
       console.error('❌ fetchCustomerDepositAction error:', err);
       set({ error: err });
       return 0;
@@ -137,9 +198,13 @@ const useCustomerDepositStore = create((set, get) => ({
   },
 
   searchCustomerByPhoneAndDepositAction: async (phone) => {
+    if (get().isSubmitting) return null;
+    const requestId = beginCustomerDepositContextRequest();
+    const phoneSnapshot = String(phone || '').trim();
     try {
       set({ error: null });
-      const res = await getCustomerAndDepositByPhone(phone);
+      const res = await getCustomerAndDepositByPhone(phoneSnapshot);
+      if (!ownsCustomerDepositContextRequest(requestId)) return null;
       const customer = res?.customer || null;
       const deposit = res?.totalDeposit || 0;
       const deposits = Array.isArray(res?.deposits) ? res.deposits : [];
@@ -164,6 +229,7 @@ const useCustomerDepositStore = create((set, get) => ({
 
       return { customer, totalDeposit: deposit, deposits };
     } catch (err) {
+      if (!ownsCustomerDepositContextRequest(requestId)) return null;
       console.error('❌ searchCustomerByPhoneAndDepositAction error:', err);
       set({ error: err });
       return null;
@@ -171,9 +237,13 @@ const useCustomerDepositStore = create((set, get) => ({
   },
 
   searchCustomerByNameAndDepositAction: async (name) => {
+    if (get().isSubmitting) return null;
+    const requestId = beginCustomerDepositContextRequest();
+    const nameSnapshot = String(name || '').trim();
     try {
       set({ error: null });
-      const res = await getCustomerAndDepositByName(name);
+      const res = await getCustomerAndDepositByName(nameSnapshot);
+      if (!ownsCustomerDepositContextRequest(requestId)) return null;
       console.log('✅ res จาก getCustomerAndDepositByName', res);
       const results = Array.isArray(res?.results) ? res.results : [];
 
@@ -186,21 +256,26 @@ const useCustomerDepositStore = create((set, get) => ({
       });
 
       return {
-        query: res?.query || name,
+        query: res?.query || nameSnapshot,
         count: res?.count || results.length,
         results,
       };
     } catch (err) {
+      if (!ownsCustomerDepositContextRequest(requestId)) return null;
       console.error('❌ searchCustomerByNameAndDepositAction error:', err);
       set({ error: err });
-      return { query: name, count: 0, results: [] };
+      return { query: nameSnapshot, count: 0, results: [] };
     }
   },
 
   searchCustomerByCustomerIdAndDepositAction: async (customerId) => {
+    if (get().isSubmitting) return null;
+    const requestId = beginCustomerDepositContextRequest();
+    const customerIdSnapshot = Number(customerId);
     try {
       set({ error: null });
-      const res = await getCustomerAndDepositByCustomerId(customerId);
+      const res = await getCustomerAndDepositByCustomerId(customerIdSnapshot);
+      if (!ownsCustomerDepositContextRequest(requestId)) return null;
       const customer = res?.customer || null;
       const deposit = res?.totalDeposit || 0;
       const deposits = Array.isArray(res?.deposits) ? res.deposits : [];
@@ -217,6 +292,7 @@ const useCustomerDepositStore = create((set, get) => ({
 
       return { customer, totalDeposit: deposit, deposits };
     } catch (err) {
+      if (!ownsCustomerDepositContextRequest(requestId)) return null;
       console.error('❌ searchCustomerByCustomerIdAndDepositAction error:', err);
       set({ error: err });
       return null;
@@ -227,6 +303,8 @@ const useCustomerDepositStore = create((set, get) => ({
     if (get().isSubmitting) {
       throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
     }
+    invalidateCustomerDepositContextRequests();
+    invalidateCustomerDepositListRequests();
     set({ isSubmitting: true, error: null });
     try {
       const res = await applyDepositUsage({ depositId, saleId, amountUsed });
@@ -273,9 +351,13 @@ const useCustomerDepositStore = create((set, get) => ({
   },
 
   loadCustomerDepositByPhoneAction: async (phone) => {
+    if (get().isSubmitting) return null;
+    const requestId = beginCustomerDepositContextRequest();
+    const phoneSnapshot = String(phone || '').trim();
     try {
       set({ error: null });
-      const res = await getCustomerAndDepositByPhone(phone);
+      const res = await getCustomerAndDepositByPhone(phoneSnapshot);
+      if (!ownsCustomerDepositContextRequest(requestId)) return null;
       const customer = res?.customer || null;
       const deposit = res?.totalDeposit || 0;
       const deposits = Array.isArray(res?.deposits) ? res.deposits : [];
@@ -294,24 +376,31 @@ const useCustomerDepositStore = create((set, get) => ({
           customerDepositAmount: 0,
         });
       }
+      return { customer, totalDeposit: deposit, deposits };
     } catch (err) {
+      if (!ownsCustomerDepositContextRequest(requestId)) return null;
       console.error('❌ loadCustomerDepositByPhoneAction error:', err);
       set({ error: err });
+      return null;
     }
   },
 
-  resetAllDepositState: () => set({
-    isSubmitting: false,
-    isLoading: false,
-    isLoadingDetail: false,
-    error: null,
-    deposits: [],
-    selectedDeposit: null,
-    selectedCustomer: null,
-    customerDeposits: [],
-    customerDepositAmount: 0,
-    depositUsed: 0,
-  }),
+  resetAllDepositState: () => {
+    invalidateCustomerDepositContextRequests();
+    invalidateCustomerDepositListRequests();
+    set({
+      isSubmitting: false,
+      isLoading: false,
+      isLoadingDetail: false,
+      error: null,
+      deposits: [],
+      selectedDeposit: null,
+      selectedCustomer: null,
+      customerDeposits: [],
+      customerDepositAmount: 0,
+      depositUsed: 0,
+    });
+  },
 }));
 
 export default useCustomerDepositStore;

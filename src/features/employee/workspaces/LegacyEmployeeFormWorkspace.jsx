@@ -1,5 +1,5 @@
 // src/features/employee/pages/EditEmployeePage.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { feedback } from '@/design-system';
 import { getEmployeeById, updateEmployee } from '../api/employeeApi';
@@ -16,26 +16,53 @@ const EditEmployeePage = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const submittingRef = useRef(false);
+  const employeeContextRef = useRef({ id, shopSlug });
+  const loadRequestRef = useRef(0);
+  const updateRequestRef = useRef(0);
+
+  useEffect(() => {
+    employeeContextRef.current = { id, shopSlug };
+    loadRequestRef.current += 1;
+    updateRequestRef.current += 1;
+    submittingRef.current = false;
+    setSubmitting(false);
+    setEmployee(null);
+    setError('');
+  }, [id, shopSlug]);
 
   useEffect(() => {
     let cancelled = false;
     const loadEmployee = async () => {
+      const employeeIdSnapshot = id;
+      const shopSlugSnapshot = shopSlug;
+      const requestId = loadRequestRef.current + 1;
+      loadRequestRef.current = requestId;
+      const ownsContext = () => (
+        !cancelled
+        && loadRequestRef.current === requestId
+        && employeeContextRef.current.id === employeeIdSnapshot
+        && employeeContextRef.current.shopSlug === shopSlugSnapshot
+      );
+
       try {
-        setLoading(true);
-        setError('');
-        if (!id) {
-          setError('ไม่พบรหัสพนักงานใน URL');
+        if (ownsContext()) {
+          setLoading(true);
+          setError('');
+        }
+        if (!employeeIdSnapshot) {
+          if (ownsContext()) setError('ไม่พบรหัสพนักงานใน URL');
           return;
         }
-        const data = await getEmployeeById(id);
-        if (!cancelled) setEmployee(data);
+        const data = await getEmployeeById(employeeIdSnapshot);
+        if (ownsContext()) setEmployee(data);
       } catch (err) {
-        if (!cancelled) {
+        if (ownsContext()) {
           setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'ดึงข้อมูลพนักงานล้มเหลว');
-          feedback.actionError(err, 'ดึงข้อมูลพนักงานล้มเหลว', 'employee:legacy-edit:load:error');
+          feedback.actionError(err, 'ดึงข้อมูลพนักงานล้มเหลว', `employee:legacy-edit:${employeeIdSnapshot}:load:error`);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (ownsContext()) setLoading(false);
       }
     };
 
@@ -43,24 +70,62 @@ const EditEmployeePage = () => {
     return () => {
       cancelled = true;
     };
-  }, [token, id]);
+  }, [token, id, shopSlug]);
 
   const handleUpdate = async (formData) => {
-    if (submitting) return;
+    if (submittingRef.current || submitting) return;
+
+    const employeeIdSnapshot = id;
+    const shopSlugSnapshot = shopSlug;
+    const payloadSnapshot = { ...formData };
+    if (!employeeIdSnapshot) return;
+
+    const requestId = updateRequestRef.current + 1;
+    updateRequestRef.current = requestId;
+    const ownsContext = () => (
+      updateRequestRef.current === requestId
+      && employeeContextRef.current.id === employeeIdSnapshot
+      && employeeContextRef.current.shopSlug === shopSlugSnapshot
+    );
+
+    submittingRef.current = true;
     setSubmitting(true);
     setError('');
     try {
-      await updateEmployee(id, formData);
-      feedback.actionSuccess('บันทึกการแก้ไขข้อมูลพนักงานเรียบร้อยแล้ว', 'employee:legacy-update:success');
-      const targetSlug = shopSlug || 'advancetech';
+      await updateEmployee(employeeIdSnapshot, payloadSnapshot);
+      feedback.actionSuccess(
+        'บันทึกการแก้ไขข้อมูลพนักงานเรียบร้อยแล้ว',
+        `employee:legacy-update:${employeeIdSnapshot}:success`,
+      );
+
+      if (!ownsContext()) {
+        feedback.warning(
+          'บันทึกข้อมูลพนักงานสำเร็จแล้ว แต่หน้าปัจจุบันเปลี่ยนไปเป็นพนักงานหรือร้านอื่น ระบบจึงไม่เปลี่ยนหน้าอัตโนมัติ',
+          `employee:legacy-update:${employeeIdSnapshot}:context-changed:error`,
+        );
+        return;
+      }
+
+      const targetSlug = shopSlugSnapshot || 'advancetech';
       navigate(`/${targetSlug}/pos/settings/employee`);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
-      feedback.actionError(err, 'แก้ไขข้อมูลพนักงานไม่สำเร็จ', 'employee:legacy-update:error');
+      if (ownsContext()) {
+        setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
+        feedback.actionError(
+          err,
+          'แก้ไขข้อมูลพนักงานไม่สำเร็จ',
+          `employee:legacy-update:${employeeIdSnapshot}:error`,
+        );
+      }
     } finally {
-      setSubmitting(false);
+      if (ownsContext()) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   };
+
+  const mutationBusy = submitting || submittingRef.current;
 
   if (loading) {
     return (
@@ -106,8 +171,10 @@ const EditEmployeePage = () => {
           <UserCog className="w-4 h-4 text-orange-500" /> แก้ไขข้อมูลพนักงาน
         </h1>
         <button
-          onClick={() => navigate(-1)}
-          disabled={submitting}
+          onClick={() => {
+            if (!mutationBusy) navigate(-1);
+          }}
+          disabled={mutationBusy}
           className="flex items-center gap-1 h-8 px-3 text-xs font-black bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 border border-slate-200/40 dark:border-zinc-700/50 rounded-xl transform active:scale-95 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
@@ -116,7 +183,7 @@ const EditEmployeePage = () => {
       </div>
 
       {error ? <div className="mb-4 rounded-lg bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
-      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={submitting} showUserSearch={false} />
+      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={mutationBusy} showUserSearch={false} />
     </div>
   );
 };

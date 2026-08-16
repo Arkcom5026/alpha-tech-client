@@ -31,20 +31,38 @@ const PaymentMethodInput = ({ label, value, onChange, onBlur, colorClass, disabl
 
 const SupplierAdvancePaymentForm = ({ supplier }) => {
   const navigate = useNavigate();
-  const { createSupplierPaymentAction, fetchAdvancePaymentsBySupplierAction, advancePayments } = useSupplierPaymentStore();
+  const supplierId = supplier?.id || null;
+  const createSupplierPaymentAction = useSupplierPaymentStore((state) => state.createSupplierPaymentAction);
+  const fetchAdvancePaymentsBySupplierAction = useSupplierPaymentStore((state) => state.fetchAdvancePaymentsBySupplierAction);
+  const advancePayments = useSupplierPaymentStore((state) => (
+    supplierId ? state.advancePaymentsBySupplier?.[supplierId] || [] : []
+  ));
   const [formData, setFormData] = useState({ paymentDate: dayjs().format('YYYY-MM-DD'), amount: '', method: 'CASH', note: '', chequeDetails: { number: '', bank: '', dueDate: '' } });
   const [error, setError] = useState(null);
   const [successPayload, setSuccessPayload] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const supplierIdRef = useRef(supplierId);
+  const historyRequestRef = useRef(0);
 
   useEffect(() => {
-    if (supplier?.id && fetchAdvancePaymentsBySupplierAction) {
-      Promise.resolve(fetchAdvancePaymentsBySupplierAction(supplier.id)).catch((requestError) => {
-        feedback.actionError(requestError, 'โหลดประวัติการชำระเงิน Supplier ไม่สำเร็จ', 'supplier-payment:advance:history:error');
-      });
-    }
-  }, [supplier?.id, fetchAdvancePaymentsBySupplierAction]);
+    supplierIdRef.current = supplierId;
+    historyRequestRef.current += 1;
+    setError(null);
+    setSuccessPayload(null);
+
+    if (!supplierId || !fetchAdvancePaymentsBySupplierAction) return;
+    const requestId = historyRequestRef.current;
+    const supplierIdSnapshot = supplierId;
+    Promise.resolve(fetchAdvancePaymentsBySupplierAction(supplierIdSnapshot)).catch((requestError) => {
+      if (supplierIdRef.current !== supplierIdSnapshot || historyRequestRef.current !== requestId) return;
+      feedback.actionError(
+        requestError,
+        'โหลดประวัติการชำระเงิน Supplier ไม่สำเร็จ',
+        `supplier-payment:advance:${supplierIdSnapshot}:history:error`,
+      );
+    });
+  }, [supplierId, fetchAdvancePaymentsBySupplierAction]);
 
   const handleChange = (event) => {
     if (submittingRef.current) return;
@@ -71,7 +89,7 @@ const SupplierAdvancePaymentForm = ({ supplier }) => {
     event.preventDefault();
     if (submitting || submittingRef.current) return;
 
-    const supplierId = supplier?.id;
+    const supplierIdSnapshot = supplierId;
     const formSnapshot = {
       ...formData,
       chequeDetails: { ...formData.chequeDetails },
@@ -80,7 +98,7 @@ const SupplierAdvancePaymentForm = ({ supplier }) => {
 
     setError(null);
     setSuccessPayload(null);
-    if (!supplierId) {
+    if (!supplierIdSnapshot) {
       setError('ไม่พบข้อมูล Supplier สำหรับบันทึกการชำระเงิน');
       return;
     }
@@ -90,7 +108,7 @@ const SupplierAdvancePaymentForm = ({ supplier }) => {
     }
 
     const payload = {
-      supplierId,
+      supplierId: supplierIdSnapshot,
       paymentDate: formSnapshot.paymentDate,
       amount: parsedAmount,
       method: formSnapshot.method,
@@ -103,22 +121,42 @@ const SupplierAdvancePaymentForm = ({ supplier }) => {
     setSubmitting(true);
     try {
       const response = await createSupplierPaymentAction(payload);
-      setSuccessPayload(response);
-      feedback.actionSuccess('บันทึกการชำระเงินล่วงหน้า Supplier เรียบร้อยแล้ว', 'supplier-payment:advance:create:success');
+      feedback.actionSuccess(
+        'บันทึกการชำระเงินล่วงหน้า Supplier เรียบร้อยแล้ว',
+        `supplier-payment:advance:${supplierIdSnapshot}:create:success`,
+      );
 
-      try {
-        await fetchAdvancePaymentsBySupplierAction?.(supplierId);
-      } catch (refreshError) {
+      if (supplierIdRef.current !== supplierIdSnapshot) {
         feedback.actionError(
-          refreshError,
-          'บันทึกสำเร็จแล้ว แต่โหลดประวัติการชำระเงินล่าสุดไม่สำเร็จ',
-          'supplier-payment:advance:history-after-create:error',
+          new Error('Supplier context changed after advance payment persistence'),
+          'บันทึกการชำระเงินล่วงหน้าสำเร็จแล้ว แต่ขณะนี้เปลี่ยนไปยัง Supplier รายอื่น จึงไม่แสดงผลรายการเดิมในหน้าปัจจุบัน',
+          `supplier-payment:advance:${supplierIdSnapshot}:context-changed-after-create:error`,
         );
+        return;
+      }
+
+      setSuccessPayload(response);
+      try {
+        await fetchAdvancePaymentsBySupplierAction?.(supplierIdSnapshot);
+      } catch (refreshError) {
+        if (supplierIdRef.current === supplierIdSnapshot) {
+          feedback.actionError(
+            refreshError,
+            'บันทึกสำเร็จแล้ว แต่โหลดประวัติการชำระเงินล่าสุดไม่สำเร็จ',
+            `supplier-payment:advance:${supplierIdSnapshot}:history-after-create:error`,
+          );
+        }
       }
     } catch (requestError) {
       const message = requestError?.response?.data?.error?.message || requestError?.response?.data?.message || requestError?.message || 'บันทึกการชำระเงินไม่สำเร็จ';
-      setError(`เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${message}`);
-      feedback.actionError(requestError, 'บันทึกการชำระเงินล่วงหน้า Supplier ไม่สำเร็จ', 'supplier-payment:advance:create:error');
+      if (supplierIdRef.current === supplierIdSnapshot) {
+        setError(`เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${message}`);
+      }
+      feedback.actionError(
+        requestError,
+        'บันทึกการชำระเงินล่วงหน้า Supplier ไม่สำเร็จ',
+        `supplier-payment:advance:${supplierIdSnapshot}:create:error`,
+      );
     } finally {
       submittingRef.current = false;
       setSubmitting(false);

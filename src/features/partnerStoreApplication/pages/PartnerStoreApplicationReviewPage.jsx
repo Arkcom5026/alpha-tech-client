@@ -30,52 +30,86 @@ export default function PartnerStoreApplicationReviewPage() {
   const [pendingAction, setPendingAction] = useState(null);
   const mutationLockRef = useRef(false);
   const pendingActionLockRef = useRef(false);
+  const loadRequestRef = useRef(0);
+  const statusRef = useRef(status);
+  statusRef.current = status;
 
-  const interactionLocked = Boolean(actingId) || Boolean(pendingAction);
+  const interactionLocked = Boolean(actingId) || Boolean(pendingAction) || mutationLockRef.current || pendingActionLockRef.current;
 
-  const load = async () => {
+  const load = async ({ reportError = true, statusSnapshot = status } = {}) => {
+    const requestId = ++loadRequestRef.current;
     setLoading(true);
     setError('');
     try {
-      const response = await listPartnerStoreApplications(status);
-      setItems(response.data?.data || []);
+      const response = await listPartnerStoreApplications(statusSnapshot);
+      if (requestId !== loadRequestRef.current || statusRef.current !== statusSnapshot) {
+        return { ok: false, stale: true };
+      }
+      const nextItems = response.data?.data || [];
+      setItems(nextItems);
+      return { ok: true, items: nextItems };
     } catch (requestError) {
+      if (requestId !== loadRequestRef.current || statusRef.current !== statusSnapshot) {
+        return { ok: false, stale: true, error: requestError };
+      }
       const message = messageFrom(requestError);
       setError(message);
-      feedback.actionError(requestError, 'โหลดใบสมัครร้านพาร์ตเนอร์ไม่สำเร็จ', 'partner-store-review:load:error');
+      if (reportError) {
+        feedback.actionError(requestError, 'โหลดใบสมัครร้านพาร์ตเนอร์ไม่สำเร็จ', 'partner-store-review:load:error');
+      }
+      return { ok: false, error: requestError, message };
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, [status]);
+  useEffect(() => { load({ statusSnapshot: status }); }, [status]);
 
   const run = async (item, action, successMessage, eventKey) => {
     if (!item || mutationLockRef.current) return null;
+    const applicationIdSnapshot = item.id;
+    const statusSnapshot = status;
+    const authorityKey = `${eventKey}:${applicationIdSnapshot}`;
+
     mutationLockRef.current = true;
-    setActingId(item.id);
+    setActingId(applicationIdSnapshot);
     setError('');
+
+    let result = null;
     try {
-      const result = await action();
-      feedback.actionSuccess(successMessage, `${eventKey}:success`);
-      await load();
-      return result;
+      result = await action();
     } catch (requestError) {
       const message = messageFrom(requestError);
       setError(message);
-      feedback.actionError(requestError, `${successMessage.replace('เรียบร้อยแล้ว', '')}ไม่สำเร็จ`, `${eventKey}:error`);
-      return null;
-    } finally {
+      feedback.actionError(requestError, `${successMessage.replace('เรียบร้อยแล้ว', '')}ไม่สำเร็จ`, `${authorityKey}:error`);
       mutationLockRef.current = false;
       setActingId(null);
+      return null;
     }
+
+    feedback.actionSuccess(successMessage, `${authorityKey}:success`);
+
+    const refreshResult = await load({ reportError: false, statusSnapshot });
+    if (!refreshResult?.ok && !refreshResult?.stale) {
+      feedback.actionError(
+        refreshResult?.error,
+        `${successMessage.replace('เรียบร้อยแล้ว', 'สำเร็จแล้ว')} แต่รีเฟรชรายการใบสมัครล่าสุดไม่สำเร็จ`,
+        `${authorityKey}:refresh:error`,
+      );
+    }
+
+    mutationLockRef.current = false;
+    setActingId(null);
+    return result;
   };
 
   const startReview = (item) => {
     if (mutationLockRef.current || pendingActionLockRef.current) return null;
+    const applicationIdSnapshot = item.id;
+    const noteSnapshot = notes[applicationIdSnapshot] || undefined;
     return run(
       item,
-      () => startReviewPartnerStoreApplication(item.id, { note: notes[item.id] || undefined }),
+      () => startReviewPartnerStoreApplication(applicationIdSnapshot, { note: noteSnapshot }),
       'เริ่มตรวจสอบใบสมัครเรียบร้อยแล้ว',
       'partner-store-review:start-review',
     );
@@ -115,26 +149,28 @@ export default function PartnerStoreApplicationReviewPage() {
     const current = pendingAction;
     if (!current || mutationLockRef.current) return;
     const { item, type } = current;
+    const applicationIdSnapshot = item.id;
+    const reviewNoteSnapshot = String(notes[applicationIdSnapshot] || '').trim();
     let result = null;
 
     if (type === 'approve') {
       result = await run(
         item,
-        () => approvePartnerStoreApplication(item.id, { reviewNote: notes[item.id] || undefined }),
+        () => approvePartnerStoreApplication(applicationIdSnapshot, { reviewNote: reviewNoteSnapshot || undefined }),
         'อนุมัติใบสมัครร้านพาร์ตเนอร์เรียบร้อยแล้ว',
         'partner-store-review:approve',
       );
     } else if (type === 'reject') {
       result = await run(
         item,
-        () => rejectPartnerStoreApplication(item.id, { reviewNote: String(notes[item.id] || '').trim() }),
+        () => rejectPartnerStoreApplication(applicationIdSnapshot, { reviewNote: reviewNoteSnapshot }),
         'ปฏิเสธใบสมัครร้านพาร์ตเนอร์เรียบร้อยแล้ว',
         'partner-store-review:reject',
       );
     } else if (type === 'provision') {
       result = await run(
         item,
-        () => provisionPartnerStoreApplication(item.id),
+        () => provisionPartnerStoreApplication(applicationIdSnapshot),
         'สร้างร้านพาร์ตเนอร์เรียบร้อยแล้ว',
         'partner-store-review:provision',
       );
@@ -148,16 +184,17 @@ export default function PartnerStoreApplicationReviewPage() {
 
   const issueActivation = async (item) => {
     if (mutationLockRef.current || pendingActionLockRef.current) return;
+    const applicationIdSnapshot = item.id;
     const response = await run(
       item,
-      () => issuePartnerStoreActivationInvitation(item.id),
+      () => issuePartnerStoreActivationInvitation(applicationIdSnapshot),
       'ออกลิงก์เปิดใช้งานร้านเรียบร้อยแล้ว',
       'partner-store-review:activation',
     );
     const claimPath = response?.data?.data?.claimPath;
     if (!claimPath) return;
     const href = new URL(claimPath, window.location.origin).toString();
-    setActivationLinks((current) => ({ ...current, [item.id]: href }));
+    setActivationLinks((current) => ({ ...current, [applicationIdSnapshot]: href }));
   };
 
   const copyActivationLink = async (itemId) => {
@@ -166,10 +203,10 @@ export default function PartnerStoreApplicationReviewPage() {
     if (!href) return;
     try {
       await navigator.clipboard.writeText(href);
-      feedback.actionSuccess('คัดลอกลิงก์เปิดใช้งานเรียบร้อยแล้ว', 'partner-store-review:copy-link:success');
+      feedback.actionSuccess('คัดลอกลิงก์เปิดใช้งานเรียบร้อยแล้ว', `partner-store-review:${itemId}:copy-link:success`);
     } catch (requestError) {
       setError('คัดลอกลิงก์อัตโนมัติไม่สำเร็จ กรุณาคัดลอกจากช่องลิงก์โดยตรง');
-      feedback.actionError(requestError, 'คัดลอกลิงก์เปิดใช้งานไม่สำเร็จ', 'partner-store-review:copy-link:error');
+      feedback.actionError(requestError, 'คัดลอกลิงก์เปิดใช้งานไม่สำเร็จ', `partner-store-review:${itemId}:copy-link:error`);
     }
   };
 

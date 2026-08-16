@@ -1,5 +1,5 @@
 // src/features/stock/brand/pages/CreateBrandPage.jsx
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { feedback } from '@/design-system'
 import { useBrandStore } from '../store/brandStore'
@@ -17,6 +17,7 @@ const CreateBrandPage = () => {
 
   const [name, setName] = useState('')
   const [touched, setTouched] = useState(false)
+  const submittingRef = useRef(false)
 
   useEffect(() => {
     clearErrorAction()
@@ -28,28 +29,37 @@ const CreateBrandPage = () => {
 
   const onSubmit = async (e) => {
     e?.preventDefault?.()
+    if (saving || submittingRef.current) return
+
     clearErrorAction()
     setTouched(true)
 
-    if (!nameTrim || saving) return
+    const nameSnapshot = String(name || '').trim()
+    const shopSlugSnapshot = shopSlug || 'advancetech'
+    if (!nameSnapshot) return
 
+    submittingRef.current = true
     try {
-      const result = await createBrandAction({ name: nameTrim })
+      const result = await createBrandAction({ name: nameSnapshot })
       if (result?.ok) {
-        feedback.actionSuccess('เพิ่มแบรนด์เรียบร้อยแล้ว', 'brand:create:success')
-        navigate(`/${shopSlug || 'advancetech'}/pos/stock/brands`)
+        feedback.actionSuccess('เพิ่มแบรนด์เรียบร้อยแล้ว', `brand:create:${nameSnapshot}:success`)
+        navigate(`/${shopSlugSnapshot}/pos/stock/brands`)
         return
       }
-      feedback.error(error || 'เพิ่มแบรนด์ไม่สำเร็จ', { eventKey: 'brand:create:error' })
+      feedback.error(error || 'เพิ่มแบรนด์ไม่สำเร็จ', { eventKey: `brand:create:${nameSnapshot}:error` })
     } catch (createError) {
-      feedback.actionError(createError, 'เพิ่มแบรนด์ไม่สำเร็จ', 'brand:create:error')
+      feedback.actionError(createError, 'เพิ่มแบรนด์ไม่สำเร็จ', `brand:create:${nameSnapshot}:error`)
+    } finally {
+      submittingRef.current = false
     }
   }
 
   const onCancel = () => {
-    if (saving) return
+    if (saving || submittingRef.current) return
     navigate(`/${shopSlug || 'advancetech'}/pos/stock/brands`)
   }
+
+  const mutationBusy = saving || submittingRef.current
 
   return (
     <div className="p-4">
@@ -73,11 +83,15 @@ const CreateBrandPage = () => {
             <label className="block text-sm font-medium mb-1">ชื่อแบรนด์</label>
             <input
               value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={() => setTouched(true)}
+              onChange={(e) => {
+                if (!submittingRef.current) setName(e.target.value)
+              }}
+              onBlur={() => {
+                if (!submittingRef.current) setTouched(true)
+              }}
               placeholder="เช่น Samsung"
               className="w-full rounded border px-3 py-2 text-sm"
-              disabled={saving}
+              disabled={mutationBusy}
             />
             {nameError ? (
               <div className="mt-1 text-xs text-red-600">{nameError}</div>
@@ -87,15 +101,15 @@ const CreateBrandPage = () => {
           <div className="flex items-center gap-2">
             <button
               type="submit"
-              disabled={saving}
+              disabled={mutationBusy}
               className="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-60"
             >
-              {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+              {mutationBusy ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
             <button
               type="button"
               onClick={onCancel}
-              disabled={saving}
+              disabled={mutationBusy}
               className="px-4 py-2 rounded border text-sm hover:bg-gray-50 disabled:opacity-60"
             >
               ยกเลิก

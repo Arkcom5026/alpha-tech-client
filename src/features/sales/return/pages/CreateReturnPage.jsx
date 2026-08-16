@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import {
   getSaleReturnEligibility,
   issueCreditNoteForSaleReturn,
@@ -27,10 +28,32 @@ const CreateReturnPage = () => {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const submittingRef = useRef(false);
+  const saleContextRef = useRef({ saleId, shopSlug });
+  const eligibilityRequestRef = useRef(0);
 
   useEffect(() => {
-    getSaleReturnEligibility(saleId).then(setEligibility).catch((err) => setError(err.response?.data?.message || err.message));
-  }, [saleId]);
+    saleContextRef.current = { saleId, shopSlug };
+    const requestId = eligibilityRequestRef.current + 1;
+    eligibilityRequestRef.current = requestId;
+    setEligibility(null);
+    setLines({});
+    setReason('');
+    setRefunds([{ method: 'CASH', amount: 0, sourcePaymentItemId: '' }]);
+    setError('');
+
+    getSaleReturnEligibility(saleId)
+      .then((result) => {
+        if (eligibilityRequestRef.current !== requestId) return;
+        if (String(saleContextRef.current.saleId) !== String(saleId)) return;
+        setEligibility(result);
+      })
+      .catch((requestError) => {
+        if (eligibilityRequestRef.current !== requestId) return;
+        if (String(saleContextRef.current.saleId) !== String(saleId)) return;
+        setError(requestError.response?.data?.message || requestError.message);
+      });
+  }, [saleId, shopSlug]);
 
   const available = useMemo(() => buildAvailableReturnItems(eligibility), [eligibility]);
 
@@ -51,53 +74,92 @@ const CreateReturnPage = () => {
     refunds,
   }), [available, selectedItems, refunds]);
 
-  const selectLine = (item, selected) => setLines((current) => ({
-    ...current,
-    [`${item.kind}:${item.id}`]: {
-      selected,
-      quantity: item.kind === 'SIMPLE' ? item.eligibleQuantity : 1,
-      refundAmount: item.eligibleRefund,
-      reason: '',
-    },
-  }));
+  const mutationBusy = submitting || submittingRef.current;
 
-  const patchLine = (item, patch) => setLines((current) => ({
-    ...current,
-    [`${item.kind}:${item.id}`]: { ...current[`${item.kind}:${item.id}`], ...patch },
-  }));
+  const selectLine = (item, selected) => {
+    if (mutationBusy) return;
+    setLines((current) => ({
+      ...current,
+      [`${item.kind}:${item.id}`]: {
+        selected,
+        quantity: item.kind === 'SIMPLE' ? item.eligibleQuantity : 1,
+        refundAmount: item.eligibleRefund,
+        reason: '',
+      },
+    }));
+  };
+
+  const patchLine = (item, patch) => {
+    if (mutationBusy) return;
+    setLines((current) => ({
+      ...current,
+      [`${item.kind}:${item.id}`]: { ...current[`${item.kind}:${item.id}`], ...patch },
+    }));
+  };
 
   const submit = async () => {
+    if (mutationBusy) return;
+
+    const returnReason = reason;
+    const returnItems = selectedItems.map((item) => ({ ...item }));
+    const refundItems = refunds
+      .filter((item) => Number(item.amount) > 0)
+      .map((item) => ({
+        ...item,
+        amount: Number(item.amount),
+        sourcePaymentItemId: item.sourcePaymentItemId ? Number(item.sourcePaymentItemId) : null,
+      }));
+    const targetSaleId = saleId;
+    const targetShopSlug = shopSlug;
+    const returnEligibility = eligibility;
+    const returnEligibleTotal = eligibleTotal;
+    const returnRefundTotal = refundTotal;
+    const returnChannelTotal = channelTotal;
+    const returnDeduction = deduction;
+    const eventKey = `sale-return:${targetSaleId}`;
+
     setError('');
     const validationError = validateSaleReturnSubmission({
-      selectedItems,
-      refundTotal,
-      channelTotal,
-      deduction,
-      reason,
+      selectedItems: returnItems,
+      refundTotal: returnRefundTotal,
+      channelTotal: returnChannelTotal,
+      deduction: returnDeduction,
+      reason: returnReason,
     });
     if (validationError) {
       setError(validationError);
       return;
     }
 
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const completedReturn = await runCompleteSaleReturn({
-        saleId,
-        reason,
-        items: selectedItems,
-        refunds: refunds.filter((item) => Number(item.amount) > 0).map((item) => ({
-          ...item,
-          amount: Number(item.amount),
-          sourcePaymentItemId: item.sourcePaymentItemId ? Number(item.sourcePaymentItemId) : null,
-        })),
+        saleId: targetSaleId,
+        reason: returnReason,
+        items: returnItems,
+        refunds: refundItems,
       });
 
+      feedback.actionSuccess('คืนสินค้าและคืนเงินเรียบร้อยแล้ว', `${eventKey}:complete:success`);
+
+      const contextStillOwned =
+        String(saleContextRef.current.saleId) === String(targetSaleId) &&
+        String(saleContextRef.current.shopSlug) === String(targetShopSlug);
+      if (!contextStillOwned) {
+        feedback.actionError(
+          new Error('Sale return completed after route context changed.'),
+          'คืนสินค้าและคืนเงินสำเร็จแล้ว แต่หน้าจอเปลี่ยนไปยังรายการขายอื่นก่อนดำเนินการขั้นถัดไป',
+          `${eventKey}:context-changed-after-complete:error`,
+        );
+        return;
+      }
+
       const fullRefundReturn = isFullRefundReturn({
-        eligibleTotal,
-        refundTotal,
-        saleTotal: eligibility.sale.totalAmount,
-        deduction,
+        eligibleTotal: returnEligibleTotal,
+        refundTotal: returnRefundTotal,
+        saleTotal: returnEligibility.sale.totalAmount,
+        deduction: returnDeduction,
       });
 
       if (fullRefundReturn) {
@@ -108,28 +170,48 @@ const CreateReturnPage = () => {
           });
           const taxDocumentId = creditNote?.document?.id;
           if (!taxDocumentId) throw new Error('Credit note issuance returned no document identity.');
+
+          const creditNoteContextStillOwned =
+            String(saleContextRef.current.saleId) === String(targetSaleId) &&
+            String(saleContextRef.current.shopSlug) === String(targetShopSlug);
+          if (!creditNoteContextStillOwned) {
+            feedback.actionError(
+              new Error('Credit note issued after route context changed.'),
+              'คืนสินค้าและออกใบลดหนี้สำเร็จแล้ว แต่หน้าจอเปลี่ยนไปยังรายการขายอื่นก่อนเปิดเอกสาร',
+              `${eventKey}:credit-note:context-changed:error`,
+            );
+            return;
+          }
+
           navigate(
-            `/${shopSlug}/pos/sales/credit-note/print/${taxDocumentId}?branchId=${completedReturn.branchId}`,
+            `/${targetShopSlug}/pos/sales/credit-note/print/${taxDocumentId}?branchId=${completedReturn.branchId}`,
             { replace: true },
           );
           return;
         } catch (creditNoteError) {
           const code = creditNoteError.response?.data?.code || creditNoteError.response?.data?.error;
           if (code === 'TAX_CREDIT_NOTE_ORIGINAL_DOCUMENT_NOT_FOUND') {
-            navigate(`/${shopSlug}/pos/sales/sale-return`, { replace: true });
+            navigate(`/${targetShopSlug}/pos/sales/sale-return`, { replace: true });
             return;
           }
-          setError(
-            `คืนสินค้าและคืนเงินสำเร็จแล้ว แต่ยังออกใบลดหนี้ไม่สำเร็จ: ${creditNoteError.response?.data?.message || creditNoteError.message}`,
+          const partialMessage = `คืนสินค้าและคืนเงินสำเร็จแล้ว แต่ยังออกใบลดหนี้ไม่สำเร็จ: ${creditNoteError.response?.data?.message || creditNoteError.message}`;
+          setError(partialMessage);
+          feedback.actionError(
+            creditNoteError,
+            partialMessage,
+            `${eventKey}:credit-note:error`,
           );
           return;
         }
       }
 
-      navigate(`/${shopSlug}/pos/sales/sale-return`, { replace: true });
-    } catch (err) {
-      setError(err.response?.data?.message || err.message);
+      navigate(`/${targetShopSlug}/pos/sales/sale-return`, { replace: true });
+    } catch (requestError) {
+      const message = requestError.response?.data?.message || requestError.message;
+      setError(message);
+      feedback.actionError(requestError, message || 'คืนสินค้าและคืนเงินไม่สำเร็จ', `${eventKey}:complete:error`);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
@@ -145,7 +227,7 @@ const CreateReturnPage = () => {
         reason={reason}
         refunds={refunds}
         error={error}
-        submitting={submitting}
+        submitting={mutationBusy}
         eligibleTotal={eligibleTotal}
         refundTotal={refundTotal}
         deduction={deduction}
@@ -153,9 +235,15 @@ const CreateReturnPage = () => {
         submitLabel={SUBMIT_LABEL}
         onSelectLine={selectLine}
         onPatchLine={patchLine}
-        onReasonChange={setReason}
-        onRefundsChange={setRefunds}
-        onCancel={() => navigate(-1)}
+        onReasonChange={(value) => {
+          if (!mutationBusy) setReason(value);
+        }}
+        onRefundsChange={(value) => {
+          if (!mutationBusy) setRefunds(value);
+        }}
+        onCancel={() => {
+          if (!mutationBusy) navigate(-1);
+        }}
         onSubmit={submit}
         onOpenHelp={() => setHelpOpen(true)}
       />

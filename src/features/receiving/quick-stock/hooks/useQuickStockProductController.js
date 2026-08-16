@@ -1,6 +1,6 @@
 // src/features/receiving/quick-stock/hooks/useQuickStockProductController.js
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { feedback as toast } from '@/design-system';
 
 import {
@@ -45,6 +45,7 @@ const useQuickStockProductController = ({
   const [isEditingProduct, setIsEditingProduct] = useState(false);
   const [isSavingProduct, setIsSavingProduct] = useState(false);
   const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+  const productMutationRef = useRef(false);
 
   const [defaultCost, setDefaultCost] = useState(0);
 
@@ -171,23 +172,28 @@ const useQuickStockProductController = ({
   }, [resetQueue, setSelectedProductId, setShowSearchResult]);
 
   const updateProductForm = useCallback((field, value) => {
+    if (productMutationRef.current) return;
     setProductForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
   const updatePriceForm = useCallback((field, value) => {
+    if (productMutationRef.current) return;
     setPriceForm((prev) => ({ ...prev, [field]: value }));
     if (field === "costPrice") setDefaultCost(value);
   }, []);
 
   const updateLocalProductForm = useCallback((field, value) => {
+    if (productMutationRef.current) return;
     setLocalProductForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
   const updateLocalPriceForm = useCallback((field, value) => {
+    if (productMutationRef.current) return;
     setLocalPriceForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
   const selectProduct = useCallback((productId) => {
+    if (productMutationRef.current) return;
     const nextSelected = productList.find(
       (product) =>
         `${product.__quickStockDiscoverySource}:${product.id}` === String(productId) ||
@@ -204,9 +210,12 @@ const useQuickStockProductController = ({
   }, [productList, resetQueue, setSelectedProductId, setShowSearchResult]);
 
   const handleCreateLocalOperationalProduct = useCallback(async () => {
+    if (productMutationRef.current) return;
+    const localProductFormSnapshot = { ...localProductForm };
+    const localPriceFormSnapshot = { ...localPriceForm };
     const payload = buildLocalOperationalProductPayload({
-      productForm: localProductForm,
-      priceForm: localPriceForm,
+      productForm: localProductFormSnapshot,
+      priceForm: localPriceFormSnapshot,
     });
 
     if (!payload.name) return toast.error("กรุณาระบุชื่อสินค้า");
@@ -215,6 +224,7 @@ const useQuickStockProductController = ({
       return toast.error("กรุณาระบุราคาทุนและราคาขายปลีกก่อนสร้างสินค้า");
     }
 
+    productMutationRef.current = true;
     setIsCreatingOperationalProduct(true);
 
     try {
@@ -222,7 +232,11 @@ const useQuickStockProductController = ({
       const rawCreatedProduct = extractSingle(response);
 
       if (!adoptOperationalProduct(rawCreatedProduct, null)) {
-        toast.error("สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง");
+        toast.actionError(
+          new Error('Operational product response is invalid'),
+          "สร้างสินค้าแล้ว แต่ข้อมูลที่ตอบกลับยังไม่ใช่ Operational Product ที่ถูกต้อง",
+          'quick-stock:product:local-create:response:error',
+        );
         return;
       }
 
@@ -242,74 +256,80 @@ const useQuickStockProductController = ({
         priceOnline: "",
       });
 
-      toast.success("สร้างสินค้า Local ของร้านเรียบร้อย");
+      toast.actionSuccess("สร้างสินค้า Local ของร้านเรียบร้อย", 'quick-stock:product:local-create:success');
     } catch (err) {
       console.error("Create local operational product failed:", err);
-      toast.error(err?.message || "สร้างสินค้า Local ไม่สำเร็จ");
+      toast.actionError(err, err?.message || "สร้างสินค้า Local ไม่สำเร็จ", 'quick-stock:product:local-create:error');
     } finally {
+      productMutationRef.current = false;
       setIsCreatingOperationalProduct(false);
     }
   }, [localProductForm, localPriceForm, createLocalOperationalProductAction, adoptOperationalProduct]);
 
   const handleSaveProductInline = useCallback(async () => {
-    if (!operationalProduct?.id) return;
+    if (productMutationRef.current || !operationalProduct?.id) return;
 
-    const name = String(productForm.name || "").trim();
+    const productIdSnapshot = Number(operationalProduct.id);
+    const operationalProductSnapshot = { ...operationalProduct };
+    const productFormSnapshot = { ...productForm };
+    const priceFormSnapshot = { ...priceForm };
+    const name = String(productFormSnapshot.name || "").trim();
     if (!name) return toast.error("ชื่อสินค้าห้ามว่าง");
-    if (toMoneyNumber(priceForm.priceRetail) <= 0) return toast.error("ราคาขายปลีกต้องมากกว่า 0");
+    if (toMoneyNumber(priceFormSnapshot.priceRetail) <= 0) return toast.error("ราคาขายปลีกต้องมากกว่า 0");
 
+    productMutationRef.current = true;
     setIsSavingProduct(true);
 
     try {
-      await updateOperationalProductAction(operationalProduct.id, {
+      await updateOperationalProductAction(productIdSnapshot, {
         name,
-        productTypeId: toNumberOrNull(productForm.productTypeId),
-        brandId: toNumberOrNull(productForm.brandId),
-        unitId: toNumberOrNull(productForm.unitId),
-        mode: operationalProduct.mode || (productForm.trackSerialNumber ? "STRUCTURED" : "SIMPLE"),
-        noSN: operationalProduct.noSN ?? !productForm.trackSerialNumber,
-        trackSerialNumber: !!productForm.trackSerialNumber,
-        active: !!productForm.active,
+        productTypeId: toNumberOrNull(productFormSnapshot.productTypeId),
+        brandId: toNumberOrNull(productFormSnapshot.brandId),
+        unitId: toNumberOrNull(productFormSnapshot.unitId),
+        mode: operationalProductSnapshot.mode || (productFormSnapshot.trackSerialNumber ? "STRUCTURED" : "SIMPLE"),
+        noSN: operationalProductSnapshot.noSN ?? !productFormSnapshot.trackSerialNumber,
+        trackSerialNumber: !!productFormSnapshot.trackSerialNumber,
+        active: !!productFormSnapshot.active,
         branchPrice: {
-          costPrice: toMoneyNumber(priceForm.costPrice),
-          priceRetail: toMoneyNumber(priceForm.priceRetail),
-          priceWholesale: toMoneyNumber(priceForm.priceWholesale),
-          priceTechnician: toMoneyNumber(priceForm.priceTechnician),
-          priceOnline: toMoneyNumber(priceForm.priceOnline),
+          costPrice: toMoneyNumber(priceFormSnapshot.costPrice),
+          priceRetail: toMoneyNumber(priceFormSnapshot.priceRetail),
+          priceWholesale: toMoneyNumber(priceFormSnapshot.priceWholesale),
+          priceTechnician: toMoneyNumber(priceFormSnapshot.priceTechnician),
+          priceOnline: toMoneyNumber(priceFormSnapshot.priceOnline),
           isActive: true,
         },
       });
 
       const nextProduct = {
-        ...operationalProduct,
+        ...operationalProductSnapshot,
         name,
-        productTypeId: toNumberOrNull(productForm.productTypeId),
-        brandId: toNumberOrNull(productForm.brandId),
-        unitId: toNumberOrNull(productForm.unitId),
-        trackSerialNumber: !!productForm.trackSerialNumber,
-        active: !!productForm.active,
-        costPrice: toMoneyNumber(priceForm.costPrice),
-        priceRetail: toMoneyNumber(priceForm.priceRetail),
-        priceWholesale: toMoneyNumber(priceForm.priceWholesale),
-        priceTechnician: toMoneyNumber(priceForm.priceTechnician),
-        priceOnline: toMoneyNumber(priceForm.priceOnline),
+        productTypeId: toNumberOrNull(productFormSnapshot.productTypeId),
+        brandId: toNumberOrNull(productFormSnapshot.brandId),
+        unitId: toNumberOrNull(productFormSnapshot.unitId),
+        trackSerialNumber: !!productFormSnapshot.trackSerialNumber,
+        active: !!productFormSnapshot.active,
+        costPrice: toMoneyNumber(priceFormSnapshot.costPrice),
+        priceRetail: toMoneyNumber(priceFormSnapshot.priceRetail),
+        priceWholesale: toMoneyNumber(priceFormSnapshot.priceWholesale),
+        priceTechnician: toMoneyNumber(priceFormSnapshot.priceTechnician),
+        priceOnline: toMoneyNumber(priceFormSnapshot.priceOnline),
         hasPrice: true,
         branchPriceActive: true,
         branchPrice: [
           {
-            ...(getFirstBranchPrice(operationalProduct) || {}),
-            costPrice: toMoneyNumber(priceForm.costPrice),
-            priceRetail: toMoneyNumber(priceForm.priceRetail),
-            priceWholesale: toMoneyNumber(priceForm.priceWholesale),
-            priceTechnician: toMoneyNumber(priceForm.priceTechnician),
-            priceOnline: toMoneyNumber(priceForm.priceOnline),
+            ...(getFirstBranchPrice(operationalProductSnapshot) || {}),
+            costPrice: toMoneyNumber(priceFormSnapshot.costPrice),
+            priceRetail: toMoneyNumber(priceFormSnapshot.priceRetail),
+            priceWholesale: toMoneyNumber(priceFormSnapshot.priceWholesale),
+            priceTechnician: toMoneyNumber(priceFormSnapshot.priceTechnician),
+            priceOnline: toMoneyNumber(priceFormSnapshot.priceOnline),
             isActive: true,
           },
         ],
       };
 
       setAdoptedOperationalProduct((prev) =>
-        prev && Number(prev?.id) === Number(nextProduct.id) ? { ...prev, ...nextProduct } : prev
+        prev && Number(prev?.id) === productIdSnapshot ? { ...prev, ...nextProduct } : prev
       );
       setRuntimeSearchProducts((prev) =>
         dedupeDiscoveryProducts([normalizeOperationalProduct(nextProduct), ...(Array.isArray(prev) ? prev : [])])
@@ -317,42 +337,62 @@ const useQuickStockProductController = ({
       setProductForm(buildProductFormFromProduct(nextProduct));
       setPriceForm(buildPriceFormFromProduct(nextProduct));
       setDefaultCost(String(nextProduct.costPrice ?? 0));
-      toast.success("บันทึกข้อมูลสินค้าเรียบร้อย");
+      toast.actionSuccess("บันทึกข้อมูลสินค้าเรียบร้อย", `quick-stock:product:${productIdSnapshot}:save:success`);
       setIsEditingProduct(false);
     } catch (err) {
       console.error("Quick edit product failed:", err);
-      toast.error(err?.message || "บันทึกข้อมูลสินค้าไม่สำเร็จ");
+      toast.actionError(err, err?.message || "บันทึกข้อมูลสินค้าไม่สำเร็จ", `quick-stock:product:${productIdSnapshot}:save:error`);
     } finally {
+      productMutationRef.current = false;
       setIsSavingProduct(false);
     }
   }, [operationalProduct, productForm, priceForm, updateOperationalProductAction, setRuntimeSearchProducts]);
 
   const handleDeleteSelectedProductForRecovery = useCallback(async () => {
-    if (!operationalProduct?.id) return;
+    if (productMutationRef.current || !operationalProduct?.id) return false;
 
+    const productIdSnapshot = Number(operationalProduct.id);
+    productMutationRef.current = true;
     setIsDeletingProduct(true);
 
     try {
-      const result = await deleteOperationalProductAction(operationalProduct.id);
+      const result = await deleteOperationalProductAction(productIdSnapshot);
       if (result === false) {
-        toast.error("ลบสินค้าไม่สำเร็จ อาจมีประวัติใช้งานแล้ว");
+        toast.actionError(
+          new Error('Operational product delete rejected'),
+          "ลบสินค้าไม่สำเร็จ อาจมีประวัติใช้งานแล้ว",
+          `quick-stock:product:${productIdSnapshot}:delete:error`,
+        );
         return false;
       }
 
-      toast.success("ลบสินค้าเรียบร้อย");
+      toast.actionSuccess("ลบสินค้าเรียบร้อย", `quick-stock:product:${productIdSnapshot}:delete:success`);
       clearProductSelection();
-      await executeProductSearch();
+      try {
+        const refreshOutcome = await executeProductSearch();
+        if (refreshOutcome === false || refreshOutcome?.ok === false) {
+          throw refreshOutcome?.error || new Error('Quick Stock product refresh failed');
+        }
+      } catch (refreshError) {
+        toast.actionError(
+          refreshError,
+          "ลบสินค้าสำเร็จแล้ว แต่รีเฟรชรายการสินค้าล่าสุดไม่สำเร็จ",
+          `quick-stock:product:${productIdSnapshot}:delete:refresh:error`,
+        );
+      }
       return true;
     } catch (err) {
       console.error("Delete product failed:", err);
-      toast.error(err?.message || "ลบสินค้าไม่สำเร็จ");
+      toast.actionError(err, err?.message || "ลบสินค้าไม่สำเร็จ", `quick-stock:product:${productIdSnapshot}:delete:error`);
       return false;
     } finally {
+      productMutationRef.current = false;
       setIsDeletingProduct(false);
     }
   }, [operationalProduct, deleteOperationalProductAction, clearProductSelection, executeProductSearch]);
 
   const openLocalCreateForm = useCallback(() => {
+    if (productMutationRef.current) return;
     setIsLocalCreateOpen(true);
     setLocalProductForm((prev) => ({
       ...prev,

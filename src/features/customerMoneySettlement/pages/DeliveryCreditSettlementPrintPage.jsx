@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 import { getDeliveryCreditSettlement } from '../api/deliveryCreditSettlementApi';
 
@@ -9,16 +10,40 @@ const customerLabel = getCustomerDisplayName;
 const DeliveryCreditSettlementPrintPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const recordContextRef = useRef(null);
+  const loadRequestRef = useRef(0);
   const [record, setRecord] = useState(null);
   const [mode, setMode] = useState('A4');
   const [error, setError] = useState('');
 
   useEffect(() => {
-    let active = true;
-    getDeliveryCreditSettlement(id)
-      .then((data) => { if (active) setRecord(data); })
-      .catch((err) => { if (active) setError(err?.response?.data?.message || err?.message || 'โหลดเอกสารไม่สำเร็จ'); });
-    return () => { active = false; };
+    const settlementIdSnapshot = id;
+    const requestId = ++loadRequestRef.current;
+    recordContextRef.current = settlementIdSnapshot;
+    const ownsRequest = () => (
+      loadRequestRef.current === requestId
+      && recordContextRef.current === settlementIdSnapshot
+    );
+
+    setRecord(null);
+    setError('');
+
+    getDeliveryCreditSettlement(settlementIdSnapshot)
+      .then((data) => {
+        if (!ownsRequest()) return;
+        setRecord(data);
+      })
+      .catch((err) => {
+        if (!ownsRequest()) return;
+        const fallbackMessage = 'โหลดเอกสารไม่สำเร็จ';
+        setError(err?.response?.data?.message || err?.message || fallbackMessage);
+        feedback.actionError(err, fallbackMessage, `customer-money-settlement:print:${settlementIdSnapshot}:load:error`);
+      });
+
+    return () => {
+      if (recordContextRef.current === settlementIdSnapshot) recordContextRef.current = null;
+      if (loadRequestRef.current === requestId) loadRequestRef.current += 1;
+    };
   }, [id]);
 
   if (error) return <div className="p-5 text-rose-700">{error}</div>;

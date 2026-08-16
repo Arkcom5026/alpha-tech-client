@@ -24,6 +24,12 @@ describe('partner store application UI contract', () => {
     expect(apply).toContain('ยังไม่สร้างร้านหรือบัญชีเข้าใช้งานระบบ');
     expect(apply).toContain('ขั้นตอนเปิดใช้งานและกำหนดบัญชีเจ้าของร้านแยกต่างหาก');
     expect(apply).toContain('Application received');
+    expect(apply).toContain('const submittingRef = useRef(false)');
+    expect(apply).toContain('if (submitting || submittingRef.current) return');
+    expect(apply).toContain('const payload = {');
+    expect(apply).toContain('fieldset disabled={interactionBusy}');
+    expect(apply).toContain('feedback.actionSuccess(');
+    expect(apply).toContain('feedback.actionError(');
     expect(review).toContain('เริ่มตรวจสอบ');
     expect(review).toContain('อนุมัติใบสมัคร');
     expect(review).not.toContain('อนุมัติและเปิดร้าน');

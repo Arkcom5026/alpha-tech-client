@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
@@ -16,25 +16,60 @@ const CustomerMoneyReceiveDetailPage = () => {
   const navigate = useNavigate();
   const [record, setRecord] = useState(null);
   const [error, setError] = useState('');
+  const [refreshWarning, setRefreshWarning] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
   const cancellingRef = useRef(false);
+  const recordContextRef = useRef(id);
+  const loadRequestRef = useRef(0);
+  const cancelRequestRef = useRef(0);
 
-  const loadRecord = async () => {
-    const data = await getCustomerMoneyReceive(id);
-    setRecord(data);
-    return data;
-  };
+  recordContextRef.current = id;
+
+  const loadRecord = useCallback(async (recordId = id) => {
+    const recordIdSnapshot = String(recordId || '');
+    const requestId = ++loadRequestRef.current;
+    const ownsRequest = () => (
+      loadRequestRef.current === requestId
+      && String(recordContextRef.current || '') === recordIdSnapshot
+    );
+
+    try {
+      const data = await getCustomerMoneyReceive(recordIdSnapshot);
+      if (!ownsRequest()) return { ok: false, stale: true, data: null };
+      setRecord(data);
+      setError('');
+      setRefreshWarning('');
+      return { ok: true, stale: false, data };
+    } catch (err) {
+      if (!ownsRequest()) return { ok: false, stale: true, error: err };
+      const message = err?.response?.data?.message || err?.message || 'โหลดเอกสารไม่สำเร็จ';
+      setRecord(null);
+      setError(message);
+      return { ok: false, stale: false, error: err };
+    }
+  }, [id]);
 
   useEffect(() => {
-    let active = true;
-    getCustomerMoneyReceive(id)
-      .then((data) => { if (active) setRecord(data); })
-      .catch((err) => { if (active) setError(err?.response?.data?.message || err?.message || 'โหลดเอกสารไม่สำเร็จ'); });
-    return () => { active = false; };
-  }, [id]);
+    loadRequestRef.current += 1;
+    cancelRequestRef.current += 1;
+    cancellingRef.current = false;
+    setCancelling(false);
+    setCancelOpen(false);
+    setCancelReason('');
+    setCancelError('');
+    setRefreshWarning('');
+    setError('');
+    setRecord(null);
+    loadRecord(id);
+
+    return () => {
+      loadRequestRef.current += 1;
+      cancelRequestRef.current += 1;
+    };
+  }, [id, loadRecord]);
 
   const requestCancel = () => {
     if (cancelling || cancellingRef.current) return;
@@ -59,21 +94,58 @@ const CustomerMoneyReceiveDetailPage = () => {
     }
     if (cancelling || cancellingRef.current || !id) return;
 
-    const recordId = id;
+    const recordId = String(id);
+    const reasonSnapshot = reason;
+    const cancelRequestId = ++cancelRequestRef.current;
+    const ownsCancelRequest = () => (
+      cancelRequestRef.current === cancelRequestId
+      && String(recordContextRef.current || '') === recordId
+    );
+
     cancellingRef.current = true;
     setCancelling(true);
     setCancelError('');
+    setRefreshWarning('');
+
     try {
-      await cancelCustomerMoneyReceive(recordId, reason);
-      await loadRecord();
-      feedback.actionSuccess('ยกเลิกเอกสารรับเงินเรียบร้อยแล้ว', `customer-money-receive:cancel:${recordId}:success`);
-      setCancelOpen(false);
-      setCancelReason('');
+      await cancelCustomerMoneyReceive(recordId, reasonSnapshot);
     } catch (err) {
+      if (!ownsCancelRequest()) return;
       const message = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'ยกเลิกเอกสารรับเงินไม่สำเร็จ';
       setCancelError(message);
       feedback.actionError(err, 'ยกเลิกเอกสารรับเงินไม่สำเร็จ', `customer-money-receive:cancel:${recordId}:error`);
-    } finally {
+      cancellingRef.current = false;
+      setCancelling(false);
+      return;
+    }
+
+    if (!ownsCancelRequest()) {
+      feedback.actionError(
+        new Error('CUSTOMER_MONEY_RECEIVE_CONTEXT_CHANGED'),
+        'ยกเลิกเอกสารรับเงินสำเร็จแล้ว แต่หน้าปัจจุบันเปลี่ยนไปเป็นเอกสารอื่น',
+        `customer-money-receive:cancel:${recordId}:context-changed:error`,
+      );
+      return;
+    }
+
+    feedback.actionSuccess('ยกเลิกเอกสารรับเงินเรียบร้อยแล้ว', `customer-money-receive:cancel:${recordId}:success`);
+    setCancelOpen(false);
+    setCancelReason('');
+
+    const refreshOutcome = await loadRecord(recordId);
+    if (!ownsCancelRequest()) return;
+
+    if (!refreshOutcome.ok && !refreshOutcome.stale) {
+      const partialMessage = 'ยกเลิกเอกสารรับเงินสำเร็จแล้ว แต่โหลดสถานะเอกสารล่าสุดไม่สำเร็จ';
+      setRefreshWarning(partialMessage);
+      feedback.actionError(
+        refreshOutcome.error,
+        partialMessage,
+        `customer-money-receive:cancel:${recordId}:refresh:error`,
+      );
+    }
+
+    if (ownsCancelRequest()) {
       cancellingRef.current = false;
       setCancelling(false);
     }
@@ -93,6 +165,8 @@ const CustomerMoneyReceiveDetailPage = () => {
         <button type="button" disabled={cancelling} onClick={() => navigate('./print')} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">ออกใบรับเงิน / พิมพ์</button>
         {canCancel && !cancelOpen && <button type="button" onClick={requestCancel} disabled={cancelling} className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:opacity-50">ยกเลิกเอกสารรับเงิน</button>}
       </div>
+
+      {refreshWarning && <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-800">{refreshWarning}</div>}
 
       {canCancel && cancelOpen && (
         <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4">

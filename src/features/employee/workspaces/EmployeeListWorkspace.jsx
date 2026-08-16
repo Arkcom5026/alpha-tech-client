@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system';
 import EmployeeTable from '../components/EmployeeTable';
 import { getAllEmployees, getBranchDropdowns } from '../api/employeeApi';
 import useEmployeeStore from '../store/employeeStore';
@@ -24,6 +25,18 @@ const ListEmployeePage = () => {
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
   const [total, setTotal] = useState(0);
+  const listContextRef = useRef(null);
+  const listRequestRef = useRef(0);
+  const branchOptionsRequestRef = useRef(0);
+
+  const contextSnapshot = useMemo(() => ({
+    shopSlug: shopSlug || '',
+    branchId: branchId == null ? null : Number(branchId),
+    isSuperAdmin,
+    token,
+  }), [branchId, isSuperAdmin, shopSlug, token]);
+  listContextRef.current = contextSnapshot;
+
   const pages = useMemo(() => Math.max(1, Math.ceil(total / Math.max(1, limit))), [total, limit]);
 
   const filtered = useMemo(() => {
@@ -53,35 +66,68 @@ const ListEmployeePage = () => {
     setPage(1);
   };
 
-  const fetchEmployees = async () => {
+  const ownsListRequest = useCallback((requestId, snapshot) => {
+    const current = listContextRef.current;
+    return listRequestRef.current === requestId
+      && current?.shopSlug === snapshot.shopSlug
+      && current?.branchId === snapshot.branchId
+      && current?.isSuperAdmin === snapshot.isSuperAdmin
+      && current?.token === snapshot.token;
+  }, []);
+
+  const fetchEmployees = useCallback(async () => {
+    const snapshot = { ...listContextRef.current };
+    const requestId = ++listRequestRef.current;
+    const branchScope = snapshot.isSuperAdmin ? 'all' : (snapshot.branchId ?? 'none');
     setLoading(true);
     setError('');
     try {
-      const branchParam = isSuperAdmin ? undefined : branchId;
+      const branchParam = snapshot.isSuperAdmin ? undefined : snapshot.branchId;
       const data = await getAllEmployees({ page: 1, limit: 10000, status: 'all', branchId: branchParam });
+      if (!ownsListRequest(requestId, snapshot)) return { ok: false, stale: true };
       const items = Array.isArray(data) ? data : (data?.items || []);
       setAllEmployees(items);
       setTotal(items.length);
+      return { ok: true, items };
     } catch (err) {
-      console.error('❌ โหลดพนักงานล้มเหลว:', err);
-      setError(err?.response?.data?.message || err?.message || 'โหลดข้อมูลล้มเหลว');
+      if (!ownsListRequest(requestId, snapshot)) return { ok: false, stale: true, error: err };
+      const message = err?.response?.data?.message || err?.message || 'โหลดข้อมูลล้มเหลว';
+      setError(message);
+      feedback.actionError(err, 'โหลดข้อมูลพนักงานไม่สำเร็จ', `employee:list:${branchScope}:load:error`);
+      return { ok: false, error: err };
     } finally {
-      setLoading(false);
+      if (ownsListRequest(requestId, snapshot)) setLoading(false);
     }
-  };
+  }, [ownsListRequest]);
 
-  useEffect(() => { fetchEmployees(); }, [token, isSuperAdmin, branchId]);
+  useEffect(() => {
+    setAllEmployees([]);
+    setError('');
+    setPage(1);
+    fetchEmployees();
+  }, [contextSnapshot, fetchEmployees]);
+
   useEffect(() => { setPage(1); }, [filters, branchFilter]);
 
   useEffect(() => {
-    if (!isSuperAdmin) return;
+    const requestId = ++branchOptionsRequestRef.current;
+    if (!isSuperAdmin) {
+      setBranchOptions([]);
+      setBranchFilter('all');
+      return;
+    }
     (async () => {
       try {
         const rows = await getBranchDropdowns();
+        if (branchOptionsRequestRef.current !== requestId || !listContextRef.current?.isSuperAdmin) return;
         setBranchOptions(Array.isArray(rows) ? rows : []);
-      } catch {}
+      } catch (err) {
+        if (branchOptionsRequestRef.current !== requestId || !listContextRef.current?.isSuperAdmin) return;
+        setBranchOptions([]);
+        feedback.actionError(err, 'โหลดรายการสาขาไม่สำเร็จ', 'employee:list:branches:load:error');
+      }
     })();
-  }, [isSuperAdmin]);
+  }, [isSuperAdmin, token]);
 
   const handleToggleActive = async (id, nextActive) => setEmployeeActiveAction(id, nextActive);
 

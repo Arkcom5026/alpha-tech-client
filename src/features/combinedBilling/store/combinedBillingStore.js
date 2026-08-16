@@ -10,6 +10,10 @@ import {
   getConsolidatedDelivery,
 } from '../api/combinedBillingApi';
 
+let combinedBillingCanonicalRequestSequence = 0;
+let combinedBillingHistoryRequestSequence = 0;
+let combinedBillingDetailRequestSequence = 0;
+
 const useCombinedBillingStore = create((set, get) => ({
   combinableSales: [],
   combinedBilling: null,
@@ -36,29 +40,44 @@ const useCombinedBillingStore = create((set, get) => ({
 
   // ✅ สร้างเอกสารรวมใบส่งของ
   createCombinedBillingDocumentAction: async (saleIds, note = '') => {
+    const requestId = ++combinedBillingCanonicalRequestSequence;
     set({ loading: true, error: null });
     try {
       const document = await createCombinedBillingDocument(saleIds, note);
-      set({ combinedBilling: document });
+      if (requestId === combinedBillingCanonicalRequestSequence) {
+        set({ combinedBilling: document });
+      }
       return document;
     } catch (error) {
-      set({ error });
+      if (requestId === combinedBillingCanonicalRequestSequence) {
+        set({ error });
+      }
       throw error;
     } finally {
-      set({ loading: false });
+      if (requestId === combinedBillingCanonicalRequestSequence) {
+        set({ loading: false });
+      }
     }
   },
 
   // ✅ ดึงข้อมูลเอกสารรวมตาม id
   loadCombinedBillingByIdAction: async (id) => {
-    set({ loading: true, error: null });
+    const requestId = ++combinedBillingCanonicalRequestSequence;
+    const documentIdSnapshot = Number(id);
+    set({ combinedBilling: null, loading: true, error: null });
     try {
-      const document = await getCombinedBillingById(id);
+      const document = await getCombinedBillingById(documentIdSnapshot);
+      if (requestId !== combinedBillingCanonicalRequestSequence) return null;
       set({ combinedBilling: document });
+      return document;
     } catch (error) {
+      if (requestId !== combinedBillingCanonicalRequestSequence) return null;
       set({ error });
+      return null;
     } finally {
-      set({ loading: false });
+      if (requestId === combinedBillingCanonicalRequestSequence) {
+        set({ loading: false });
+      }
     }
   },
 
@@ -107,29 +126,52 @@ const useCombinedBillingStore = create((set, get) => ({
 
   confirmDocumentWorkspaceAction: async (payload) => {
     if (get().loading) return null;
+    const requestId = ++combinedBillingCanonicalRequestSequence;
     set({ loading: true, error: null });
     try {
       const document = await confirmDocumentWorkspace(payload);
-      set({ combinedBilling: document });
+      if (requestId === combinedBillingCanonicalRequestSequence) {
+        set({ combinedBilling: document });
+      }
       return document;
     } catch (error) {
-      set({ error });
+      if (requestId === combinedBillingCanonicalRequestSequence) {
+        set({ error });
+      }
       throw error;
     } finally {
-      set({ loading: false });
+      if (requestId === combinedBillingCanonicalRequestSequence) {
+        set({ loading: false });
+      }
     }
   },
 
   loadHistoryAction: async () => {
-    const history = await listConsolidatedDeliveries();
-    set({ history });
-    return history;
+    const requestId = ++combinedBillingHistoryRequestSequence;
+    try {
+      const history = await listConsolidatedDeliveries();
+      if (requestId !== combinedBillingHistoryRequestSequence) return null;
+      set({ history });
+      return history;
+    } catch (error) {
+      if (requestId !== combinedBillingHistoryRequestSequence) return null;
+      throw error;
+    }
   },
 
   loadDocumentDetailAction: async (id) => {
-    const selectedDocument = await getConsolidatedDelivery(id);
-    set({ selectedDocument });
-    return selectedDocument;
+    const requestId = ++combinedBillingDetailRequestSequence;
+    const documentIdSnapshot = Number(id);
+    set({ selectedDocument: null });
+    try {
+      const selectedDocument = await getConsolidatedDelivery(documentIdSnapshot);
+      if (requestId !== combinedBillingDetailRequestSequence) return null;
+      set({ selectedDocument });
+      return selectedDocument;
+    } catch (error) {
+      if (requestId !== combinedBillingDetailRequestSequence) return null;
+      throw error;
+    }
   },
 }));
 

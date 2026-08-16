@@ -37,15 +37,18 @@ const WithholdingTaxWorkspacePage = () => {
   const mutationRef = useRef(false);
 
   const load = useCallback(async () => {
-    if (!branchId || !taxPeriodId) return;
+    if (!branchId || !taxPeriodId) return { ok: false, error: null };
     setLoading(true);
     setError('');
     try {
-      setData(await getWithholdingTaxWorkspace({ branchId, taxPeriodId }));
+      const workspace = await getWithholdingTaxWorkspace({ branchId, taxPeriodId });
+      setData(workspace);
+      return { ok: true, data: workspace, error: null };
     } catch (requestError) {
       const message = getWithholdingTaxErrorMessage(requestError);
       setError(message);
       feedback.error(message);
+      return { ok: false, data: null, error: requestError };
     } finally {
       setLoading(false);
     }
@@ -70,46 +73,100 @@ const WithholdingTaxWorkspacePage = () => {
   }, [rows]);
 
   const run = async (key, work, successMessage) => {
-    if (mutationRef.current || busyKey || loading) return false;
+    if (mutationRef.current || busyKey || loading || !branchId || !taxPeriodId) return false;
+
+    const branchIdSnapshot = Number(branchId);
+    const taxPeriodIdSnapshot = taxPeriodId;
     mutationRef.current = true;
     setBusyKey(key);
     try {
-      await work();
-      feedback.actionSuccess(successMessage, `withholding-tax:${taxPeriodId}:${key}:success`);
-      await load();
-      return true;
+      await work({ branchIdSnapshot, taxPeriodIdSnapshot });
     } catch (requestError) {
       feedback.actionError(
         requestError,
         getWithholdingTaxErrorMessage(requestError),
-        `withholding-tax:${taxPeriodId}:${key}:error`,
+        `withholding-tax:${taxPeriodIdSnapshot}:${key}:error`,
       );
       return false;
-    } finally {
-      mutationRef.current = false;
-      setBusyKey('');
     }
+
+    feedback.actionSuccess(successMessage, `withholding-tax:${taxPeriodIdSnapshot}:${key}:success`);
+    const refreshResult = await load();
+    if (!refreshResult?.ok) {
+      feedback.actionError(
+        refreshResult?.error,
+        'ดำเนินการ WHT สำเร็จแล้ว แต่รีเฟรชข้อมูล WHT ล่าสุดไม่สำเร็จ',
+        `withholding-tax:${taxPeriodIdSnapshot}:${key}:refresh:error`,
+      );
+    }
+
+    mutationRef.current = false;
+    setBusyKey('');
+    return true;
   };
 
-  const transition = async (row, resultingTreatment) => run(
-    `treatment:${row.taxExpenseItemId}`,
-    () => transitionWithholdingTreatment({ branchId, taxExpenseItemId: row.taxExpenseItemId, resultingTreatment }),
-    resultingTreatment === 'WITHHOLDING_REQUIRED' ? 'ยืนยันว่ารายการนี้ต้องหัก WHT แล้ว' : 'ยืนยันว่าหัก WHT แล้ว',
-  );
+  const transition = async (row, resultingTreatment) => {
+    const taxExpenseItemIdSnapshot = row.taxExpenseItemId;
+    return run(
+      `treatment:${taxExpenseItemIdSnapshot}`,
+      ({ branchIdSnapshot }) => transitionWithholdingTreatment({
+        branchId: branchIdSnapshot,
+        taxExpenseItemId: taxExpenseItemIdSnapshot,
+        resultingTreatment,
+      }),
+      resultingTreatment === 'WITHHOLDING_REQUIRED' ? 'ยืนยันว่ารายการนี้ต้องหัก WHT แล้ว' : 'ยืนยันว่าหัก WHT แล้ว',
+    );
+  };
 
   const issue = async (group) => {
     if (mutationRef.current || busyKey || loading) return false;
     const first = group[0];
-    const selectedForm = first.recommendedFormType || manualForms[first.taxExpenseId];
-    if (!selectedForm) {
+    const taxExpenseIdSnapshot = first.taxExpenseId;
+    const selectedFormSnapshot = first.recommendedFormType || manualForms[taxExpenseIdSnapshot];
+    const expenseNumberSnapshot = first.expenseNumber;
+    if (!selectedFormSnapshot) {
       feedback.warning('กรุณาเลือก ภ.ง.ด.3 หรือ ภ.ง.ด.53 สำหรับผู้รับเงินรายนี้');
       return false;
     }
-    return run(`cert:${first.taxExpenseId}`, () => issueWithholdingCertificate({ branchId, taxPeriodId, taxExpenseId: first.taxExpenseId, formType: selectedForm }), `ออกหนังสือรับรอง WHT ${first.expenseNumber} แล้ว`);
+    return run(
+      `cert:${taxExpenseIdSnapshot}`,
+      ({ branchIdSnapshot, taxPeriodIdSnapshot }) => issueWithholdingCertificate({
+        branchId: branchIdSnapshot,
+        taxPeriodId: taxPeriodIdSnapshot,
+        taxExpenseId: taxExpenseIdSnapshot,
+        formType: selectedFormSnapshot,
+      }),
+      `ออกหนังสือรับรอง WHT ${expenseNumberSnapshot} แล้ว`,
+    );
   };
 
-  const prepare = async (formType) => run(`prepare:${formType}`, () => prepareWithholdingFiling({ branchId, taxPeriodId, formType }), `เตรียม ${formLabel(formType)} แล้ว`);
-  const submit = async (formType) => run(`submit:${formType}`, () => submitWithholdingFiling({ branchId, taxPeriodId, formType, reference: references[formType] }), `บันทึกหลักฐานการยื่น ${formLabel(formType)} แล้ว`);
+  const prepare = async (formType) => {
+    const formTypeSnapshot = formType;
+    return run(
+      `prepare:${formTypeSnapshot}`,
+      ({ branchIdSnapshot, taxPeriodIdSnapshot }) => prepareWithholdingFiling({
+        branchId: branchIdSnapshot,
+        taxPeriodId: taxPeriodIdSnapshot,
+        formType: formTypeSnapshot,
+      }),
+      `เตรียม ${formLabel(formTypeSnapshot)} แล้ว`,
+    );
+  };
+
+  const submit = async (formType) => {
+    const formTypeSnapshot = formType;
+    const referenceSnapshot = String(references[formTypeSnapshot] || '').trim();
+    return run(
+      `submit:${formTypeSnapshot}`,
+      ({ branchIdSnapshot, taxPeriodIdSnapshot }) => submitWithholdingFiling({
+        branchId: branchIdSnapshot,
+        taxPeriodId: taxPeriodIdSnapshot,
+        formType: formTypeSnapshot,
+        reference: referenceSnapshot,
+      }),
+      `บันทึกหลักฐานการยื่น ${formLabel(formTypeSnapshot)} แล้ว`,
+    );
+  };
 
   return (
     <section className="space-y-5">

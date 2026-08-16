@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Building2 } from 'lucide-react';
 
@@ -15,33 +15,85 @@ import useSupplierFormRuntime from './useSupplierFormRuntime';
 const SupplierCreateWorkspace = () => {
   const [loading, setLoading] = useState(false);
   const mutationRef = useRef(false);
+  const createRequestRef = useRef(0);
+  const createContextRef = useRef({ shopSlug: '', branchId: null });
   const navigate = useNavigate();
   const { shopSlug } = useParams();
   const { createSupplierAction } = useSupplierStore();
   const { banks, branchId, formSyncReady } = useSupplierFormRuntime();
   const paths = useMemo(() => createSupplierPaths(shopSlug), [shopSlug]);
 
+  useEffect(() => {
+    const previous = createContextRef.current;
+    const changed = previous.shopSlug !== (shopSlug || '') || previous.branchId !== branchId;
+    createContextRef.current = { shopSlug: shopSlug || '', branchId };
+    if (changed && mutationRef.current) {
+      createRequestRef.current += 1;
+      mutationRef.current = false;
+      setLoading(false);
+    }
+  }, [shopSlug, branchId]);
+
   const handleCreateSupplier = async (formData) => {
     if (loading || mutationRef.current) return;
     if (!branchId) {
-      feedback.actionError(new Error('ยังไม่ได้เลือกสาขา'), 'ยังไม่ได้เลือกสาขา', 'supplier:create:error');
+      feedback.actionError(new Error('ยังไม่ได้เลือกสาขา'), 'ยังไม่ได้เลือกสาขา', 'supplier:create:branch-missing:error');
       return;
     }
 
     const payload = normalizeSupplierMutationPayload(formData);
-    const listPath = paths.list;
+    const shopSlugSnapshot = shopSlug || '';
+    const branchIdSnapshot = branchId;
+    const listPath = createSupplierPaths(shopSlugSnapshot).list;
+    const requestId = createRequestRef.current + 1;
+    createRequestRef.current = requestId;
 
     mutationRef.current = true;
     setLoading(true);
     try {
       await createSupplierAction(payload);
-      feedback.actionSuccess('เพิ่มผู้ขายเรียบร้อยแล้ว', 'supplier:create:success');
+      feedback.actionSuccess(
+        'เพิ่มผู้ขายเรียบร้อยแล้ว',
+        `supplier:create:${branchIdSnapshot}:success`,
+      );
+
+      const currentContext = createContextRef.current;
+      const stillOwnsContext =
+        createRequestRef.current === requestId &&
+        currentContext.shopSlug === shopSlugSnapshot &&
+        currentContext.branchId === branchIdSnapshot;
+      if (!stillOwnsContext) {
+        feedback.warning(
+          'เพิ่มผู้ขายสำเร็จแล้ว แต่บริบทสาขาหรือร้านเปลี่ยนระหว่างดำเนินการ จึงไม่เปลี่ยนหน้าอัตโนมัติ',
+          `supplier:create:${branchIdSnapshot}:context-changed:error`,
+        );
+        return;
+      }
+
       navigate(listPath);
     } catch (error) {
-      feedback.actionError(error, 'เพิ่มผู้ขายไม่สำเร็จ', 'supplier:create:error');
+      const currentContext = createContextRef.current;
+      const stillOwnsContext =
+        createRequestRef.current === requestId &&
+        currentContext.shopSlug === shopSlugSnapshot &&
+        currentContext.branchId === branchIdSnapshot;
+      if (stillOwnsContext) {
+        feedback.actionError(
+          error,
+          'เพิ่มผู้ขายไม่สำเร็จ',
+          `supplier:create:${branchIdSnapshot}:error`,
+        );
+      }
     } finally {
-      mutationRef.current = false;
-      setLoading(false);
+      const currentContext = createContextRef.current;
+      const stillOwnsContext =
+        createRequestRef.current === requestId &&
+        currentContext.shopSlug === shopSlugSnapshot &&
+        currentContext.branchId === branchIdSnapshot;
+      if (stillOwnsContext) {
+        mutationRef.current = false;
+        setLoading(false);
+      }
     }
   };
 

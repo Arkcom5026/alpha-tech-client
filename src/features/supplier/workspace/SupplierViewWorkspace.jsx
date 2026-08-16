@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   User,
 } from 'lucide-react';
 
+import { feedback } from '@/design-system';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { getSupplierById } from '../api/supplierApi';
 import { createSupplierPaths } from './supplierWorkspacePolicy';
@@ -26,22 +27,62 @@ const SupplierViewWorkspace = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const paths = useMemo(() => createSupplierPaths(shopSlug), [shopSlug]);
+  const contextKey = `${id || ''}:${shopSlug || ''}:${selectedBranchId || ''}`;
+  const supplierContextRef = useRef(contextKey);
+  const loadRequestRef = useRef(0);
+  supplierContextRef.current = contextKey;
 
   useEffect(() => {
+    const supplierIdSnapshot = id;
+    const shopSlugSnapshot = shopSlug || '';
+    const branchIdSnapshot = selectedBranchId;
+    const contextKeySnapshot = `${supplierIdSnapshot || ''}:${shopSlugSnapshot}:${branchIdSnapshot || ''}`;
+    const requestId = ++loadRequestRef.current;
+
+    setSupplier(null);
+    setError(null);
+
+    if (!supplierIdSnapshot || !branchIdSnapshot) {
+      setLoading(false);
+      return undefined;
+    }
+
     const fetchSupplier = async () => {
+      setLoading(true);
       try {
-        const data = await getSupplierById(id);
+        const data = await getSupplierById(supplierIdSnapshot);
+        if (
+          loadRequestRef.current !== requestId
+          || supplierContextRef.current !== contextKeySnapshot
+        ) return;
         setSupplier(data);
       } catch (err) {
-        console.error('❌ ไม่สามารถโหลดข้อมูลผู้ขายได้', err);
-        setError('ไม่สามารถเรียกข้อมูลบริษัทคู่ค้าจากเซิร์ฟเวอร์ส่วนกลางได้');
+        if (
+          loadRequestRef.current !== requestId
+          || supplierContextRef.current !== contextKeySnapshot
+        ) return;
+        const message = 'ไม่สามารถเรียกข้อมูลบริษัทคู่ค้าจากเซิร์ฟเวอร์ส่วนกลางได้';
+        setError(message);
+        feedback.actionError(
+          err,
+          'โหลดข้อมูลผู้ขายไม่สำเร็จ',
+          `supplier:view:${supplierIdSnapshot}:load:error`,
+        );
       } finally {
-        setLoading(false);
+        if (
+          loadRequestRef.current === requestId
+          && supplierContextRef.current === contextKeySnapshot
+        ) {
+          setLoading(false);
+        }
       }
     };
 
-    if (id && selectedBranchId) fetchSupplier();
-  }, [id, selectedBranchId]);
+    fetchSupplier();
+    return () => {
+      if (loadRequestRef.current === requestId) loadRequestRef.current += 1;
+    };
+  }, [id, shopSlug, selectedBranchId]);
 
   if (!selectedBranchId) {
     return (

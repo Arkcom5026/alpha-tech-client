@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import { feedback } from '@/design-system/feedback';
 import { useBranchStore } from '@/features/branch/store/branchStore';
@@ -17,51 +17,101 @@ const SalesTaxFilingPage = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [pendingSubmit, setPendingSubmit] = useState(null);
+  const mutationRef = useRef(false);
 
-  const load = useCallback(async () => {
-    if (!branchId) return;
-    const result = await listSalesTaxFilings({ branchId, year, month });
-    setBatches(result?.batches || []);
+  const load = useCallback(async ({ reportError = true } = {}) => {
+    if (!branchId) return { ok: false, batches: null, skipped: true, error: null };
+    try {
+      const result = await listSalesTaxFilings({ branchId, year, month });
+      const nextBatches = result?.batches || [];
+      setBatches(nextBatches);
+      return { ok: true, batches: nextBatches, error: null };
+    } catch (requestError) {
+      const message = errorMessage(requestError, 'โหลดชุดยื่นภาษีขายไม่สำเร็จ');
+      setError(message);
+      if (reportError) {
+        feedback.actionError(requestError, 'โหลดชุดยื่นภาษีขายไม่สำเร็จ', 'sales-tax-filing:load:error');
+      }
+      return { ok: false, batches: null, error: requestError };
+    }
   }, [branchId, month, year]);
 
   useEffect(() => {
-    load().catch((requestError) => {
-      setError(errorMessage(requestError, 'โหลดชุดยื่นภาษีขายไม่สำเร็จ'));
-      feedback.actionError(requestError, 'โหลดชุดยื่นภาษีขายไม่สำเร็จ', 'sales-tax-filing:load:error');
-    });
+    load();
   }, [load]);
 
   const prepare = async () => {
-    if (busy || !branchId) return;
+    if (mutationRef.current || busy || !branchId) return;
+    const branchIdSnapshot = branchId;
+    const yearSnapshot = year;
+    const monthSnapshot = month;
+    mutationRef.current = true;
     setBusy(true);
     setError('');
     try {
-      const result = await prepareSalesTaxFiling({ branchId, year, month });
+      const result = await prepareSalesTaxFiling({
+        branchId: branchIdSnapshot,
+        year: yearSnapshot,
+        month: monthSnapshot,
+      });
       setDetail(result);
-      feedback.actionSuccess('เตรียมชุดยื่นภาษีขายเรียบร้อยแล้ว', 'sales-tax-filing:prepare:success');
-      await load();
+      feedback.actionSuccess(
+        'เตรียมชุดยื่นภาษีขายเรียบร้อยแล้ว',
+        `sales-tax-filing:${branchIdSnapshot}:${yearSnapshot}:${monthSnapshot}:prepare:success`,
+      );
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        feedback.warning(
+          'เตรียมชุดยื่นภาษีขายสำเร็จแล้ว แต่โหลดรายการล่าสุดไม่สำเร็จ กรุณากดโหลดใหม่',
+          'sales-tax-filing:prepare:refresh:error',
+        );
+      }
     } catch (requestError) {
       setError(errorMessage(requestError, 'เตรียมชุดยื่นภาษีขายไม่สำเร็จ'));
-      feedback.actionError(requestError, 'เตรียมชุดยื่นภาษีขายไม่สำเร็จ', 'sales-tax-filing:prepare:error');
+      feedback.actionError(
+        requestError,
+        'เตรียมชุดยื่นภาษีขายไม่สำเร็จ',
+        `sales-tax-filing:${branchIdSnapshot}:${yearSnapshot}:${monthSnapshot}:prepare:error`,
+      );
     } finally {
+      if (mutationRef.current) mutationRef.current = false;
       setBusy(false);
     }
   };
 
   const confirmSubmit = async () => {
-    if (!pendingSubmit || busy) return;
+    if (!pendingSubmit || mutationRef.current || busy) return;
+    const branchIdSnapshot = branchId;
+    const batchIdSnapshot = pendingSubmit.id;
+    const batchYearSnapshot = pendingSubmit.year;
+    const batchMonthSnapshot = pendingSubmit.month;
+    mutationRef.current = true;
     setBusy(true);
     setError('');
     try {
-      const result = await submitSalesTaxFiling({ branchId, batchId: pendingSubmit.id });
+      const result = await submitSalesTaxFiling({ branchId: branchIdSnapshot, batchId: batchIdSnapshot });
       setDetail(result?.batch);
       setPendingSubmit(null);
-      feedback.actionSuccess('ยืนยันชุดยื่นภาษีขายเรียบร้อยแล้ว', 'sales-tax-filing:submit:success');
-      await load();
+      feedback.actionSuccess(
+        'ยืนยันชุดยื่นภาษีขายเรียบร้อยแล้ว',
+        `sales-tax-filing:${branchIdSnapshot}:batch:${batchIdSnapshot}:submit:success`,
+      );
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        feedback.warning(
+          `ยืนยันชุดยื่นภาษีขาย ${String(batchMonthSnapshot).padStart(2, '0')}/${batchYearSnapshot} สำเร็จแล้ว แต่โหลดรายการล่าสุดไม่สำเร็จ กรุณากดโหลดใหม่`,
+          'sales-tax-filing:submit:refresh:error',
+        );
+      }
     } catch (requestError) {
       setError(errorMessage(requestError, 'ยืนยันชุดยื่นภาษีขายไม่สำเร็จ'));
-      feedback.actionError(requestError, 'ยืนยันชุดยื่นภาษีขายไม่สำเร็จ', 'sales-tax-filing:submit:error');
+      feedback.actionError(
+        requestError,
+        'ยืนยันชุดยื่นภาษีขายไม่สำเร็จ',
+        `sales-tax-filing:${branchIdSnapshot}:batch:${batchIdSnapshot}:submit:error`,
+      );
     } finally {
+      if (mutationRef.current) mutationRef.current = false;
       setBusy(false);
     }
   };
@@ -75,8 +125,8 @@ const SalesTaxFilingPage = () => {
         </header>
 
         <section className="flex flex-wrap items-end gap-3 rounded-2xl border bg-white p-4">
-          <label>ปี<input className="ml-2 rounded border px-3 py-2" type="number" value={year} onChange={(event) => setYear(Number(event.target.value))} /></label>
-          <label>เดือน<select className="ml-2 rounded border px-3 py-2" value={month} onChange={(event) => setMonth(Number(event.target.value))}>{Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}</select></label>
+          <label>ปี<input disabled={busy} className="ml-2 rounded border px-3 py-2 disabled:opacity-50" type="number" value={year} onChange={(event) => setYear(Number(event.target.value))} /></label>
+          <label>เดือน<select disabled={busy} className="ml-2 rounded border px-3 py-2 disabled:opacity-50" value={month} onChange={(event) => setMonth(Number(event.target.value))}>{Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{index + 1}</option>)}</select></label>
           <button disabled={busy || !branchId} onClick={prepare} className="rounded-xl bg-teal-700 px-4 py-2 font-bold text-white disabled:opacity-50">{busy ? 'กำลังดำเนินการ...' : 'เตรียมชุดยื่น/อัปเดตรายการ'}</button>
         </section>
 
@@ -122,7 +172,7 @@ const SalesTaxFilingPage = () => {
         loading={busy}
         loadingLabel="กำลังยืนยัน..."
         onClose={() => {
-          if (!busy) setPendingSubmit(null);
+          if (!busy && !mutationRef.current) setPendingSubmit(null);
         }}
         onConfirm={confirmSubmit}
       />

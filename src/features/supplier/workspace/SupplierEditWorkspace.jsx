@@ -27,23 +27,57 @@ const SupplierEditWorkspace = () => {
   const [deleting, setDeleting] = useState(false);
   const [open, setOpen] = useState(false);
   const mutationRef = useRef(false);
+  const supplierContextRef = useRef({ id, shopSlug, branchId });
+  const loadRequestRef = useRef(0);
+  const mutationRequestRef = useRef(0);
   const paths = useMemo(() => createSupplierPaths(shopSlug), [shopSlug]);
   const mutationBusy = submitting || deleting || mutationRef.current;
 
   useEffect(() => {
+    supplierContextRef.current = { id, shopSlug, branchId };
+    loadRequestRef.current += 1;
+    mutationRequestRef.current += 1;
+    mutationRef.current = false;
+    setSubmitting(false);
+    setDeleting(false);
+    setOpen(false);
+    setDefaultValues(null);
+  }, [id, shopSlug, branchId]);
+
+  useEffect(() => {
+    if (!id || !branchId) return undefined;
+    const supplierIdSnapshot = id;
+    const shopSlugSnapshot = shopSlug;
+    const branchIdSnapshot = branchId;
+    const requestId = ++loadRequestRef.current;
+
+    const ownsContext = () => {
+      const current = supplierContextRef.current;
+      return loadRequestRef.current === requestId
+        && current.id === supplierIdSnapshot
+        && current.shopSlug === shopSlugSnapshot
+        && current.branchId === branchIdSnapshot;
+    };
+
     const fetchSupplier = async () => {
       try {
-        setLoading(true);
-        const data = await getSupplierById(id);
-        setDefaultValues(normalizeSupplierForForm(data));
+        if (ownsContext()) setLoading(true);
+        const data = await getSupplierById(supplierIdSnapshot);
+        if (ownsContext()) setDefaultValues(normalizeSupplierForForm(data));
       } catch (err) {
-        feedback.actionError(err, 'โหลดข้อมูลผู้ขายไม่สำเร็จ', 'supplier:edit:load:error');
+        if (ownsContext()) {
+          feedback.actionError(err, 'โหลดข้อมูลผู้ขายไม่สำเร็จ', `supplier:edit:${supplierIdSnapshot}:load:error`);
+        }
       } finally {
-        setLoading(false);
+        if (ownsContext()) setLoading(false);
       }
     };
-    if (id && branchId) fetchSupplier();
-  }, [id, branchId]);
+
+    fetchSupplier();
+    return () => {
+      if (loadRequestRef.current === requestId) loadRequestRef.current += 1;
+    };
+  }, [id, shopSlug, branchId]);
 
   const handleSubmit = async (formData) => {
     if (mutationBusy) return;
@@ -52,42 +86,84 @@ const SupplierEditWorkspace = () => {
       return;
     }
 
-    const supplierId = id;
-    const payload = normalizeSupplierMutationPayload(formData);
-    const listPath = paths.list;
+    const supplierIdSnapshot = id;
+    const shopSlugSnapshot = shopSlug;
+    const branchIdSnapshot = branchId;
+    const payloadSnapshot = normalizeSupplierMutationPayload(formData);
+    const listPathSnapshot = createSupplierPaths(shopSlugSnapshot).list;
+    const requestId = ++mutationRequestRef.current;
+    const ownsContext = () => {
+      const current = supplierContextRef.current;
+      return mutationRequestRef.current === requestId
+        && current.id === supplierIdSnapshot
+        && current.shopSlug === shopSlugSnapshot
+        && current.branchId === branchIdSnapshot;
+    };
 
     mutationRef.current = true;
     setSubmitting(true);
     try {
-      await updateSupplierAction(supplierId, payload);
-      feedback.actionSuccess('บันทึกการแก้ไขผู้ขายเรียบร้อยแล้ว', 'supplier:update:success');
-      navigate(listPath);
+      await updateSupplierAction(supplierIdSnapshot, payloadSnapshot);
+      feedback.actionSuccess('บันทึกการแก้ไขผู้ขายเรียบร้อยแล้ว', `supplier:update:${supplierIdSnapshot}:success`);
+      if (!ownsContext()) {
+        feedback.warning(
+          'บันทึกข้อมูลผู้ขายสำเร็จแล้ว แต่หน้าปัจจุบันเปลี่ยนไปเป็นผู้ขายหรือร้านอื่น จึงไม่เปลี่ยนหน้าอัตโนมัติ',
+          `supplier:update:${supplierIdSnapshot}:context-changed:error`,
+        );
+        return;
+      }
+      navigate(listPathSnapshot);
     } catch (err) {
-      feedback.actionError(err, 'บันทึกการแก้ไขผู้ขายไม่สำเร็จ', 'supplier:update:error');
+      if (ownsContext()) {
+        feedback.actionError(err, 'บันทึกการแก้ไขผู้ขายไม่สำเร็จ', `supplier:update:${supplierIdSnapshot}:error`);
+      }
     } finally {
-      mutationRef.current = false;
-      setSubmitting(false);
+      if (ownsContext()) {
+        mutationRef.current = false;
+        setSubmitting(false);
+      }
     }
   };
 
   const handleDelete = async () => {
     if (mutationBusy) return;
 
-    const supplierId = id;
-    const listPath = paths.list;
+    const supplierIdSnapshot = id;
+    const shopSlugSnapshot = shopSlug;
+    const branchIdSnapshot = branchId;
+    const listPathSnapshot = createSupplierPaths(shopSlugSnapshot).list;
+    const requestId = ++mutationRequestRef.current;
+    const ownsContext = () => {
+      const current = supplierContextRef.current;
+      return mutationRequestRef.current === requestId
+        && current.id === supplierIdSnapshot
+        && current.shopSlug === shopSlugSnapshot
+        && current.branchId === branchIdSnapshot;
+    };
 
     mutationRef.current = true;
     setDeleting(true);
     try {
-      await deleteSupplierAction(supplierId);
+      await deleteSupplierAction(supplierIdSnapshot);
+      feedback.actionSuccess('ลบผู้ขายเรียบร้อยแล้ว', `supplier:delete:${supplierIdSnapshot}:success`);
+      if (!ownsContext()) {
+        feedback.warning(
+          'ลบผู้ขายสำเร็จแล้ว แต่หน้าปัจจุบันเปลี่ยนไปเป็นผู้ขายหรือร้านอื่น จึงไม่เปลี่ยนหน้าอัตโนมัติ',
+          `supplier:delete:${supplierIdSnapshot}:context-changed:error`,
+        );
+        return;
+      }
       setOpen(false);
-      feedback.actionSuccess('ลบผู้ขายเรียบร้อยแล้ว', 'supplier:delete:success');
-      navigate(listPath);
+      navigate(listPathSnapshot);
     } catch (err) {
-      feedback.actionError(err, 'ลบผู้ขายไม่สำเร็จ', 'supplier:delete:error');
+      if (ownsContext()) {
+        feedback.actionError(err, 'ลบผู้ขายไม่สำเร็จ', `supplier:delete:${supplierIdSnapshot}:error`);
+      }
     } finally {
-      mutationRef.current = false;
-      setDeleting(false);
+      if (ownsContext()) {
+        mutationRef.current = false;
+        setDeleting(false);
+      }
     }
   };
 

@@ -1,5 +1,5 @@
 // src/features/stock/brand/pages/EditBrandPage.jsx
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { feedback } from '@/design-system'
 import { useBrandStore } from '../store/brandStore'
@@ -31,6 +31,7 @@ const EditBrandPage = () => {
 
   const [name, setName] = useState('')
   const [touched, setTouched] = useState(false)
+  const mutationRef = useRef(false)
 
   useEffect(() => {
     clearErrorAction()
@@ -55,7 +56,7 @@ const EditBrandPage = () => {
   }, [numericId])
 
   useEffect(() => {
-    if (existing) {
+    if (existing && !mutationRef.current) {
       setName(existing.name || '')
       setTouched(false)
     }
@@ -67,47 +68,61 @@ const EditBrandPage = () => {
 
   const onSubmit = async (e) => {
     e?.preventDefault?.()
+    if (saving || mutationRef.current) return
+
     clearErrorAction()
     setTouched(true)
 
-    if (!numericId || !nameTrim || saving) return
+    const brandIdSnapshot = numericId
+    const nameSnapshot = String(name || '').trim()
+    const listPathSnapshot = listPath
+    if (!brandIdSnapshot || !nameSnapshot) return
 
+    mutationRef.current = true
     try {
-      const result = await updateBrandAction({ id: numericId, name: nameTrim })
+      const result = await updateBrandAction({ id: brandIdSnapshot, name: nameSnapshot })
       if (result?.ok) {
-        feedback.actionSuccess('บันทึกการแก้ไขแบรนด์เรียบร้อยแล้ว', 'brand:update:success')
-        navigate(listPath)
+        feedback.actionSuccess('บันทึกการแก้ไขแบรนด์เรียบร้อยแล้ว', `brand:${brandIdSnapshot}:update:success`)
+        navigate(listPathSnapshot)
         return
       }
-      feedback.error(error || 'บันทึกการแก้ไขแบรนด์ไม่สำเร็จ', { eventKey: 'brand:update:error' })
+      feedback.error(error || 'บันทึกการแก้ไขแบรนด์ไม่สำเร็จ', { eventKey: `brand:${brandIdSnapshot}:update:error` })
     } catch (updateError) {
-      feedback.actionError(updateError, 'บันทึกการแก้ไขแบรนด์ไม่สำเร็จ', 'brand:update:error')
+      feedback.actionError(updateError, 'บันทึกการแก้ไขแบรนด์ไม่สำเร็จ', `brand:${brandIdSnapshot}:update:error`)
+    } finally {
+      mutationRef.current = false
     }
   }
 
   const onCancel = () => {
-    if (saving) return
+    if (saving || mutationRef.current) return
     navigate(listPath)
   }
 
   const onToggle = async () => {
-    if (!existing?.id || saving) return
-    clearErrorAction()
+    if (!existing?.id || saving || mutationRef.current) return
+
+    const brandIdSnapshot = Number(existing.id)
     const nextActive = !existing.isActive
     const actionText = nextActive ? 'เปิดใช้งาน' : 'ปิดใช้งาน'
+    clearErrorAction()
+    mutationRef.current = true
     try {
-      const result = await toggleBrandActiveAction({ id: existing.id, isActive: nextActive })
+      const result = await toggleBrandActiveAction({ id: brandIdSnapshot, isActive: nextActive })
       if (result?.ok === false) {
-        feedback.error(error || `${actionText}แบรนด์ไม่สำเร็จ`, { eventKey: 'brand:toggle:error' })
+        feedback.error(error || `${actionText}แบรนด์ไม่สำเร็จ`, { eventKey: `brand:${brandIdSnapshot}:${nextActive ? 'activate' : 'deactivate'}:error` })
         return
       }
-      feedback.actionSuccess(`${actionText}แบรนด์เรียบร้อยแล้ว`, `brand:${nextActive ? 'activate' : 'deactivate'}:success`)
+      feedback.actionSuccess(`${actionText}แบรนด์เรียบร้อยแล้ว`, `brand:${brandIdSnapshot}:${nextActive ? 'activate' : 'deactivate'}:success`)
     } catch (toggleError) {
-      feedback.actionError(toggleError, `${actionText}แบรนด์ไม่สำเร็จ`, `brand:${nextActive ? 'activate' : 'deactivate'}:error`)
+      feedback.actionError(toggleError, `${actionText}แบรนด์ไม่สำเร็จ`, `brand:${brandIdSnapshot}:${nextActive ? 'activate' : 'deactivate'}:error`)
+    } finally {
+      mutationRef.current = false
     }
   }
 
   const notFound = numericId && !existing && !loading
+  const mutationBusy = saving || mutationRef.current
 
   return (
     <div className="p-4">
@@ -132,7 +147,8 @@ const EditBrandPage = () => {
             <button
               type="button"
               onClick={onCancel}
-              className="px-4 py-2 rounded border text-sm hover:bg-gray-50"
+              disabled={mutationBusy}
+              className="px-4 py-2 rounded border text-sm hover:bg-gray-50 disabled:opacity-60"
             >
               กลับ
             </button>
@@ -145,11 +161,15 @@ const EditBrandPage = () => {
               <label className="block text-sm font-medium mb-1">ชื่อแบรนด์</label>
               <input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
-                onBlur={() => setTouched(true)}
+                onChange={(e) => {
+                  if (!mutationRef.current) setName(e.target.value)
+                }}
+                onBlur={() => {
+                  if (!mutationRef.current) setTouched(true)
+                }}
                 placeholder="เช่น Samsung"
                 className="w-full rounded border px-3 py-2 text-sm"
-                disabled={saving || !existing}
+                disabled={mutationBusy || !existing}
               />
               {nameError ? (
                 <div className="mt-1 text-xs text-red-600">{nameError}</div>
@@ -159,15 +179,15 @@ const EditBrandPage = () => {
             <div className="flex items-center gap-2 flex-wrap">
               <button
                 type="submit"
-                disabled={saving || !existing}
+                disabled={mutationBusy || !existing}
                 className="px-4 py-2 rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-60"
               >
-                {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+                {mutationBusy ? 'กำลังบันทึก...' : 'บันทึก'}
               </button>
               <button
                 type="button"
                 onClick={onCancel}
-                disabled={saving}
+                disabled={mutationBusy}
                 className="px-4 py-2 rounded border text-sm hover:bg-gray-50 disabled:opacity-60"
               >
                 ยกเลิก
@@ -176,7 +196,7 @@ const EditBrandPage = () => {
               <button
                 type="button"
                 onClick={onToggle}
-                disabled={saving || !existing}
+                disabled={mutationBusy || !existing}
                 className="px-4 py-2 rounded border text-sm hover:bg-gray-50 disabled:opacity-60"
               >
                 {existing?.isActive ? 'ปิดใช้งาน' : 'เปิดใช้งาน'}

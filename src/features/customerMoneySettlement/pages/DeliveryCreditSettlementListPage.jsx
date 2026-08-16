@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FileText, Plus, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
@@ -10,24 +10,40 @@ const statusLabel = (status) => status === 'CANCELLED' ? 'ยกเลิกแ�
 
 const DeliveryCreditSettlementListPage = () => {
   const navigate = useNavigate();
+  const loadRequestRef = useRef(0);
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const loadRows = useCallback(async () => {
+    const requestId = ++loadRequestRef.current;
+    const ownsRequest = () => loadRequestRef.current === requestId;
+
     setLoading(true);
     setError('');
     try {
-      setRows(await listDeliveryCreditSettlements({ take: 200 }));
+      const nextRows = await listDeliveryCreditSettlements({ take: 200 });
+      if (!ownsRequest()) return { ok: false, stale: true, rows: [] };
+      const safeRows = Array.isArray(nextRows) ? nextRows : [];
+      setRows(safeRows);
+      return { ok: true, stale: false, rows: safeRows };
     } catch (err) {
+      if (!ownsRequest()) return { ok: false, stale: true, rows: [] };
+      const message = err?.response?.data?.message || err?.message || 'โหลดประวัติการตัดยอดไม่สำเร็จ';
       setRows([]);
-      setError(err?.response?.data?.message || err?.message || 'โหลดประวัติการตัดยอดไม่สำเร็จ');
+      setError(message);
+      return { ok: false, stale: false, error: message, rows: [] };
     } finally {
-      setLoading(false);
+      if (ownsRequest()) setLoading(false);
     }
   }, []);
 
-  useEffect(() => { loadRows(); }, [loadRows]);
+  useEffect(() => {
+    loadRows();
+    return () => {
+      loadRequestRef.current += 1;
+    };
+  }, [loadRows]);
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-4 p-3 md:p-5">

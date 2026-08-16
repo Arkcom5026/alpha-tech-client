@@ -1,7 +1,7 @@
 // src/features/bank/pages/CreateBankPage.jsx
 // 🏛️ Premium Next-Gen POS Bank Settings Hub: (Create Bank Form Hardened Edition)
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import useBankStore from '@/features/bank/store/bankStore';
 import { useAuthStore } from '@/features/auth/store/authStore'; // 🟢 ดึงข้อมูลสิทธิ์ร่วมสาขา
@@ -31,6 +31,8 @@ export function CreateBankPage() {
 
   const [form, setForm] = useState(emptyBank);
   const [nameError, setNameError] = useState('');
+  const savingRef = useRef(false);
+  const mutationBusy = bankSaving || savingRef.current;
 
   // 🟢 [DYNAMIC BACK LIST CONTROL - FIXED]: สับสายคำนวณพาธย้อนกลับด้วย shopSlug โดยตรง แม่นยำ 100% ไม่พึ่งพาพาสดิบเบราว์เซอร์
   const getListUrl = () => {
@@ -55,28 +57,41 @@ export function CreateBankPage() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (bankSaving) return;
-    if (!form.name || form.name.trim() === '') {
+    if (bankSaving || savingRef.current) return;
+
+    const formSnapshot = { ...form, name: form.name.trim() };
+    const idSnapshot = isEdit ? Number(id) : null;
+    const modeSnapshot = isEdit ? 'edit' : 'create';
+    if (!formSnapshot.name) {
       setNameError('กรุณาระบุชื่อธนาคาร');
       return;
     }
+
     setNameError('');
+    savingRef.current = true;
     try {
-      if (isEdit) {
-        await updateBankAction(Number(id), form);
+      if (modeSnapshot === 'edit') {
+        await updateBankAction(idSnapshot, formSnapshot);
       } else {
-        await createBankAction(form);
+        await createBankAction(formSnapshot);
       }
-      const successMessage = isEdit ? 'แก้ไขข้อมูลธนาคารแล้ว' : 'เพิ่มข้อมูลธนาคารแล้ว';
-      feedback.actionSuccess(successMessage, `bank:${isEdit ? 'edit' : 'create'}:${id || form.name.trim()}:success`);
+      const successMessage = modeSnapshot === 'edit' ? 'แก้ไขข้อมูลธนาคารแล้ว' : 'เพิ่มข้อมูลธนาคารแล้ว';
+      feedback.actionSuccess(successMessage, `bank:${modeSnapshot}:${idSnapshot || formSnapshot.name}:success`);
       navigate(getListUrl());
     } catch (err) {
       feedback.actionError(
         err,
         'บันทึกข้อมูลธนาคารไม่สำเร็จ',
-        `bank:${isEdit ? 'edit' : 'create'}:${id || 'new'}:error`,
+        `bank:${modeSnapshot}:${idSnapshot || 'new'}:error`,
       );
+    } finally {
+      savingRef.current = false;
     }
+  };
+
+  const cancel = () => {
+    if (bankSaving || savingRef.current) return;
+    navigate(getListUrl());
   };
 
   return (
@@ -84,7 +99,7 @@ export function CreateBankPage() {
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="mb-4 border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2 text-xs text-slate-400 font-bold mb-1">
-            <Link to={getListUrl()} className="transition hover:text-emerald-700">รายการธนาคาร</Link>
+            <Link to={mutationBusy ? '#' : getListUrl()} onClick={(event) => { if (mutationBusy) event.preventDefault(); }} className={`transition ${mutationBusy ? 'pointer-events-none opacity-50' : 'hover:text-emerald-700'}`}>รายการธนาคาร</Link>
             <span>/</span>
             <span className="text-slate-700">{isEdit ? 'แก้ไขข้อมูล' : 'เพิ่มบัญชีใหม่'}</span>
           </div>
@@ -92,47 +107,50 @@ export function CreateBankPage() {
         </div>
 
         <form onSubmit={onSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div className="space-y-1.5 md:col-span-2">
-              <Label htmlFor="name" className="text-xs font-black text-slate-700">ชื่อสถาบันธนาคาร / รหัสเรียกย่อ *</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => {
-                  setForm((f) => ({ ...f, name: e.target.value }));
-                  if (nameError) setNameError('');
-                }}
-                placeholder="เช่น ธนาคารกสิกรไทย (KBANK), ธนาคารไทยพาณิชย์"
-                className="h-9 text-xs font-bold rounded-xl bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 border-slate-200 shadow-inner"
-                aria-invalid={Boolean(nameError)}
-                aria-describedby={nameError ? 'bank-name-error' : undefined}
-                required
-              />
-              <FieldMessage id="bank-name-error">{nameError}</FieldMessage>
-            </div>
+          <fieldset disabled={mutationBusy} className="space-y-4 disabled:opacity-60">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="name" className="text-xs font-black text-slate-700">ชื่อสถาบันธนาคาร / รหัสเรียกย่อ *</Label>
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => {
+                    if (savingRef.current) return;
+                    setForm((f) => ({ ...f, name: e.target.value }));
+                    if (nameError) setNameError('');
+                  }}
+                  placeholder="เช่น ธนาคารกสิกรไทย (KBANK), ธนาคารไทยพาณิชย์"
+                  className="h-9 text-xs font-bold rounded-xl bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 border-slate-200 shadow-inner"
+                  aria-invalid={Boolean(nameError)}
+                  aria-describedby={nameError ? 'bank-name-error' : undefined}
+                  required
+                />
+                <FieldMessage id="bank-name-error">{nameError}</FieldMessage>
+              </div>
 
-            <div className="flex items-center gap-2 h-9 border border-emerald-100 bg-emerald-50/40 rounded-xl px-3 select-none">
-              <input
-                id="active"
-                type="checkbox"
-                checked={!!form.active}
-                onChange={(e) => setForm((f) => ({ ...f, active: e.target.checked }))}
-                className="rounded accent-emerald-600 cursor-pointer w-4 h-4"
-              />
-              <Label htmlFor="active" className="text-xs font-bold text-slate-600 cursor-pointer">เปิดระบบใช้งานทันที</Label>
+              <div className="flex items-center gap-2 h-9 border border-emerald-100 bg-emerald-50/40 rounded-xl px-3 select-none">
+                <input
+                  id="active"
+                  type="checkbox"
+                  checked={!!form.active}
+                  onChange={(e) => { if (!savingRef.current) setForm((f) => ({ ...f, active: e.target.checked })); }}
+                  className="rounded accent-emerald-600 cursor-pointer w-4 h-4"
+                />
+                <Label htmlFor="active" className="text-xs font-bold text-slate-600 cursor-pointer">เปิดระบบใช้งานทันที</Label>
+              </div>
             </div>
-          </div>
+          </fieldset>
 
           {bankError && (
             <div className="bg-rose-50 border border-rose-100 p-2 rounded-lg text-xs font-bold text-rose-600">⚠️ {bankError}</div>
           )}
 
           <div className="flex justify-end gap-2 border-t border-slate-100 pt-4 select-none">
-            <Button type="button" variant="outline" onClick={() => navigate(getListUrl())} className="h-9 px-4 rounded-xl text-xs font-bold border-slate-200">
+            <Button type="button" variant="outline" onClick={cancel} disabled={mutationBusy} className="h-9 px-4 rounded-xl text-xs font-bold border-slate-200 disabled:cursor-not-allowed disabled:opacity-50">
               ยกเลิกคำสั่ง
             </Button>
-            <Button type="submit" disabled={bankSaving} className="h-9 px-5 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
-              {bankSaving ? 'กำลังบันทึกข้อมูล...' : 'ยืนยันบันทึก'}
+            <Button type="submit" disabled={mutationBusy} className="h-9 px-5 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
+              {mutationBusy ? 'กำลังบันทึกข้อมูล...' : 'ยืนยันบันทึก'}
             </Button>
           </div>
         </form>

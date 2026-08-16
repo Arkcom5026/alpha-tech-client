@@ -21,6 +21,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
   const [companyName, setCompanyName] = useState('');
   const [taxId, setTaxId] = useState('');
   const [customerLoading, setCustomerLoading] = useState(false);
+  const [customerMutationAction, setCustomerMutationAction] = useState(null);
   const [formError, setFormError] = useState('');
   const [pendingPhone, setPendingPhone] = useState(false);
   const [isModified, setIsModified] = useState(false);
@@ -30,6 +31,9 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
   const [isClearing, setIsClearing] = useState(false);
   const [_shouldShowDetails, _setShouldShowDetails] = useState(false);
   const phoneInputRef = useRef(null);
+  const customerMutationRef = useRef(false);
+
+  const customerMutationBusy = Boolean(customerMutationAction) || customerMutationRef.current;
 
   const setShouldShowDetails = (val) => {
     console.log('🛠️ setShouldShowDetails:', val);
@@ -140,6 +144,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
   };
 
   const handleVerifyCustomer = async () => {
+    if (customerMutationRef.current) return;
     setFormError('');
     try {
       setCustomerLoading(true);
@@ -205,63 +210,98 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
 
 
   const handleSelectCustomer = (customer) => {
+    if (customerMutationRef.current) return;
     processSelectedCustomer(customer);
   };
 
   const handleUpdateCustomer = async () => {
+    if (!selectedCustomer?.id || customerMutationRef.current) return;
+
+    const customerIdSnapshot = selectedCustomer.id;
+    const payloadSnapshot = {
+      id: customerIdSnapshot,
+      name,
+      email,
+      address,
+      type: customerType,
+      companyName,
+      taxId,
+    };
+
+    customerMutationRef.current = true;
+    setCustomerMutationAction('update');
     try {
-      if (!selectedCustomer?.id) return;
-      await updateCustomerProfileAction({
-        id: selectedCustomer.id,
-        name,
-        email,
-        address,
-        type: customerType, // ✨ ส่งค่า type ที่ถูกต้อง
-        companyName,
-        taxId,
-      });
+      await updateCustomerProfileAction(payloadSnapshot);
       setIsModified(false);
-      feedback.success('อัปเดตข้อมูลลูกค้าสำเร็จ');
+      feedback.actionSuccess(
+        'อัปเดตข้อมูลลูกค้าเรียบร้อยแล้ว',
+        `customer-deposit:customer:${customerIdSnapshot}:update:success`,
+      );
     } catch (error) {
-      console.error('อัปเดตข้อมูลไม่สำเร็จ:', error);
-      feedback.error(error, { fallback: 'อัปเดตข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง' });
+      feedback.actionError(
+        error,
+        'อัปเดตข้อมูลลูกค้าไม่สำเร็จ กรุณาลองใหม่อีกครั้ง',
+        `customer-deposit:customer:${customerIdSnapshot}:update:error`,
+      );
+    } finally {
+      customerMutationRef.current = false;
+      setCustomerMutationAction(null);
     }
   };
 
   const handleConfirmCreateCustomer = async () => {
+    if (customerMutationRef.current) return;
     setFormError('');
     if (!name.trim()) {
       setFormError('กรุณากรอกชื่อลูกค้า');
       return;
     }
+
+    const payloadSnapshot = {
+      name,
+      phone: rawPhone,
+      email,
+      address,
+      type: customerType,
+      companyName,
+      taxId,
+    };
+
+    customerMutationRef.current = true;
+    setCustomerMutationAction('create');
     try {
-      const newCustomer = await createCustomerAction({
-        name,
-        phone: rawPhone,
-        email,
-        address,
-        type: customerType,
-        companyName,
-        taxId,
-      });
-      if (newCustomer?.id) {
-        setSelectedCustomer(newCustomer);
-        setCustomerIdAction(newCustomer.id);
-        feedback.success('สร้างลูกค้าใหม่สำเร็จ');
-        setShouldShowDetails(true);
-        setTimeout(() => {
-          productSearchRef?.current?.focus();
-        }, 100);
+      const newCustomer = await createCustomerAction(payloadSnapshot);
+      if (!newCustomer?.id) {
+        throw new Error('Server ไม่ได้ส่งรหัสลูกค้าที่สร้างกลับมา');
       }
+
+      setSelectedCustomer(newCustomer);
+      setCustomerIdAction(newCustomer.id);
+      feedback.actionSuccess(
+        'สร้างลูกค้าใหม่เรียบร้อยแล้ว',
+        `customer-deposit:customer:${newCustomer.id}:create:success`,
+      );
+      setShouldShowDetails(true);
+      setTimeout(() => {
+        productSearchRef?.current?.focus();
+      }, 100);
     } catch (error) {
-      console.error('สร้างลูกค้าไม่สำเร็จ:', error);
       setFormError('สร้างลูกค้าไม่สำเร็จ: ' + (error.message || 'เกิดข้อผิดพลาด'));
+      feedback.actionError(
+        error,
+        'สร้างลูกค้าใหม่ไม่สำเร็จ',
+        'customer-deposit:customer:create:error',
+      );
+    } finally {
+      customerMutationRef.current = false;
+      setCustomerMutationAction(null);
     }
   };
 
   
 
   const handleCancelCreateCustomer = () => {
+    if (customerMutationRef.current) return;
     setSelectedCustomer(null);
     setCustomerIdAction(null);
     setPhone('');
@@ -292,6 +332,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
             type="radio"
             name="searchMode"
             checked={searchMode === 'name'}
+            disabled={customerMutationBusy}
             onChange={() => setSearchMode('name')}
             className="form-radio text-blue-600"
           />
@@ -302,6 +343,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
             type="radio"
             name="searchMode"
             checked={searchMode === 'phone'}
+            disabled={customerMutationBusy}
             onChange={() => setSearchMode('phone')}
             className="form-radio text-blue-600"
           />
@@ -315,6 +357,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
             key={clearKey}
             mask="099-999-9999"
             value={phone}
+            disabled={customerMutationBusy}
             onChange={(e) => setPhone(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleVerifyCustomer()}
           >
@@ -325,7 +368,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
                 id="customer-phone-input"
                 type="tel"
                 placeholder="เบอร์โทรลูกค้า (0xx-xxx-xxxx)"
-                className="border border-gray-300 rounded-md px-3 py-2 w-full text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 shadow-sm"
+                className="border border-gray-300 rounded-md px-3 py-2 w-full text-gray-800 text-lg focus:ring-2 focus:ring-blue-500 shadow-sm disabled:opacity-60"
               />
             )}
           </InputMask>
@@ -334,9 +377,10 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
             type="text"
             placeholder="ค้นหาชื่อลูกค้าหรือนามสกุล"
             value={nameSearch}
+            disabled={customerMutationBusy}
             onChange={(e) => setNameSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleVerifyCustomer()}
-            className="border border-gray-300 rounded-md px-3 py-2 w-full text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+            className="border border-gray-300 rounded-md px-3 py-2 w-full text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm disabled:opacity-60"
           />
         )}
         <button
@@ -344,7 +388,8 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
           disabled={
             (searchMode === 'phone' && !phone) ||
             (searchMode === 'name' && !nameSearch.trim()) ||
-            customerLoading
+            customerLoading ||
+            customerMutationBusy
           }
           className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg shadow-md flex items-center justify-center"
         >
@@ -378,7 +423,8 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
               <button
                 key={cust.id}
                 onClick={() => handleSelectCustomer(cust)}
-                className="block w-full text-left px-4 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-100 rounded-sm transition-colors duration-200"
+                disabled={customerMutationBusy}
+                className="block w-full text-left px-4 py-2 border-b border-gray-200 last:border-b-0 text-gray-700 hover:bg-blue-100 rounded-sm transition-colors duration-200 disabled:opacity-60"
               >
            
                 {(cust.type === 'ORGANIZATION' || cust.type === 'GOVERNMENT') ? cust.companyName : cust.name} ({cust.phone})
@@ -410,6 +456,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
                     value="INDIVIDUAL"
                     className="form-radio text-blue-600"
                     checked={customerType === 'INDIVIDUAL'}
+                    disabled={customerMutationBusy}
                     onChange={() => setCustomerType('INDIVIDUAL')}
                   />
                   <span>บุคคลทั่วไป</span>
@@ -421,6 +468,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
                     value="ORGANIZATION"
                     className="form-radio text-blue-600"
                     checked={customerType === 'ORGANIZATION'}
+                    disabled={customerMutationBusy}
                     onChange={() => setCustomerType('ORGANIZATION')}
                   />
                   <span>นิติบุคคล</span>
@@ -433,6 +481,7 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
                     value="GOVERNMENT"
                     className="form-radio text-blue-600"
                     checked={customerType === 'GOVERNMENT'}
+                    disabled={customerMutationBusy}
                     onChange={() => setCustomerType('GOVERNMENT')}
                   />
                   <span>หน่วยงาน</span>
@@ -446,15 +495,17 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
                   type="text"
                   placeholder="ชื่อบริษัท / หน่วยงาน"
                   value={companyName}
+                  disabled={customerMutationBusy}
                   onChange={(e) => { setCompanyName(e.target.value); setIsModified(true); }}
-                  className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm disabled:opacity-60"
                 />
                 <input
                   type="text"
                   placeholder="เลขผู้เสียภาษี (ถ้ามี)"
                   value={taxId}
+                  disabled={customerMutationBusy}
                   onChange={(e) => { setTaxId(e.target.value); setIsModified(true); }}
-                  className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm disabled:opacity-60"
                 />
               </>
             )}
@@ -464,23 +515,26 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
               id="customer-name-input"
               placeholder="ชื่อลูกค้า / ผู้ติดต่อ"
               value={name}
+              disabled={customerMutationBusy}
               onChange={(e) => { setName(e.target.value); setIsModified(true); }}
-              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm disabled:opacity-60"
             />
 
             <input
               type="email"
               placeholder="อีเมล (ถ้ามี)"
               value={email}
+              disabled={customerMutationBusy}
               onChange={(e) => { setEmail(e.target.value); setIsModified(true); }}
-              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm"
+              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm disabled:opacity-60"
             />
 
             <textarea
               placeholder="ที่อยู่ (ถ้ามี)"
               value={address}
+              disabled={customerMutationBusy}
               onChange={(e) => { setAddress(e.target.value); setIsModified(true); }}
-              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm min-h-[80px]"
+              className="border border-gray-300 px-3 py-2 rounded-md col-span-2 text-gray-800 text-base focus:ring-2 focus:ring-blue-500 shadow-sm min-h-[80px] disabled:opacity-60"
             />
           </div>
 
@@ -488,11 +542,11 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
             {selectedCustomer ? (
               <button
                 onClick={handleUpdateCustomer}
-                disabled={!isModified}
-                className={`px-5 py-2 rounded-md text-white font-semibold transition-colors duration-200 shadow-md ${isModified ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
+                disabled={!isModified || customerMutationBusy}
+                className={`px-5 py-2 rounded-md text-white font-semibold transition-colors duration-200 shadow-md ${isModified && !customerMutationBusy ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-400 cursor-not-allowed'}`}
               >
                 <span className="flex items-center">
-                  อัปเดตข้อมูล
+                  {customerMutationAction === 'update' ? 'กำลังอัปเดต...' : 'อัปเดตข้อมูล'}
                 </span>
               </button>
             ) : (
@@ -500,14 +554,16 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
                 <div className="flex gap-3">
                   <button
                     onClick={handleConfirmCreateCustomer}
-                    className="px-5 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 shadow-md flex items-center"
+                    disabled={customerMutationBusy}
+                    className="px-5 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 shadow-md flex items-center disabled:cursor-not-allowed disabled:opacity-60"
                   >
                  
-                    บันทึกลูกค้าใหม่
+                    {customerMutationAction === 'create' ? 'กำลังบันทึก...' : 'บันทึกลูกค้าใหม่'}
                   </button>
                   <button
                     onClick={handleCancelCreateCustomer}
-                    className="px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600  transition-colors duration-200 shadow-md flex items-center"
+                    disabled={customerMutationBusy}
+                    className="px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600  transition-colors duration-200 shadow-md flex items-center disabled:cursor-not-allowed disabled:opacity-60"
                   >
                   
                     ยกเลิก
@@ -523,7 +579,6 @@ const CustomerSelectorDeposit = ({ productSearchRef, clearTrigger, hideCustomerD
 };
 
 export default CustomerSelectorDeposit;
-
 
 
 

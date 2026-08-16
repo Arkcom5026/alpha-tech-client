@@ -3,6 +3,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import useBarcodeStore from '@/features/barcode/store/barcodeStore';
 import useStockItemReceiveStore from '@/features/stockItem/receive/store/useStockItemReceiveStore';
 import StockItemReceivedResults from '@/features/stockItem/receive/scan-workflow/components/StockItemReceivedResults';
@@ -44,6 +45,8 @@ const ScanBarcodeListPage = () => {
   const refreshTimeoutRef = useRef(null);
   const scanQueueRef = useRef([]);
   const inFlightRef = useRef(false);
+  const workflowMutationRef = useRef(null);
+  const editingMutationRef = useRef(false);
 
   const {
     loadBarcodesAction,
@@ -164,16 +167,40 @@ const ScanBarcodeListPage = () => {
     focusForCurrentState();
   }, [focusForCurrentState]);
 
+  const reportRefreshAfterSuccess = useCallback((refreshResult, successText, eventKey) => {
+    if (refreshResult?.ok === false) {
+      const partialText = `${successText} แต่รีเฟรชรายการบาร์โค้ดล่าสุดไม่สำเร็จ`;
+      setPageMessage({ type: 'warning', text: partialText });
+      feedback.actionError(refreshResult.error, partialText, `${eventKey}:refresh:error`);
+      return false;
+    }
+    setPageMessage({ type: 'success', text: successText });
+    return true;
+  }, []);
+
   const handleFinalize = async () => {
-    if (!receiptId) return;
+    if (!receiptId || workflowMutationRef.current || editingMutationRef.current) return;
+    const receiptIdSnapshot = receiptId;
+    const eventKey = `stock-receive:${receiptIdSnapshot}:finalize`;
+
+    workflowMutationRef.current = 'FINALIZE';
     setSubmitting(true);
     try {
-      await finalizeReceiptIfNeededAction(receiptId);
-      await Promise.all([loadBarcodesAction(receiptId), loadReceiptWithSupplierAction(receiptId)]);
-      setPageMessage({ type: 'success', text: 'ปิดยอดและบันทึกใบรับสินค้าเรียบร้อยแล้ว' });
+      await finalizeReceiptIfNeededAction(receiptIdSnapshot);
+      const successText = 'ปิดยอดและบันทึกใบรับสินค้าเรียบร้อยแล้ว';
+      feedback.actionSuccess(successText, `${eventKey}:success`);
+
+      const [refreshResult] = await Promise.all([
+        loadBarcodesAction(receiptIdSnapshot),
+        loadReceiptWithSupplierAction(receiptIdSnapshot),
+      ]);
+      reportRefreshAfterSuccess(refreshResult, successText, eventKey);
     } catch (error) {
-      setPageMessage({ type: 'error', text: `ปิดยอดไม่สำเร็จ: ${error?.message || 'เกิดข้อผิดพลาด'}` });
+      const errorText = `ปิดยอดไม่สำเร็จ: ${error?.message || 'เกิดข้อผิดพลาด'}`;
+      setPageMessage({ type: 'error', text: errorText });
+      feedback.actionError(error, 'ปิดยอดและบันทึกใบรับสินค้าไม่สำเร็จ', `${eventKey}:error`);
     } finally {
+      if (workflowMutationRef.current === 'FINALIZE') workflowMutationRef.current = null;
       setSubmitting(false);
       restoreWorkflowFocus();
     }
@@ -191,39 +218,47 @@ const ScanBarcodeListPage = () => {
   }, []);
 
   const processQueue = useCallback(async () => {
-    if (inFlightRef.current || !scanQueueRef.current?.length) return;
+    if (workflowMutationRef.current || inFlightRef.current || !scanQueueRef.current?.length) return;
+    const receiptIdSnapshot = receiptId;
+    workflowMutationRef.current = 'RECEIVE_SCAN';
     inFlightRef.current = true;
     setSubmitting(true);
     try {
       while (scanQueueRef.current.length) {
         const job = scanQueueRef.current.shift();
         const barcode = String(job?.barcode || '').trim();
+        const serialNumberSnapshot = String(job?.serialNumber || '').trim() || null;
         if (!barcode) continue;
         const now = Date.now();
         if (lastSubmit.barcode === barcode && now - lastSubmit.at < 650) continue;
         setLastSubmit({ barcode, at: now });
+        const eventKey = `stock-receive:${receiptIdSnapshot}:${barcode}`;
         try {
-          await receiveSNAction({
-            barcode,
-            serialNumber: String(job?.serialNumber || '').trim() || null,
-          });
-          await loadBarcodesAction(receiptId);
-          setPageMessage({ type: 'success', text: `บันทึกสินค้าเข้าสต๊อกสำเร็จ: ${barcode}` });
+          await receiveSNAction({ barcode, serialNumber: serialNumberSnapshot });
+          const successText = `บันทึกสินค้าเข้าสต๊อกสำเร็จ: ${barcode}`;
+          feedback.actionSuccess(successText, `${eventKey}:success`);
+          const refreshResult = await loadBarcodesAction(receiptIdSnapshot);
+          reportRefreshAfterSuccess(refreshResult, successText, eventKey);
           setLastFlashBarcode(barcode);
           setBarcodeInput('');
           setSnInput('');
         } catch (error) {
-          setPageMessage({ type: 'error', text: `รับสินค้าไม่สำเร็จ: ${error?.message || 'เกิดข้อผิดพลาด'}` });
+          const errorText = `รับสินค้าไม่สำเร็จ: ${error?.message || 'เกิดข้อผิดพลาด'}`;
+          setPageMessage({ type: 'error', text: errorText });
+          feedback.actionError(error, 'รับสินค้าไม่สำเร็จ', `${eventKey}:error`);
         }
       }
     } finally {
+      if (workflowMutationRef.current === 'RECEIVE_SCAN') workflowMutationRef.current = null;
       inFlightRef.current = false;
       setSubmitting(false);
       restoreWorkflowFocus();
     }
-  }, [lastSubmit, loadBarcodesAction, receiptId, receiveSNAction, restoreWorkflowFocus]);
+  }, [lastSubmit, loadBarcodesAction, receiptId, receiveSNAction, reportRefreshAfterSuccess, restoreWorkflowFocus]);
 
   const submitCurrentInput = useCallback(() => {
+    if (workflowMutationRef.current || editingMutationRef.current) return;
+
     const effectiveInput = resolveReceiveInput({
       barcodeInput,
       serialNumber: snInput,
@@ -246,17 +281,26 @@ const ScanBarcodeListPage = () => {
         scheduleFocus(STOCK_ITEM_FOCUS_TARGET.BARCODE);
         return;
       }
+
+      const receiptIdSnapshot = receiptId;
+      const eventKey = `stock-receive:${receiptIdSnapshot}:receive-all`;
       setSecretAllArmedAt(0);
+      workflowMutationRef.current = 'RECEIVE_ALL_PENDING';
       setSubmitting(true);
-      receiveAllPendingNoSNAction({ receiptId })
+      receiveAllPendingNoSNAction({ receiptId: receiptIdSnapshot })
         .then(async () => {
-          await loadBarcodesAction(receiptId);
-          setPageMessage({ type: 'success', text: 'รับสินค้าค้างทั้งหมดเรียบร้อยแล้ว' });
+          const successText = 'รับสินค้าค้างทั้งหมดเรียบร้อยแล้ว';
+          feedback.actionSuccess(successText, `${eventKey}:success`);
+          const refreshResult = await loadBarcodesAction(receiptIdSnapshot);
+          reportRefreshAfterSuccess(refreshResult, successText, eventKey);
         })
         .catch((error) => {
-          setPageMessage({ type: 'error', text: `รับสินค้าค้างทั้งหมดไม่สำเร็จ: ${error?.message || 'เกิดข้อผิดพลาด'}` });
+          const errorText = `รับสินค้าค้างทั้งหมดไม่สำเร็จ: ${error?.message || 'เกิดข้อผิดพลาด'}`;
+          setPageMessage({ type: 'error', text: errorText });
+          feedback.actionError(error, 'รับสินค้าค้างทั้งหมดไม่สำเร็จ', `${eventKey}:error`);
         })
         .finally(() => {
+          if (workflowMutationRef.current === 'RECEIVE_ALL_PENDING') workflowMutationRef.current = null;
           setSubmitting(false);
           setBarcodeInput('');
           setSnInput('');
@@ -274,6 +318,7 @@ const ScanBarcodeListPage = () => {
     processQueue,
     receiptId,
     receiveAllPendingNoSNAction,
+    reportRefreshAfterSuccess,
     resolveReceiveInput,
     restoreWorkflowFocus,
     scheduleFocus,
@@ -305,6 +350,7 @@ const ScanBarcodeListPage = () => {
   ]);
 
   const handleSerialModeChange = useCallback((event) => {
+    if (workflowMutationRef.current || editingMutationRef.current) return;
     const checked = event.target.checked;
     setManualSerialMode(checked);
     requestAnimationFrame(() => {
@@ -318,39 +364,70 @@ const ScanBarcodeListPage = () => {
   }, [currentExpectedPlaceholder, isSingleProductWorkingGroup, scheduleFocus]);
 
   const handleSaveEditSN = async (row) => {
-    const nextSN = String(editingSN || '').trim();
+    if (editingMutationRef.current || workflowMutationRef.current) return;
+
+    const receiptIdSnapshot = receiptId;
+    const barcodeReceiptIdSnapshot = row?.id ?? null;
+    const barcodeSnapshot = String(row?.barcode || '').trim();
+    const stockItemIdSnapshot = row?.stockItemId ?? row?.stockItem?.id ?? null;
+    const nextSNSnapshot = String(editingSN || '').trim();
+
+    editingMutationRef.current = true;
     setEditingSubmitting(true);
     try {
-      if (nextSN) {
-        await updateReceivedSNAction({
-          stockItemId: row.stockItemId ?? row.stockItem?.id ?? null,
-          serialNumber: nextSN,
-          barcodeReceiptId: row.id,
-          receiptId,
-        });
-        setPageMessage({ type: 'success', text: 'แก้ไข SN สำเร็จ' });
+      const result = nextSNSnapshot
+        ? await updateReceivedSNAction({
+            stockItemId: stockItemIdSnapshot,
+            serialNumber: nextSNSnapshot,
+            barcodeReceiptId: barcodeReceiptIdSnapshot,
+            receiptId: receiptIdSnapshot,
+          })
+        : await deleteSerialNumberAction(barcodeSnapshot);
+
+      const successText = nextSNSnapshot ? 'แก้ไข SN สำเร็จ' : 'ล้าง SN สำเร็จ';
+      feedback.actionSuccess(
+        successText,
+        `barcode-sn:${barcodeSnapshot || barcodeReceiptIdSnapshot}:${nextSNSnapshot ? 'update' : 'delete'}:success`,
+      );
+
+      if (result?.refreshError) {
+        const partialText = `${successText}แล้ว แต่รีเฟรชรายการบาร์โค้ดล่าสุดไม่สำเร็จ`;
+        setPageMessage({ type: 'warning', text: partialText });
+        feedback.actionError(
+          result.refreshError,
+          partialText,
+          `barcode-sn:${barcodeSnapshot || barcodeReceiptIdSnapshot}:${nextSNSnapshot ? 'update' : 'delete'}:refresh:error`,
+        );
       } else {
-        await deleteSerialNumberAction(row.barcode);
-        await loadBarcodesAction(receiptId);
-        setPageMessage({ type: 'success', text: 'ล้าง SN สำเร็จ' });
+        setPageMessage({ type: 'success', text: successText });
       }
+
       setEditingBarcodeReceiptId(null);
       setEditingSN('');
     } catch (error) {
-      setPageMessage({ type: 'error', text: `แก้ไข SN ไม่สำเร็จ: ${error?.message || 'เกิดข้อผิดพลาด'}` });
+      const actionText = nextSNSnapshot ? 'แก้ไข SN ไม่สำเร็จ' : 'ล้าง SN ไม่สำเร็จ';
+      setPageMessage({ type: 'error', text: `${actionText}: ${error?.message || 'เกิดข้อผิดพลาด'}` });
+      feedback.actionError(
+        error,
+        actionText,
+        `barcode-sn:${barcodeSnapshot || barcodeReceiptIdSnapshot}:${nextSNSnapshot ? 'update' : 'delete'}:error`,
+      );
     } finally {
+      editingMutationRef.current = false;
       setEditingSubmitting(false);
       restoreWorkflowFocus();
     }
   };
 
   const handleStartEditSN = useCallback((row) => {
+    if (editingMutationRef.current || workflowMutationRef.current) return;
     setEditingBarcodeReceiptId(row.id);
     setEditingSN(row.serialNumber || '');
     scheduleFocus(STOCK_ITEM_FOCUS_TARGET.EDIT_SERIAL);
   }, [scheduleFocus]);
 
   const handleCancelEditSN = useCallback(() => {
+    if (editingMutationRef.current || workflowMutationRef.current) return;
     setEditingBarcodeReceiptId(null);
     setEditingSN('');
     restoreWorkflowFocus();
@@ -369,7 +446,9 @@ const ScanBarcodeListPage = () => {
         shopSlug={shopSlug}
         pendingCount={pendingCount}
         submitting={submitting}
-        onBack={() => navigate(-1)}
+        onBack={() => {
+          if (!workflowMutationRef.current && !editingMutationRef.current) navigate(-1);
+        }}
         onFinalize={handleFinalize}
       />
 

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { feedback } from '@/design-system';
 import repairApi from '../api/repairApi';
 
 const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }) => {
@@ -8,41 +9,75 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
   const [handover, setHandover] = useState(null);
   const [form, setForm] = useState({ receiverName: defaultReceiverName, handoverConfirmed: false, note: '' });
   const [state, setState] = useState({ loading: false, saving: false, error: null });
+  const savingRef = useRef(false);
+  const repairJobIdRef = useRef(repairJobId);
+  const loadRequestRef = useRef(0);
+  repairJobIdRef.current = repairJobId;
 
-  const load = () => {
-    if (!handoverRelevant) return;
+  const load = async () => {
+    if (!handoverRelevant) return { ok: false, skipped: true };
+
+    const repairJobIdSnapshot = repairJobId;
+    const requestId = ++loadRequestRef.current;
     setState((v) => ({ ...v, loading: true, error: null }));
-    repairApi.getHandover(repairJobId)
-      .then((data) => {
-        setHandover(data);
-        setForm((current) => ({
-          ...current,
-          receiverName: current.receiverName.trim() || data?.customerConfirmedBy || defaultReceiverName,
-        }));
-        setState({ loading: false, saving: false, error: null });
-      })
-      .catch((error) => setState({ loading: false, saving: false, error: error.message }));
+    try {
+      const data = await repairApi.getHandover(repairJobIdSnapshot);
+      const stale = repairJobIdRef.current !== repairJobIdSnapshot || loadRequestRef.current !== requestId;
+      if (stale) return { ok: false, stale: true };
+
+      setHandover(data);
+      setForm((current) => ({
+        ...current,
+        receiverName: current.receiverName.trim() || data?.customerConfirmedBy || defaultReceiverName,
+      }));
+      setState({ loading: false, saving: false, error: null });
+      return { ok: true, data };
+    } catch (error) {
+      const stale = repairJobIdRef.current !== repairJobIdSnapshot || loadRequestRef.current !== requestId;
+      if (stale) return { ok: false, stale: true, error };
+      setState({ loading: false, saving: false, error: error.message });
+      return { ok: false, error };
+    }
   };
 
   useEffect(() => {
+    loadRequestRef.current += 1;
+    setHandover(null);
+    setForm({ receiverName: defaultReceiverName, handoverConfirmed: false, note: '' });
     if (!handoverRelevant) return;
     load();
-  }, [repairJobId, handoverRelevant]);
+  }, [repairJobId, handoverRelevant, defaultReceiverName]);
 
   if (!handoverRelevant) return null;
 
   const finalizeAndClose = async () => {
-    if (state.saving) return;
+    if (state.saving || savingRef.current) return;
 
+    const repairJobIdSnapshot = repairJobId;
+    const formSnapshot = { ...form };
+    const handoverAlreadyConfirmed = Boolean(handover?.customerConfirmedAt);
+
+    savingRef.current = true;
     setState((v) => ({ ...v, saving: true, error: null }));
     let handoverFinalized = false;
     try {
-      const finalized = await repairApi.finalizeHandover(repairJobId, {
-        receiverName: handover?.customerConfirmedAt ? undefined : form.receiverName,
-        handoverConfirmed: form.handoverConfirmed,
-        note: form.note,
+      const finalized = await repairApi.finalizeHandover(repairJobIdSnapshot, {
+        receiverName: handoverAlreadyConfirmed ? undefined : formSnapshot.receiverName,
+        handoverConfirmed: formSnapshot.handoverConfirmed,
+        note: formSnapshot.note,
       });
       handoverFinalized = true;
+
+      if (repairJobIdRef.current !== repairJobIdSnapshot) {
+        const contextError = new Error('ส่งมอบเครื่องสำเร็จแล้ว แต่มีการเปลี่ยนไปอีกใบงานก่อนปิดงานอัตโนมัติ');
+        feedback.actionError(
+          contextError,
+          'ส่งมอบเครื่องสำเร็จแล้ว แต่มีการเปลี่ยนไปอีกใบงานก่อนปิดงานอัตโนมัติ กรุณากลับไปตรวจใบงานเดิม',
+          `repair:handover:${repairJobIdSnapshot}:context-changed-after-finalize:error`,
+        );
+        return;
+      }
+
       setHandover(finalized);
 
       if (onWorkflowAction) {
@@ -51,18 +86,55 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
           expectedWorkflowStatus: 'DELIVERED',
           note: 'ปิดใบงานอัตโนมัติหลังยืนยันส่งมอบเครื่องคืนลูกค้าเรียบร้อยแล้ว',
         });
-        if (closed === false) {
+        if (closed === false || closed?.ok === false) {
           throw new Error('ส่งมอบเครื่องสำเร็จแล้ว แต่ยังปิดใบงานไม่สำเร็จ กรุณาลองปิดใบงานอีกครั้ง');
         }
       } else {
-        await onJobReload?.();
+        try {
+          const reloadResult = await onJobReload?.();
+          if (reloadResult === false || reloadResult?.ok === false) {
+            throw reloadResult?.error || new Error('รีเฟรชใบงานล่าสุดไม่สำเร็จ');
+          }
+        } catch (refreshError) {
+          const message = 'ส่งมอบเครื่องสำเร็จแล้ว แต่รีเฟรชใบงานล่าสุดไม่สำเร็จ';
+          if (repairJobIdRef.current === repairJobIdSnapshot) {
+            setState({ loading: false, saving: false, error: message });
+          }
+          feedback.actionError(
+            refreshError,
+            message,
+            `repair:handover:${repairJobIdSnapshot}:refresh:error`,
+          );
+          return;
+        }
       }
-      setState({ loading: false, saving: false, error: null });
+
+      if (repairJobIdRef.current === repairJobIdSnapshot) {
+        setState({ loading: false, saving: false, error: null });
+      }
+      feedback.actionSuccess(
+        'ส่งมอบเครื่องและปิดใบงานเรียบร้อยแล้ว',
+        `repair:handover:${repairJobIdSnapshot}:finalize-close:success`,
+      );
     } catch (error) {
       const message = handoverFinalized
         ? error?.message || 'ส่งมอบเครื่องสำเร็จแล้ว แต่ปิดใบงานไม่สำเร็จ'
         : error?.message || 'ส่งมอบเครื่องไม่สำเร็จ';
-      setState({ loading: false, saving: false, error: message });
+      if (repairJobIdRef.current === repairJobIdSnapshot) {
+        setState({ loading: false, saving: false, error: message });
+      }
+      feedback.actionError(
+        error,
+        message,
+        handoverFinalized
+          ? `repair:handover:${repairJobIdSnapshot}:close-after-finalize:error`
+          : `repair:handover:${repairJobIdSnapshot}:finalize:error`,
+      );
+    } finally {
+      savingRef.current = false;
+      if (repairJobIdRef.current === repairJobIdSnapshot) {
+        setState((current) => ({ ...current, saving: false }));
+      }
     }
   };
 
@@ -119,7 +191,7 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
             />
           ) : null}
 
-          <label className="flex min-h-14 items-start gap-3 rounded-xl border border-slate-200 px-4 py-3 font-bold">
+          <label className={`flex min-h-14 items-start gap-3 rounded-xl border border-slate-200 px-4 py-3 font-bold ${state.saving ? 'opacity-60' : ''}`}>
             <input
               type="checkbox"
               checked={form.handoverConfirmed}

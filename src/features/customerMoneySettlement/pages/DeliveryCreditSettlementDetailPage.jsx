@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
@@ -24,40 +24,92 @@ const DeliveryCreditSettlementDetailPage = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelling, setCancelling] = useState(false);
   const [actionError, setActionError] = useState('');
+  const cancellingRef = useRef(false);
+  const recordContextRef = useRef(String(id || ''));
+  const loadRequestRef = useRef(0);
+  const cancelRequestRef = useRef(0);
 
   useEffect(() => {
-    let active = true;
-    getDeliveryCreditSettlement(id)
-      .then((data) => { if (active) setRecord(data); })
-      .catch((err) => { if (active) setError(err?.response?.data?.message || err?.message || 'โหลดเอกสารไม่สำเร็จ'); });
-    return () => { active = false; };
+    const settlementIdSnapshot = String(id || '');
+    const requestId = ++loadRequestRef.current;
+    recordContextRef.current = settlementIdSnapshot;
+    cancelRequestRef.current += 1;
+    cancellingRef.current = false;
+    setRecord(null);
+    setError('');
+    setShowCancel(false);
+    setCancelReason('');
+    setActionError('');
+    setCancelling(false);
+
+    getDeliveryCreditSettlement(settlementIdSnapshot)
+      .then((data) => {
+        if (loadRequestRef.current !== requestId || recordContextRef.current !== settlementIdSnapshot) return;
+        setRecord(data);
+      })
+      .catch((err) => {
+        if (loadRequestRef.current !== requestId || recordContextRef.current !== settlementIdSnapshot) return;
+        const fallbackMessage = 'โหลดเอกสารไม่สำเร็จ';
+        setError(err?.response?.data?.message || err?.message || fallbackMessage);
+        feedback.actionError(err, fallbackMessage, `customer-money-settlement:detail:${settlementIdSnapshot}:load:error`);
+      });
+
+    return () => {
+      if (recordContextRef.current === settlementIdSnapshot) {
+        loadRequestRef.current += 1;
+        cancelRequestRef.current += 1;
+      }
+    };
   }, [id]);
 
   const shopSlug = useMemo(() => location.pathname.split('/').filter(Boolean)[0] || 'advancetech', [location.pathname]);
 
   const cancelSettlement = async () => {
     const reason = cancelReason.trim();
-    if (!reason || cancelling) return;
+    if (!reason || cancelling || cancellingRef.current || !id) return;
+
+    const settlementIdSnapshot = String(id);
+    const reasonSnapshot = reason;
+    const requestId = ++cancelRequestRef.current;
+    const ownsCancelRequest = () => (
+      cancelRequestRef.current === requestId
+      && recordContextRef.current === settlementIdSnapshot
+    );
+
+    cancellingRef.current = true;
     setCancelling(true);
     setActionError('');
     try {
-      const updated = await cancelDeliveryCreditSettlement(id, reason);
+      const updated = await cancelDeliveryCreditSettlement(settlementIdSnapshot, reasonSnapshot);
+      if (!ownsCancelRequest()) {
+        feedback.actionError(
+          new Error('เอกสารถูกยกเลิกแล้ว แต่หน้าปัจจุบันเปลี่ยนไปเป็นเอกสารอื่น'),
+          'ยกเลิกเอกสารสำเร็จ แต่บริบทหน้าปัจจุบันเปลี่ยนไปแล้ว',
+          `customer-money-settlement:cancel:${settlementIdSnapshot}:context-changed:error`,
+        );
+        return;
+      }
       setRecord(updated);
       setShowCancel(false);
       setCancelReason('');
-      feedback.actionSuccess('ยกเลิกเอกสารตัดยอดเรียบร้อยแล้ว', `customer-money-settlement:cancel:${id}:success`);
+      feedback.actionSuccess('ยกเลิกเอกสารตัดยอดเรียบร้อยแล้ว', `customer-money-settlement:cancel:${settlementIdSnapshot}:success`);
     } catch (err) {
+      if (!ownsCancelRequest()) return;
       const fallbackMessage = 'ยกเลิกเอกสารตัดยอดไม่สำเร็จ';
       setActionError(err?.response?.data?.message || err?.message || fallbackMessage);
-      feedback.actionError(err, fallbackMessage, `customer-money-settlement:cancel:${id}:error`);
+      feedback.actionError(err, fallbackMessage, `customer-money-settlement:cancel:${settlementIdSnapshot}:error`);
     } finally {
-      setCancelling(false);
+      if (ownsCancelRequest()) {
+        cancellingRef.current = false;
+        setCancelling(false);
+      }
     }
   };
 
   if (error) return <div className="mx-auto max-w-5xl p-5"><div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-700">{error}</div></div>;
   if (!record) return <div className="p-8 text-center text-slate-500">กำลังโหลดเอกสารตัดยอด...</div>;
 
+  const isCancelled = record.status === 'CANCELLED';
   const paymentBySaleId = new Map((record.salePaymentStates || []).map((sale) => [String(sale.saleId), sale]));
   const grouped = record.lines.reduce((acc, line) => {
     if (!acc[line.saleId]) acc[line.saleId] = { saleCode: line.saleCode, lines: [], total: 0 };
@@ -65,7 +117,6 @@ const DeliveryCreditSettlementDetailPage = () => {
     acc[line.saleId].total += Number(line.appliedAmount || 0);
     return acc;
   }, {});
-  const isCancelled = record.status === 'CANCELLED';
   const documentCompletion = getSettlementDocumentCompletion(record);
   const generatedDocument = documentCompletion.document;
   const hasAutoGeneratedDocument = documentCompletion.mode === 'AUTO_GENERATED';
@@ -74,19 +125,19 @@ const DeliveryCreditSettlementDetailPage = () => {
   return (
     <div className="mx-auto w-full max-w-5xl space-y-4 p-3 md:p-5">
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => navigate('..')} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">กลับรายการ</button>
-        <button type="button" onClick={() => navigate('./print')} className="rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white">พิมพ์เอกสาร</button>
-        {!isCancelled && <button type="button" onClick={() => { setShowCancel((value) => !value); setActionError(''); }} className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700">ยกเลิกเอกสาร</button>}
+        <button type="button" disabled={cancelling} onClick={() => { if (!cancellingRef.current) navigate('..'); }} className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">กลับรายการ</button>
+        <button type="button" disabled={cancelling} onClick={() => { if (!cancellingRef.current) navigate('./print'); }} className="rounded-xl bg-indigo-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">พิมพ์เอกสาร</button>
+        {!isCancelled && <button type="button" disabled={cancelling} onClick={() => { if (cancellingRef.current) return; setShowCancel((value) => !value); setActionError(''); }} className="rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-50">ยกเลิกเอกสาร</button>}
       </div>
 
       {showCancel && !isCancelled && (
         <section className="rounded-2xl border border-rose-200 bg-rose-50 p-4">
           <h2 className="font-semibold text-rose-900">ยกเลิกเอกสารตัดยอด</h2>
           <p className="mt-1 text-xs text-rose-700">ระบบจะยกเลิกใบส่งของรวมที่สร้างอัตโนมัติ คืน Customer Money ไปยังแหล่งเดิม และคำนวณยอดชำระของใบส่งของใหม่ หากมีเอกสารภาษีปลายทางแล้วระบบจะไม่อนุญาตให้ยกเลิก</p>
-          <textarea value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} maxLength={500} rows={3} placeholder="ระบุเหตุผลการยกเลิก" className="mt-3 w-full rounded-xl border border-rose-300 bg-white p-3 text-sm" />
+          <textarea disabled={cancelling} value={cancelReason} onChange={(event) => { if (!cancellingRef.current) setCancelReason(event.target.value); }} maxLength={500} rows={3} placeholder="ระบุเหตุผลการยกเลิก" className="mt-3 w-full rounded-xl border border-rose-300 bg-white p-3 text-sm disabled:cursor-not-allowed disabled:bg-slate-100" />
           {actionError && <div className="mt-2 text-sm font-medium text-rose-700">{actionError}</div>}
           <div className="mt-3 flex flex-wrap justify-end gap-2">
-            <button type="button" onClick={() => { setShowCancel(false); setCancelReason(''); setActionError(''); }} disabled={cancelling} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">ไม่ยกเลิก</button>
+            <button type="button" onClick={() => { if (cancellingRef.current) return; setShowCancel(false); setCancelReason(''); setActionError(''); }} disabled={cancelling} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">ไม่ยกเลิก</button>
             <button type="button" onClick={cancelSettlement} disabled={!cancelReason.trim() || cancelling} className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-semibold text-white disabled:bg-rose-300">{cancelling ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิกเอกสาร'}</button>
           </div>
         </section>
@@ -122,8 +173,9 @@ const DeliveryCreditSettlementDetailPage = () => {
               </div>
               <button
                 type="button"
-                onClick={() => navigate(buildGeneratedDeliveryPrintPath(shopSlug, generatedDocument.id))}
-                className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white"
+                disabled={cancelling}
+                onClick={() => { if (!cancellingRef.current) navigate(buildGeneratedDeliveryPrintPath(shopSlug, generatedDocument.id)); }}
+                className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 ดู / พิมพ์ใบส่งของรวม
               </button>
@@ -149,7 +201,7 @@ const DeliveryCreditSettlementDetailPage = () => {
             {!isCancelled && !generatedDocument && payment?.taxDocumentReady && <div className="border-t border-amber-200 bg-amber-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div><div className="font-semibold text-amber-900">เอกสารตัดยอดเดิม — พร้อมนำไปรวมเอกสาร</div><div className="text-xs text-amber-700">รายการนี้ไม่มีข้อมูลใบส่งของรวมอัตโนมัติ จึงยังคงทางเลือก Document Workspace สำหรับเอกสารย้อนหลัง</div></div>
-                <button type="button" onClick={() => navigate(`/${shopSlug}/pos/sales/combined-billing`)} className="rounded-lg bg-amber-700 px-3 py-2 text-sm font-semibold text-white">ไปที่ Document Workspace</button>
+                <button type="button" disabled={cancelling} onClick={() => { if (!cancellingRef.current) navigate(`/${shopSlug}/pos/sales/combined-billing`); }} className="rounded-lg bg-amber-700 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">ไปที่ Document Workspace</button>
               </div>
             </div>}
           </section>;

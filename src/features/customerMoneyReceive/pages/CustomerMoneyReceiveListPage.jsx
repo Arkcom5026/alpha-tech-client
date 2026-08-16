@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FileText, Plus, RefreshCw, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
@@ -35,6 +35,7 @@ const initialFilters = {
 
 const CustomerMoneyReceiveListPage = () => {
   const navigate = useNavigate();
+  const loadRequestRef = useRef(0);
   const [filters, setFilters] = useState(initialFilters);
   const [appliedFilters, setAppliedFilters] = useState(initialFilters);
   const [rows, setRows] = useState([]);
@@ -42,20 +43,36 @@ const CustomerMoneyReceiveListPage = () => {
   const [error, setError] = useState('');
 
   const loadRows = useCallback(async () => {
+    const requestId = ++loadRequestRef.current;
+    const filterSnapshot = { ...appliedFilters };
+    const ownsRequest = () => loadRequestRef.current === requestId;
+
     setLoading(true);
     setError('');
     try {
-      const params = Object.fromEntries(Object.entries(appliedFilters).filter(([, value]) => value));
-      setRows(await listCustomerMoneyReceives({ ...params, take: 200 }));
+      const params = Object.fromEntries(Object.entries(filterSnapshot).filter(([, value]) => value));
+      const nextRows = await listCustomerMoneyReceives({ ...params, take: 200 });
+      if (!ownsRequest()) return { ok: false, stale: true, rows: [] };
+      const safeRows = Array.isArray(nextRows) ? nextRows : [];
+      setRows(safeRows);
+      return { ok: true, stale: false, rows: safeRows };
     } catch (err) {
+      if (!ownsRequest()) return { ok: false, stale: true, rows: [] };
+      const message = err?.response?.data?.message || err?.message || 'โหลดประวัติการรับเงินไม่สำเร็จ';
       setRows([]);
-      setError(err?.response?.data?.message || err?.message || 'โหลดประวัติการรับเงินไม่สำเร็จ');
+      setError(message);
+      return { ok: false, stale: false, error: message, rows: [] };
     } finally {
-      setLoading(false);
+      if (ownsRequest()) setLoading(false);
     }
   }, [appliedFilters]);
 
-  useEffect(() => { loadRows(); }, [loadRows]);
+  useEffect(() => {
+    loadRows();
+    return () => {
+      loadRequestRef.current += 1;
+    };
+  }, [loadRows]);
 
   const summary = useMemo(() => rows.reduce((acc, row) => {
     acc.total += Number(row.amount || 0);
@@ -67,7 +84,7 @@ const CustomerMoneyReceiveListPage = () => {
 
   const submitFilters = (event) => {
     event.preventDefault();
-    setAppliedFilters(filters);
+    setAppliedFilters({ ...filters });
   };
 
   const resetFilters = () => {

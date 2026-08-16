@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 import { useAuthStore } from '@/features/auth/store/authStore';
@@ -11,6 +11,8 @@ const EditProductProfilePage = () => {
   const navigate = useNavigate();
   const listPath = `/${shopSlug}/pos/stock/profiles`;
   const [submitError, setSubmitError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const { isSuperAdmin, canManageProductOrdering } = useAuthStore();
   const canManage = useMemo(
@@ -28,6 +30,7 @@ const EditProductProfilePage = () => {
     clearCurrentAction,
   } = useProductProfileStore();
   const { ensureDropdownsAction, dropdowns, dropdownsLoaded } = useProductStore();
+  const mutationBusy = isSubmitting || submitting;
 
   useEffect(() => {
     Promise.resolve(ensureDropdownsAction?.()).catch((requestError) => {
@@ -58,18 +61,39 @@ const EditProductProfilePage = () => {
   }, [canManage, clearCurrentAction, fetchProfileByIdAction, id, listPath, navigate]);
 
   const handleSubmit = async (values) => {
-    if (!canManage || isSubmitting) return;
+    if (!canManage || mutationBusy || submittingRef.current) return;
+    const profileId = Number(id);
+    const payload = { ...values };
+    const destination = listPath;
+
+    submittingRef.current = true;
+    setSubmitting(true);
     setSubmitError('');
 
     try {
-      await updateProfileAction(Number(id), values);
-      feedback.actionSuccess('บันทึกการแก้ไขโปรไฟล์สินค้าเรียบร้อยแล้ว', 'product-profile:edit:success');
-      navigate(listPath);
+      await updateProfileAction(profileId, payload);
+      feedback.actionSuccess(
+        'บันทึกการแก้ไขโปรไฟล์สินค้าเรียบร้อยแล้ว',
+        `product-profile:${profileId}:edit:success`,
+      );
+      navigate(destination);
     } catch (requestError) {
       const message = requestError?.response?.data?.error?.message || requestError?.response?.data?.message || requestError?.message || 'บันทึกการแก้ไขโปรไฟล์สินค้าไม่สำเร็จ';
       setSubmitError(message);
-      feedback.actionError(requestError, 'บันทึกการแก้ไขโปรไฟล์สินค้าไม่สำเร็จ', 'product-profile:edit:error');
+      feedback.actionError(
+        requestError,
+        'บันทึกการแก้ไขโปรไฟล์สินค้าไม่สำเร็จ',
+        `product-profile:${profileId}:edit:error`,
+      );
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
+  };
+
+  const guardNavigation = (event) => {
+    if (!mutationBusy && !submittingRef.current) return;
+    event?.preventDefault?.();
   };
 
   if (!canManage) {
@@ -101,7 +125,14 @@ const EditProductProfilePage = () => {
             <h1 className="text-xl font-semibold">แก้ไขโปรไฟล์สินค้า #{id}</h1>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">โปรไฟล์สินค้าเป็นตัวช่วยจัดกลุ่มรูปแบบซ้ำภายในประเภทสินค้า และไม่จำเป็นต้องมีทุกสินค้า</p>
           </div>
-          <Link to={listPath} className="btn btn-outline">กลับไปหน้ารายการ</Link>
+          <Link
+            to={listPath}
+            onClick={guardNavigation}
+            aria-disabled={mutationBusy}
+            className={`btn btn-outline ${mutationBusy ? 'pointer-events-none opacity-50' : ''}`}
+          >
+            กลับไปหน้ารายการ
+          </Link>
         </div>
 
         {submitError && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{submitError}</div>}
@@ -112,9 +143,12 @@ const EditProductProfilePage = () => {
             defaultValues={current}
             dropdowns={dropdowns}
             isDropdownLoading={!dropdownsLoaded}
-            isSubmitting={isSubmitting}
+            isSubmitting={mutationBusy}
             onSubmit={handleSubmit}
-            onCancel={() => navigate(listPath)}
+            onCancel={() => {
+              if (mutationBusy || submittingRef.current) return;
+              navigate(listPath);
+            }}
           />
         </div>
       </div>

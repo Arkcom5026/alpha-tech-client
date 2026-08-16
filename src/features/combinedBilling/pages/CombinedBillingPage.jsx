@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import CustomerFilter from '../components/CustomerFilter';
 import useCombinedBillingStore from '../store/combinedBillingStore';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -18,6 +18,9 @@ const CombinedBillingPage = () => {
   const [note, setNote] = useState('');
   const [message, setMessage] = useState('');
   const [lastResult, setLastResult] = useState(null);
+  const [confirming, setConfirming] = useState(false);
+  const confirmRef = useRef(false);
+  const mutationBusy = loading || confirming;
 
   useEffect(() => { loadHistoryAction().catch(() => {}); }, [loadHistoryAction]);
 
@@ -37,21 +40,60 @@ const CombinedBillingPage = () => {
   const total = chosen.reduce((sum, line) => sum + Number(prices[`${line.lineType}:${line.lineId}`] || 0) * Number(line.quantity || 0), 0);
 
   const confirm = async () => {
-    if (loading || !customer?.id || !chosen.length) return;
+    if (confirmRef.current || mutationBusy || !customer?.id || !chosen.length) return;
+
+    const customerIdSnapshot = Number(customer.id);
+    const command = {
+      customerId: customerIdSnapshot,
+      note: String(note || ''),
+      lines: chosen.map((line) => ({
+        lineType: line.lineType,
+        lineId: line.lineId,
+        documentUnitPrice: Number(prices[`${line.lineType}:${line.lineId}`]),
+        adjustmentReason: reasons[`${line.lineType}:${line.lineId}`] || '',
+      })),
+    };
+
+    confirmRef.current = true;
+    setConfirming(true);
     setMessage('');
+
     try {
-      const result = await confirmDocumentWorkspaceAction({ customerId: customer.id, note, lines: chosen.map((line) => ({ lineType: line.lineType, lineId: line.lineId, documentUnitPrice: Number(prices[`${line.lineType}:${line.lineId}`]), adjustmentReason: reasons[`${line.lineType}:${line.lineId}`] || '' })) });
+      const result = await confirmDocumentWorkspaceAction(command);
       if (!result) return;
+
       setLastResult(result);
       const successMessage = `สร้างใบส่งของรวม ${result.code} และส่งต่อ Bill/Tax แล้ว (Tax Document #${result.taxDocument?.id})`;
       setMessage(successMessage);
       feedback.actionSuccess(successMessage, `combined-billing:${result.id || result.code}:create:success`);
-      await loadDocumentWorkspaceAction(customer.id);
-      await loadHistoryAction();
+
+      let refreshError = null;
+      try {
+        await loadDocumentWorkspaceAction(customerIdSnapshot);
+      } catch (requestError) {
+        refreshError = requestError;
+      }
+      try {
+        await loadHistoryAction();
+      } catch (requestError) {
+        refreshError = refreshError || requestError;
+      }
+
       setSelected({});
       setReasons({});
+
+      if (refreshError) {
+        feedback.actionError(
+          refreshError,
+          'สร้างใบส่งของรวมสำเร็จแล้ว แต่รีเฟรชข้อมูลล่าสุดไม่สำเร็จ กรุณารีเฟรชหน้า',
+          `combined-billing:${result.id || result.code}:refresh-after-create:error`,
+        );
+      }
     } catch (requestError) {
       feedback.actionError(requestError, 'สร้างใบส่งของรวมไม่สำเร็จ', 'combined-billing:create:error');
+    } finally {
+      confirmRef.current = false;
+      setConfirming(false);
     }
   };
 
@@ -68,10 +110,10 @@ const CombinedBillingPage = () => {
       {workspace.map((sale) => <section key={sale.id} className="rounded-xl border bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between"><div><b>{sale.documentNo}</b><span className="ml-2 text-sm text-gray-500">{sale.code}</span></div><span className="rounded bg-gray-100 px-2 py-1 text-xs">{sale.documentStatus}</span></div>
         <div className="overflow-x-auto"><table className="min-w-full text-sm"><thead><tr className="bg-gray-50 text-left"><th className="p-2">เลือก</th><th className="p-2">รายการ</th><th className="p-2">สถานะ</th><th className="p-2 text-right">ราคาเดิม</th><th className="p-2">ราคาสุดท้าย/หน่วย</th><th className="p-2">เหตุผลปรับราคา</th></tr></thead><tbody>
-          {sale.lines.map((line) => { const key = `${line.lineType}:${line.lineId}`; const ready = line.status === 'PAID_READY'; const changed = Number(prices[key]) !== Number(line.sourceUnitPrice); return <tr key={key} className="border-t"><td className="p-2"><input type="checkbox" disabled={!ready || loading} checked={!!selected[key]} onChange={() => setSelected((state) => ({ ...state, [key]: !state[key] }))} /></td><td className="p-2">{line.description}<div className="text-xs text-gray-500">จำนวน {line.quantity} · ชำระ {money(line.settledAmount)}</div></td><td className="p-2">{line.status}</td><td className="p-2 text-right">{money(line.sourceUnitPrice)}</td><td className="p-2"><input className="w-32 rounded border px-2 py-1 text-right" type="number" min="0" step="0.01" disabled={!ready || loading} value={prices[key] ?? ''} onChange={(e) => setPrices((state) => ({ ...state, [key]: e.target.value }))} /></td><td className="p-2"><input className="w-full min-w-48 rounded border px-2 py-1" disabled={!ready || !changed || loading} required={changed} value={reasons[key] || ''} onChange={(e) => setReasons((state) => ({ ...state, [key]: e.target.value }))} placeholder={changed ? 'ระบุเหตุผล (จำเป็น)' : '-'} /></td></tr>; })}
+          {sale.lines.map((line) => { const key = `${line.lineType}:${line.lineId}`; const ready = line.status === 'PAID_READY'; const changed = Number(prices[key]) !== Number(line.sourceUnitPrice); return <tr key={key} className="border-t"><td className="p-2"><input type="checkbox" disabled={!ready || mutationBusy} checked={!!selected[key]} onChange={() => setSelected((state) => ({ ...state, [key]: !state[key] }))} /></td><td className="p-2">{line.description}<div className="text-xs text-gray-500">จำนวน {line.quantity} · ชำระ {money(line.settledAmount)}</div></td><td className="p-2">{line.status}</td><td className="p-2 text-right">{money(line.sourceUnitPrice)}</td><td className="p-2"><input className="w-32 rounded border px-2 py-1 text-right" type="number" min="0" step="0.01" disabled={!ready || mutationBusy} value={prices[key] ?? ''} onChange={(e) => setPrices((state) => ({ ...state, [key]: e.target.value }))} /></td><td className="p-2"><input className="w-full min-w-48 rounded border px-2 py-1" disabled={!ready || !changed || mutationBusy} required={changed} value={reasons[key] || ''} onChange={(e) => setReasons((state) => ({ ...state, [key]: e.target.value }))} placeholder={changed ? 'ระบุเหตุผล (จำเป็น)' : '-'} /></td></tr>; })}
         </tbody></table></div>
       </section>)}
-      <div className="sticky bottom-4 rounded-xl border bg-white p-4 shadow-lg"><div className="flex flex-wrap items-end gap-4"><label className="flex-1">หมายเหตุ<input className="mt-1 w-full rounded border px-3 py-2" disabled={loading} value={note} onChange={(e) => setNote(e.target.value)} /></label><div className="text-right"><div className="text-sm text-gray-500">{chosen.length} รายการ</div><div className="text-xl font-bold">{money(total)} บาท</div></div><button className="rounded bg-blue-600 px-5 py-2 text-white disabled:opacity-50" disabled={loading || !chosen.length || chosen.some((line) => Number(prices[`${line.lineType}:${line.lineId}`]) !== Number(line.sourceUnitPrice) && !reasons[`${line.lineType}:${line.lineId}`]?.trim())} onClick={confirm}>ยืนยันสร้างใบส่งของรวม</button></div></div>
+      <div className="sticky bottom-4 rounded-xl border bg-white p-4 shadow-lg"><div className="flex flex-wrap items-end gap-4"><label className="flex-1">หมายเหตุ<input className="mt-1 w-full rounded border px-3 py-2" disabled={mutationBusy} value={note} onChange={(e) => setNote(e.target.value)} /></label><div className="text-right"><div className="text-sm text-gray-500">{chosen.length} รายการ</div><div className="text-xl font-bold">{money(total)} บาท</div></div><button className="rounded bg-blue-600 px-5 py-2 text-white disabled:opacity-50" disabled={mutationBusy || !chosen.length || chosen.some((line) => Number(prices[`${line.lineType}:${line.lineId}`]) !== Number(line.sourceUnitPrice) && !reasons[`${line.lineType}:${line.lineId}`]?.trim())} onClick={confirm}>{confirming ? 'กำลังสร้างใบส่งของรวม...' : 'ยืนยันสร้างใบส่งของรวม'}</button></div></div>
     </div>}
     <section className="rounded-xl border bg-white p-4">
       <h2 className="mb-3 text-xl font-bold">ประวัติใบส่งของรวม</h2>

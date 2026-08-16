@@ -1,5 +1,5 @@
 // src/features/unit/pages/EditUnitPage.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { feedback } from '@/design-system';
 import useUnitStore from '../store/unitStore';
@@ -11,6 +11,7 @@ const EditUnitPage = () => {
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [unit, setUnit] = useState(null);
+  const submittingRef = useRef(false);
 
   const { getUnitById, updateUnit } = useUnitStore();
 
@@ -29,14 +30,22 @@ const EditUnitPage = () => {
   }, [id, getUnitById]);
 
   const handleUpdate = async (formData) => {
+    if (isSubmitting || submittingRef.current) return;
+
+    const unitIdSnapshot = id;
+    const shopSlugSnapshot = shopSlug;
+    const payload = { ...formData, name: formData?.name?.trim?.() || formData?.name };
+
+    submittingRef.current = true;
     setIsSubmitting(true);
     try {
-      await updateUnit(id, formData);
-      feedback.actionSuccess('บันทึกการแก้ไขหน่วยนับเรียบร้อยแล้ว', 'unit:update:success');
-      navigate(`/${shopSlug}/pos/stock/units`);
+      await updateUnit(unitIdSnapshot, payload);
+      feedback.actionSuccess('บันทึกการแก้ไขหน่วยนับเรียบร้อยแล้ว', `unit:${unitIdSnapshot}:update:success`);
+      navigate(`/${shopSlugSnapshot}/pos/stock/units`);
     } catch (err) {
-      feedback.actionError(err, 'บันทึกการแก้ไขหน่วยนับไม่สำเร็จ', 'unit:update:error');
+      feedback.actionError(err, 'บันทึกการแก้ไขหน่วยนับไม่สำเร็จ', `unit:${unitIdSnapshot}:update:error`);
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
   };

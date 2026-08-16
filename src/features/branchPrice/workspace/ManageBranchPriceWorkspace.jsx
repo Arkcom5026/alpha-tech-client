@@ -108,10 +108,26 @@ const ManageBranchPriceWorkspace = () => {
     try {
       await updateMultipleBranchPricesAction(updates);
       setPendingList([]);
-      await fetchAllProductsWithPriceByTokenAction(refreshFilters);
-      feedback.actionSuccess('บันทึกการเปลี่ยนราคาสินค้าเรียบร้อยแล้ว', 'branch-price:update:success');
+      feedback.actionSuccess(
+        'บันทึกการเปลี่ยนราคาสินค้าเรียบร้อยแล้ว',
+        'branch-price:update:success',
+      );
+
+      try {
+        await fetchAllProductsWithPriceByTokenAction(refreshFilters);
+      } catch (refreshError) {
+        feedback.actionError(
+          refreshError,
+          'บันทึกราคาสินค้าสำเร็จแล้ว แต่รีเฟรชรายการราคาล่าสุดไม่สำเร็จ',
+          'branch-price:update:refresh:error',
+        );
+      }
     } catch (saveError) {
-      feedback.actionError(saveError, 'บันทึกการเปลี่ยนราคาสินค้าไม่สำเร็จ', 'branch-price:update:error');
+      feedback.actionError(
+        saveError,
+        'บันทึกการเปลี่ยนราคาสินค้าไม่สำเร็จ',
+        'branch-price:update:error',
+      );
     } finally {
       savingRef.current = false;
       setSaving(false);

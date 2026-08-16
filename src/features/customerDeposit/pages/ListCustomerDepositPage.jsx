@@ -1,6 +1,6 @@
 // ListCustomerDepositPage.jsx
 // 🏛️ Premium Finance Influx: (Fixed Tenant Navigation, Glassmorphic Headers & Spring Physics Buttons)
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 // 🟢 [IMPORT FIXED] เรียกใช้งาน useParams คุมรหัสพิกัดบริษัทคั่น URL
 import useCustomerDepositStore from '../store/customerDepositStore';
 import StandardActionButtons from '@/components/shared/buttons/StandardActionButtons';
@@ -9,31 +9,42 @@ import { ConfirmActionDialog, feedback } from '@/design-system';
 
 const ListCustomerDepositPage = () => {
   // 🟢 [SLUG ACTIVATED] แกะคีย์ Dynamic Shop Slug ประจำหน้างานปัจจุบัน
-  const { deposits, fetchCustomerDepositsAction, cancelCustomerDepositAction } = useCustomerDepositStore();
+  const { deposits, setDeposits, fetchCustomerDepositsAction, cancelCustomerDepositAction } = useCustomerDepositStore();
   const [pendingCancelId, setPendingCancelId] = useState(null);
   const [isCanceling, setIsCanceling] = useState(false);
+  const cancelingRef = useRef(false);
 
   useEffect(() => {
     fetchCustomerDepositsAction();
   }, [fetchCustomerDepositsAction]);
 
   const handleCancel = async (id) => {
-    if (!id || isCanceling) return;
+    if (!id || isCanceling || cancelingRef.current) return;
+
+    const depositId = id;
+    cancelingRef.current = true;
+    setIsCanceling(true);
     try {
-      setIsCanceling(true);
-      await cancelCustomerDepositAction(id);
+      const updated = await cancelCustomerDepositAction(depositId);
+      const resultingStatus = updated?.status || 'CANCELLED';
+      setDeposits(deposits.map((deposit) => (
+        deposit.id === depositId
+          ? { ...deposit, ...updated, status: resultingStatus }
+          : deposit
+      )));
       feedback.actionSuccess(
         'ยกเลิกรายการเงินมัดจำเรียบร้อยแล้ว',
-        `customer-deposit:${id}:cancel:success`,
+        `customer-deposit:${depositId}:cancel:success`,
       );
       setPendingCancelId(null);
     } catch (error) {
       feedback.actionError(
         error,
         'ไม่สามารถยกเลิกรายการเงินมัดจำได้ กรุณาลองใหม่อีกครั้ง',
-        `customer-deposit:${id}:cancel:error`,
+        `customer-deposit:${depositId}:cancel:error`,
       );
     } finally {
+      cancelingRef.current = false;
       setIsCanceling(false);
     }
   };
@@ -79,32 +90,39 @@ const ListCustomerDepositPage = () => {
                   </td>
                 </tr>
               ) : (
-                deposits.map((d, i) => (
-                  <tr key={d.id} className="hover:bg-slate-50/80 transition-colors duration-150 group">
-                    <td className="p-4 text-center font-bold text-slate-400 text-xs">{i + 1}</td>
-                    <td className="p-4 font-black text-slate-900 group-hover:text-emerald-600 transition-colors">
-                      {d.customer?.name || '-'}
-                    </td>
-                    <td className="p-4 font-bold text-slate-600">{d.customer?.phone || '-'}</td>
-                    <td className="p-4 text-right font-medium text-slate-600 font-sans">{d.cashAmount.toLocaleString()}</td>
-                    <td className="p-4 text-right font-medium text-slate-600 font-sans">{d.transferAmount.toLocaleString()}</td>
-                    <td className="p-4 text-right font-medium text-slate-600 font-sans">{d.cardAmount.toLocaleString()}</td>
-                    <td className="p-4 text-right font-black text-emerald-700 font-sans text-base">
-                      ฿{d.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="p-4 text-center font-semibold text-slate-500">
-                      {new Date(d.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </td>
-                    <td className="p-4 text-center">
-                      <div className="inline-flex transform scale-90 origin-center">
-                        <StandardActionButtons
-                          onDelete={() => setPendingCancelId(d.id)}
-                          disableEdit
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                deposits.map((d, i) => {
+                  const isCancelled = d.status === 'CANCELLED';
+                  return (
+                    <tr key={d.id} className="hover:bg-slate-50/80 transition-colors duration-150 group">
+                      <td className="p-4 text-center font-bold text-slate-400 text-xs">{i + 1}</td>
+                      <td className="p-4 font-black text-slate-900 group-hover:text-emerald-600 transition-colors">
+                        {d.customer?.name || '-'}
+                      </td>
+                      <td className="p-4 font-bold text-slate-600">{d.customer?.phone || '-'}</td>
+                      <td className="p-4 text-right font-medium text-slate-600 font-sans">{d.cashAmount.toLocaleString()}</td>
+                      <td className="p-4 text-right font-medium text-slate-600 font-sans">{d.transferAmount.toLocaleString()}</td>
+                      <td className="p-4 text-right font-medium text-slate-600 font-sans">{d.cardAmount.toLocaleString()}</td>
+                      <td className="p-4 text-right font-black text-emerald-700 font-sans text-base">
+                        ฿{d.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="p-4 text-center font-semibold text-slate-500">
+                        {new Date(d.createdAt).toLocaleDateString('th-TH', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </td>
+                      <td className="p-4 text-center">
+                        {isCancelled ? (
+                          <span className="inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-500">ยกเลิกแล้ว</span>
+                        ) : (
+                          <div className="inline-flex transform scale-90 origin-center">
+                            <StandardActionButtons
+                              onDelete={() => setPendingCancelId(d.id)}
+                              disableEdit
+                            />
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -121,7 +139,7 @@ const ListCustomerDepositPage = () => {
         loading={isCanceling}
         onConfirm={() => handleCancel(pendingCancelId)}
         onClose={() => {
-          if (!isCanceling) setPendingCancelId(null);
+          if (!isCanceling && !cancelingRef.current) setPendingCancelId(null);
         }}
       />
 

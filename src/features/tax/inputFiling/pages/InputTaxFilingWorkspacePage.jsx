@@ -81,16 +81,19 @@ const InputTaxFilingWorkspacePage = () => {
   const [removalReason, setRemovalReason] = useState('');
   const mutationRef = useRef(false);
 
-  const load = useCallback(async () => {
-    if (!branchId || !taxPeriodId) return;
+  const load = useCallback(async ({ reportError = true } = {}) => {
+    if (!branchId || !taxPeriodId) return { ok: false, skipped: true };
     setLoading(true);
     setError('');
     try {
-      setWorkspace(await getInputTaxFilingWorkspace({ branchId, taxPeriodId }));
+      const nextWorkspace = await getInputTaxFilingWorkspace({ branchId, taxPeriodId });
+      setWorkspace(nextWorkspace);
+      return { ok: true, workspace: nextWorkspace };
     } catch (requestError) {
       const message = inputTaxFilingErrorMessage(requestError);
       setError(message);
-      feedback.error(message);
+      if (reportError) feedback.error(message);
+      return { ok: false, error: requestError, message };
     } finally {
       setLoading(false);
     }
@@ -110,23 +113,58 @@ const InputTaxFilingWorkspacePage = () => {
   const summary = workspace?.summary || {};
   const pendingApprovalCount = Number(summary.pendingApprovalCount || 0);
 
-  const runMutation = async ({ key, work, successMessage, reload = true }) => {
+  const runMutation = async ({ key, work, successMessage, reload = true, partialFailureMessage }) => {
     if (mutationRef.current || submitting || loading) return { ok: false, result: null };
+    const branchIdSnapshot = branchId;
+    const taxPeriodIdSnapshot = taxPeriodId;
     mutationRef.current = true;
     setSubmitting(true);
     try {
-      const result = await work();
+      const result = await work({ branchId: branchIdSnapshot, taxPeriodId: taxPeriodIdSnapshot });
       const message = typeof successMessage === 'function' ? successMessage(result) : successMessage;
       if (message) {
-        feedback.actionSuccess(message, `input-tax-filing:${taxPeriodId}:${key}:success`);
+        feedback.actionSuccess(message, `input-tax-filing:${taxPeriodIdSnapshot}:${key}:success`);
       }
-      if (reload) await load();
+      if (reload) {
+        const refresh = await load({ reportError: false });
+        if (!refresh.ok) {
+          feedback.warning(
+            'ดำเนินการภาษีซื้อสำเร็จแล้ว แต่รีเฟรชข้อมูลล่าสุดไม่สำเร็จ กรุณากดโหลดข้อมูลใหม่',
+            `input-tax-filing:${taxPeriodIdSnapshot}:${key}:refresh:error`,
+          );
+          return { ok: true, result, refreshError: refresh.error || new Error('Input tax filing refresh failed') };
+        }
+      }
       return { ok: true, result };
     } catch (requestError) {
+      const partialCompleted = Number(requestError?.partialCompleted || 0);
+      if (partialCompleted > 0) {
+        const partialMessage = typeof partialFailureMessage === 'function'
+          ? partialFailureMessage(partialCompleted, requestError)
+          : `ดำเนินการสำเร็จแล้ว ${partialCompleted} รายการ แต่รายการถัดไปไม่สำเร็จ ระบบหยุดเพื่อป้องกันการทำซ้ำ`;
+        feedback.warning(
+          partialMessage,
+          `input-tax-filing:${taxPeriodIdSnapshot}:${key}:partial:error`,
+        );
+        const refresh = await load({ reportError: false });
+        if (!refresh.ok) {
+          feedback.warning(
+            'มีบางรายการบันทึกสำเร็จแล้ว แต่รีเฟรชข้อมูลล่าสุดไม่สำเร็จ กรุณากดโหลดข้อมูลใหม่ก่อนดำเนินการต่อ',
+            `input-tax-filing:${taxPeriodIdSnapshot}:${key}:partial-refresh:error`,
+          );
+        }
+        return {
+          ok: false,
+          partial: true,
+          result: partialCompleted,
+          error: requestError,
+          refreshError: refresh.ok ? null : refresh.error,
+        };
+      }
       feedback.actionError(
         requestError,
         inputTaxFilingErrorMessage(requestError),
-        `input-tax-filing:${taxPeriodId}:${key}:error`,
+        `input-tax-filing:${taxPeriodIdSnapshot}:${key}:error`,
       );
       return { ok: false, result: null };
     } finally {
@@ -137,14 +175,16 @@ const InputTaxFilingWorkspacePage = () => {
 
   const advanceDocument = async (document) => {
     if (!document?.canAdvanceLifecycle || !document?.nextLifecycleTarget) return false;
+    const taxDocumentIdSnapshot = document.taxDocumentId;
+    const targetStatusSnapshot = document.nextLifecycleTarget;
     const { ok } = await runMutation({
-      key: `document:${document.taxDocumentId}:lifecycle:${document.nextLifecycleTarget}`,
-      work: () => advanceInputTaxDocumentLifecycle({
-        branchId,
-        taxDocumentId: document.taxDocumentId,
-        targetStatus: document.nextLifecycleTarget,
+      key: `document:${taxDocumentIdSnapshot}:lifecycle:${targetStatusSnapshot}`,
+      work: ({ branchId: branchIdSnapshot }) => advanceInputTaxDocumentLifecycle({
+        branchId: branchIdSnapshot,
+        taxDocumentId: taxDocumentIdSnapshot,
+        targetStatus: targetStatusSnapshot,
       }),
-      successMessage: lifecycleSuccessText(document.nextLifecycleTarget),
+      successMessage: lifecycleSuccessText(targetStatusSnapshot),
     });
     return ok;
   };
@@ -153,7 +193,10 @@ const InputTaxFilingWorkspacePage = () => {
     if (!branchId || !taxPeriodId || pendingApprovalCount > 0) return false;
     const { ok } = await runMutation({
       key: 'prepare',
-      work: () => prepareInputTaxFilingBatch({ branchId, taxPeriodId }),
+      work: ({ branchId: branchIdSnapshot, taxPeriodId: taxPeriodIdSnapshot }) => prepareInputTaxFilingBatch({
+        branchId: branchIdSnapshot,
+        taxPeriodId: taxPeriodIdSnapshot,
+      }),
       successMessage: (result) => result?.replayed
         ? 'เปิดชุดภาษีซื้อเดิมของรอบนี้แล้ว'
         : 'เริ่มเตรียมชุดภาษีซื้อแล้ว',
@@ -163,9 +206,15 @@ const InputTaxFilingWorkspacePage = () => {
 
   const selectDocument = async (taxDocumentId) => {
     if (!batch?.id) return false;
+    const batchIdSnapshot = batch.id;
+    const taxDocumentIdSnapshot = taxDocumentId;
     const { ok } = await runMutation({
-      key: `document:${taxDocumentId}:select`,
-      work: () => selectInputTaxDocumentForFiling({ branchId, batchId: batch.id, taxDocumentId }),
+      key: `document:${taxDocumentIdSnapshot}:select`,
+      work: ({ branchId: branchIdSnapshot }) => selectInputTaxDocumentForFiling({
+        branchId: branchIdSnapshot,
+        batchId: batchIdSnapshot,
+        taxDocumentId: taxDocumentIdSnapshot,
+      }),
       successMessage: 'เพิ่มเอกสารเข้าชุดภาษีซื้อแล้ว',
     });
     return ok;
@@ -173,36 +222,47 @@ const InputTaxFilingWorkspacePage = () => {
 
   const selectAllReady = async () => {
     if (!batch?.id || readyDocuments.length === 0) return false;
+    const batchIdSnapshot = batch.id;
+    const readyDocumentIdsSnapshot = readyDocuments.map((document) => document.taxDocumentId);
     const { ok } = await runMutation({
       key: 'select-all-ready',
-      work: async () => {
+      work: async ({ branchId: branchIdSnapshot }) => {
         let completed = 0;
-        for (const document of readyDocuments) {
-          await selectInputTaxDocumentForFiling({
-            branchId,
-            batchId: batch.id,
-            taxDocumentId: document.taxDocumentId,
-          });
-          completed += 1;
+        try {
+          for (const taxDocumentIdSnapshot of readyDocumentIdsSnapshot) {
+            await selectInputTaxDocumentForFiling({
+              branchId: branchIdSnapshot,
+              batchId: batchIdSnapshot,
+              taxDocumentId: taxDocumentIdSnapshot,
+            });
+            completed += 1;
+          }
+          return completed;
+        } catch (requestError) {
+          requestError.partialCompleted = completed;
+          throw requestError;
         }
-        return completed;
       },
       successMessage: (completed) => `เพิ่มเอกสารพร้อมใช้ ${completed} รายการเข้าชุดแล้ว`,
+      partialFailureMessage: (completed) => `เพิ่มเอกสารเข้าชุดสำเร็จแล้ว ${completed} รายการ แต่รายการถัดไปไม่สำเร็จ ระบบหยุดรายการที่เหลือเพื่อป้องกันการทำซ้ำ`,
     });
     return ok;
   };
 
   const removeDocument = async (document) => {
-    const reason = removalReason.trim();
-    if (!batch?.id || !reason) return false;
+    const reasonSnapshot = removalReason.trim();
+    if (!batch?.id || !reasonSnapshot) return false;
+    const batchIdSnapshot = batch.id;
+    const taxDocumentIdSnapshot = document.taxDocumentId;
+    const versionSnapshot = document.filingItem?.version;
     const { ok } = await runMutation({
-      key: `document:${document.taxDocumentId}:remove`,
-      work: () => removeInputTaxDocumentFromFiling({
-        branchId,
-        batchId: batch.id,
-        taxDocumentId: document.taxDocumentId,
-        reason,
-        version: document.filingItem?.version,
+      key: `document:${taxDocumentIdSnapshot}:remove`,
+      work: ({ branchId: branchIdSnapshot }) => removeInputTaxDocumentFromFiling({
+        branchId: branchIdSnapshot,
+        batchId: batchIdSnapshot,
+        taxDocumentId: taxDocumentIdSnapshot,
+        reason: reasonSnapshot,
+        version: versionSnapshot,
       }),
       successMessage: 'นำเอกสารออกจากชุดภาษีซื้อแล้ว',
     });

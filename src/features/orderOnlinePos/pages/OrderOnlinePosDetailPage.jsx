@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { feedback } from '@/design-system';
 import { useOrderOnlinePosStore } from '../store/orderOnlinePosStore';
@@ -6,11 +6,14 @@ import OrderOnlinePosStatusBadge from '../components/OrderOnlinePosStatusBadge';
 
 const OrderOnlinePosDetailPage = () => {
   const { id } = useParams();
+  const actionRef = useRef(false);
+  const [localMutation, setLocalMutation] = useState(null);
   const {
     selectedOrder,
     loadOrderOnlinePosByIdAction,
     getOrderOnlineTotalSummary,
     isLoading,
+    mutationAction,
     error,
     approveOrderOnlinePaymentSlipAction,
     rejectOrderOnlineSlipAction,
@@ -18,12 +21,14 @@ const OrderOnlinePosDetailPage = () => {
 
   useEffect(() => {
     if (id) {
-      loadOrderOnlinePosByIdAction(id);
+      loadOrderOnlinePosByIdAction(id).catch(() => {});
     }
   }, [id, loadOrderOnlinePosByIdAction]);
 
-  if (isLoading) return <p className="p-4">กำลังโหลดข้อมูล...</p>;
-  if (error) return <p className="p-4 text-red-500">เกิดข้อผิดพลาด: {error}</p>;
+  const mutationBusy = Boolean(localMutation || mutationAction);
+
+  if (isLoading && !selectedOrder) return <p className="p-4">กำลังโหลดข้อมูล...</p>;
+  if (error && !selectedOrder) return <p className="p-4 text-red-500">เกิดข้อผิดพลาด: {error}</p>;
   if (!selectedOrder) return <p className="p-4 text-gray-500">ไม่พบคำสั่งซื้อ</p>;
 
   const {
@@ -41,23 +46,47 @@ const OrderOnlinePosDetailPage = () => {
   const { subtotal, vat, total } = getOrderOnlineTotalSummary(selectedOrder);
   const displayCustomer = customerType === 'GOVERNMENT' && customerCompany ? `${customerCompany}` : customerName;
 
-  const handleConfirm = async () => {
-    if (!id || isLoading) return;
-    try {
-      await approveOrderOnlinePaymentSlipAction(id);
-      feedback.actionSuccess('อนุมัติหลักฐานการชำระเงินเรียบร้อยแล้ว', 'order-online-pos:slip:approve:success');
-    } catch (requestError) {
-      feedback.actionError(requestError, 'อนุมัติหลักฐานการชำระเงินไม่สำเร็จ', 'order-online-pos:slip:approve:error');
-    }
-  };
+  const runSlipTransition = async (type) => {
+    if (!id || actionRef.current || mutationBusy) return;
 
-  const handleReject = async () => {
-    if (!id || isLoading) return;
+    const orderIdSnapshot = Number(id);
+    const action = type === 'approve'
+      ? approveOrderOnlinePaymentSlipAction
+      : rejectOrderOnlineSlipAction;
+    const successMessage = type === 'approve'
+      ? 'อนุมัติหลักฐานการชำระเงินเรียบร้อยแล้ว'
+      : 'ปฏิเสธหลักฐานการชำระเงินเรียบร้อยแล้ว';
+    const failureMessage = type === 'approve'
+      ? 'อนุมัติหลักฐานการชำระเงินไม่สำเร็จ'
+      : 'ปฏิเสธหลักฐานการชำระเงินไม่สำเร็จ';
+    const partialMessage = type === 'approve'
+      ? 'อนุมัติหลักฐานการชำระเงินสำเร็จแล้ว แต่รีเฟรชข้อมูลคำสั่งซื้อไม่สำเร็จ กรุณารีเฟรชหน้า'
+      : 'ปฏิเสธหลักฐานการชำระเงินสำเร็จแล้ว แต่รีเฟรชข้อมูลคำสั่งซื้อไม่สำเร็จ กรุณารีเฟรชหน้า';
+
+    actionRef.current = true;
+    setLocalMutation(type);
     try {
-      await rejectOrderOnlineSlipAction(id);
-      feedback.actionSuccess('ปฏิเสธหลักฐานการชำระเงินเรียบร้อยแล้ว', 'order-online-pos:slip:reject:success');
+      const outcome = await action(orderIdSnapshot);
+      feedback.actionSuccess(
+        successMessage,
+        `order-online-pos:${orderIdSnapshot}:slip:${type}:success`,
+      );
+      if (outcome?.refreshError) {
+        feedback.actionError(
+          outcome.refreshError,
+          partialMessage,
+          `order-online-pos:${orderIdSnapshot}:slip:${type}:refresh:error`,
+        );
+      }
     } catch (requestError) {
-      feedback.actionError(requestError, 'ปฏิเสธหลักฐานการชำระเงินไม่สำเร็จ', 'order-online-pos:slip:reject:error');
+      feedback.actionError(
+        requestError,
+        failureMessage,
+        `order-online-pos:${orderIdSnapshot}:slip:${type}:error`,
+      );
+    } finally {
+      actionRef.current = false;
+      setLocalMutation(null);
     }
   };
 
@@ -126,18 +155,18 @@ const OrderOnlinePosDetailPage = () => {
         {paymentSlipStatus === 'WAITING_APPROVAL' && (
           <div className="mt-4 flex justify-center gap-4">
             <button
-              onClick={handleConfirm}
-              disabled={isLoading}
+              onClick={() => runSlipTransition('approve')}
+              disabled={mutationBusy}
               className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white rounded disabled:cursor-not-allowed disabled:opacity-50"
             >
-              อนุมัติการชำระเงิน
+              {localMutation === 'approve' ? 'กำลังอนุมัติ...' : 'อนุมัติการชำระเงิน'}
             </button>
             <button
-              onClick={handleReject}
-              disabled={isLoading}
+              onClick={() => runSlipTransition('reject')}
+              disabled={mutationBusy}
               className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded disabled:cursor-not-allowed disabled:opacity-50"
             >
-              ปฏิเสธสลิป
+              {localMutation === 'reject' ? 'กำลังปฏิเสธ...' : 'ปฏิเสธสลิป'}
             </button>
           </div>
         )}

@@ -1,6 +1,6 @@
 import { registerUser } from "@/features/auth/api/authApi";
-import React, { useState } from "react";
-
+import { feedback } from '@/design-system';
+import React, { useRef, useState } from "react";
 
 const RegisterForm = ({ setShowRegister }) => {
   const [form, setForm] = useState({
@@ -12,34 +12,50 @@ const RegisterForm = ({ setShowRegister }) => {
   });
 
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
 
   const handleChange = (e) => {
+    if (submittingRef.current) return;
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     setError(null);
-    setSuccess(false);
 
     if (form.password !== form.confirmPassword) {
       setError("รหัสผ่านไม่ตรงกัน");
       return;
     }
 
+    const payloadSnapshot = {
+      name: form.name,
+      phone: form.phone || null,
+      email: form.email,
+      password: form.password,
+    };
+
+    submittingRef.current = true;
+    setSubmitting(true);
     try {
-      const payload = {
-        name: form.name,
-        phone: form.phone || null,
-        email: form.email,
-        password: form.password,
-      };
-      await registerUser(payload);
-      setSuccess(true);
-      setShowRegister(false); // ✅ กลับไปหน้า Login หลังสมัครเสร็จ
+      await registerUser(payloadSnapshot);
+      feedback.actionSuccess(
+        'สมัครสมาชิกเรียบร้อยแล้ว กรุณาเข้าสู่ระบบ',
+        'online-register:create:success',
+      );
+      setShowRegister(false);
     } catch (err) {
       setError("เกิดข้อผิดพลาดในการสมัครสมาชิก");
+      feedback.actionError(
+        err,
+        'สมัครสมาชิกไม่สำเร็จ',
+        'online-register:create:error',
+      );
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
   };
 
@@ -54,7 +70,8 @@ const RegisterForm = ({ setShowRegister }) => {
           placeholder="ชื่อของคุณ"
           value={form.name}
           onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
+          disabled={submitting}
+          className="w-full border px-3 py-2 rounded disabled:opacity-60"
           required
         />
         <input
@@ -63,7 +80,8 @@ const RegisterForm = ({ setShowRegister }) => {
           placeholder="เบอร์โทรศัพท์ (ไม่จำเป็น)"
           value={form.phone}
           onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
+          disabled={submitting}
+          className="w-full border px-3 py-2 rounded disabled:opacity-60"
         />
         <input
           type="email"
@@ -71,7 +89,8 @@ const RegisterForm = ({ setShowRegister }) => {
           placeholder="อีเมลของคุณ"
           value={form.email}
           onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
+          disabled={submitting}
+          className="w-full border px-3 py-2 rounded disabled:opacity-60"
           required
         />
         <input
@@ -80,7 +99,8 @@ const RegisterForm = ({ setShowRegister }) => {
           placeholder="รหัสผ่าน"
           value={form.password}
           onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
+          disabled={submitting}
+          className="w-full border px-3 py-2 rounded disabled:opacity-60"
           required
         />
         <input
@@ -89,18 +109,19 @@ const RegisterForm = ({ setShowRegister }) => {
           placeholder="ยืนยันรหัสผ่าน"
           value={form.confirmPassword}
           onChange={handleChange}
-          className="w-full border px-3 py-2 rounded"
+          disabled={submitting}
+          className="w-full border px-3 py-2 rounded disabled:opacity-60"
           required
         />
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
-        {success && <p className="text-green-600 text-sm">สมัครสมาชิกสำเร็จ</p>}
 
         <button
           type="submit"
-          className="w-full bg-blue-700 hover:bg-blue-800 text-white py-2 rounded"
+          disabled={submitting}
+          className="w-full bg-blue-700 hover:bg-blue-800 text-white py-2 rounded disabled:cursor-not-allowed disabled:opacity-60"
         >
-          สมัครสมาชิก
+          {submitting ? 'กำลังสมัครสมาชิก...' : 'สมัครสมาชิก'}
         </button>
       </form>
 
@@ -108,8 +129,11 @@ const RegisterForm = ({ setShowRegister }) => {
         มีบัญชีแล้วใช่ไหม?
         <button
           type="button"
-          className="ml-1 text-blue-600 hover:underline"
-          onClick={() => setShowRegister(false)}
+          disabled={submitting}
+          className="ml-1 text-blue-600 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+          onClick={() => {
+            if (!submittingRef.current) setShowRegister(false);
+          }}
         >
           เข้าสู่ระบบ
         </button>

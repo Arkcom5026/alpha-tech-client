@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { feedback } from '@/design-system';
 import { getEmployeeById, updateEmployee, getBranchDropdowns } from '../api/employeeApi';
@@ -17,26 +17,39 @@ const EditEmployeePage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [branches, setBranches] = useState([]);
+  const submittingRef = useRef(false);
+  const employeeContextRef = useRef({ id: String(id || ''), shopSlug: shopSlug || 'advancetech' });
+  const updateRequestRef = useRef(0);
+
+  useEffect(() => {
+    employeeContextRef.current = { id: String(id || ''), shopSlug: shopSlug || 'advancetech' };
+    updateRequestRef.current += 1;
+    submittingRef.current = false;
+    setSubmitting(false);
+    setEmployee(null);
+    setError('');
+  }, [id, shopSlug]);
 
   useEffect(() => {
     let cancelled = false;
+    const employeeIdSnapshot = String(id || '');
     const loadEmployee = async () => {
       try {
         setLoading(true);
         setError('');
-        if (!id) {
+        if (!employeeIdSnapshot) {
           setError('ไม่พบรหัสพนักงานใน URL');
           return;
         }
-        const data = await getEmployeeById(id);
-        if (!cancelled) setEmployee(data);
+        const data = await getEmployeeById(employeeIdSnapshot);
+        if (!cancelled && employeeContextRef.current.id === employeeIdSnapshot) setEmployee(data);
       } catch (err) {
-        if (!cancelled) {
+        if (!cancelled && employeeContextRef.current.id === employeeIdSnapshot) {
           setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'ดึงข้อมูลพนักงานล้มเหลว');
-          feedback.actionError(err, 'ดึงข้อมูลพนักงานล้มเหลว', 'employee:edit:load:error');
+          feedback.actionError(err, 'ดึงข้อมูลพนักงานล้มเหลว', `employee:edit:${employeeIdSnapshot}:load:error`);
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled && employeeContextRef.current.id === employeeIdSnapshot) setLoading(false);
       }
     };
 
@@ -61,20 +74,64 @@ const EditEmployeePage = () => {
   }, [isSuperAdmin]);
 
   const handleUpdate = async (formData) => {
-    if (submitting) return;
+    if (submitting || submittingRef.current) return;
+
+    const employeeIdSnapshot = String(id || '');
+    const shopSlugSnapshot = shopSlug || 'advancetech';
+    const payload = { ...formData };
+    if (!employeeIdSnapshot) return;
+
+    const requestId = updateRequestRef.current + 1;
+    updateRequestRef.current = requestId;
+    submittingRef.current = true;
     setSubmitting(true);
     setError('');
     try {
-      await updateEmployee(id, formData);
-      feedback.actionSuccess('บันทึกการแก้ไขข้อมูลพนักงานเรียบร้อยแล้ว', 'employee:update:success');
-      navigate(`/${shopSlug}/pos/settings/employee`);
+      await updateEmployee(employeeIdSnapshot, payload);
+      feedback.actionSuccess(
+        'บันทึกการแก้ไขข้อมูลพนักงานเรียบร้อยแล้ว',
+        `employee:update:${employeeIdSnapshot}:success`,
+      );
+
+      const ownsCurrentContext =
+        requestId === updateRequestRef.current &&
+        employeeContextRef.current.id === employeeIdSnapshot &&
+        employeeContextRef.current.shopSlug === shopSlugSnapshot;
+      if (!ownsCurrentContext) {
+        feedback.warning(
+          'บันทึกข้อมูลพนักงานสำเร็จแล้ว แต่หน้าปัจจุบันเปลี่ยนไปเป็นพนักงานหรือร้านอื่น จึงไม่เปลี่ยนหน้าอัตโนมัติ',
+          `employee:update:${employeeIdSnapshot}:context-changed:error`,
+        );
+        return;
+      }
+
+      navigate(`/${shopSlugSnapshot}/pos/settings/employee`);
     } catch (err) {
-      setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
-      feedback.actionError(err, 'แก้ไขข้อมูลพนักงานไม่สำเร็จ', 'employee:update:error');
+      const ownsCurrentContext =
+        requestId === updateRequestRef.current &&
+        employeeContextRef.current.id === employeeIdSnapshot &&
+        employeeContextRef.current.shopSlug === shopSlugSnapshot;
+      if (ownsCurrentContext) {
+        setError(err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'แก้ไขพนักงานล้มเหลว');
+      }
+      feedback.actionError(
+        err,
+        'แก้ไขข้อมูลพนักงานไม่สำเร็จ',
+        `employee:update:${employeeIdSnapshot}:error`,
+      );
     } finally {
-      setSubmitting(false);
+      const ownsCurrentContext =
+        requestId === updateRequestRef.current &&
+        employeeContextRef.current.id === employeeIdSnapshot &&
+        employeeContextRef.current.shopSlug === shopSlugSnapshot;
+      if (ownsCurrentContext) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   };
+
+  const mutationBusy = submitting || submittingRef.current;
 
   if (loading) return <p className="text-center text-emerald-700">กำลังโหลดข้อมูล...</p>;
   if (error && !employee) return <p className="text-center text-red-500">{error}</p>;
@@ -85,15 +142,17 @@ const EditEmployeePage = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-xl font-semibold text-emerald-800 dark:text-emerald-300">✏️ แก้ไขข้อมูลพนักงาน</h1>
         <button
-          onClick={() => navigate(-1)}
-          disabled={submitting}
+          onClick={() => {
+            if (!mutationBusy) navigate(-1);
+          }}
+          disabled={mutationBusy}
           className="text-sm px-3 py-1 border border-slate-200 bg-white hover:bg-emerald-50 hover:border-emerald-200 text-slate-700 rounded shadow-sm transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
           ← กลับ
         </button>
       </div>
       {error ? <div className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
-      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={submitting} canEditBranch={isSuperAdmin} branchOptions={branches} />
+      <EmployeeForm defaultValues={employee} onSubmit={handleUpdate} loading={mutationBusy} canEditBranch={isSuperAdmin} branchOptions={branches} />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { feedback } from '@/design-system';
 
 import {
@@ -79,6 +79,7 @@ const useQuickReceiptSessionController = ({
   const [draftSearch, setDraftSearch] = useState('');
   const [receipt, setReceipt] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
+  const busyRef = useRef(false);
 
   const refreshDrafts = async () => {
     const rows = await listQuickReceiptDrafts({ status: 'DRAFT' });
@@ -131,7 +132,7 @@ const useQuickReceiptSessionController = ({
   }, [draftSearch, drafts]);
 
   const updateHeader = (field, value) => {
-    if (isBusy) return;
+    if (isBusy || busyRef.current) return;
     setHeader((current) => ({ ...current, [field]: value }));
   };
 
@@ -142,7 +143,7 @@ const useQuickReceiptSessionController = ({
   };
 
   const resetReceipt = () => {
-    if (isBusy) return;
+    if (isBusy || busyRef.current) return;
     setReceipt(null);
     setHeader(emptyHeader);
     setLocalLines([]);
@@ -150,7 +151,7 @@ const useQuickReceiptSessionController = ({
   };
 
   const handleAddCurrentLine = () => {
-    if (isBusy) return;
+    if (isBusy || busyRef.current) return;
     if (!operationalProduct?.id) return feedback.error('กรุณาเลือกสินค้าก่อน');
     if (!barcodeQueue.length) return feedback.error('ยังไม่มีรายการ Barcode ใน Queue');
 
@@ -177,7 +178,8 @@ const useQuickReceiptSessionController = ({
   };
 
   const handleSaveForLater = async () => {
-    if (isBusy) return false;
+    if (isBusy || busyRef.current) return false;
+    busyRef.current = true;
     setIsBusy(true);
     try {
       validateHeader();
@@ -189,11 +191,19 @@ const useQuickReceiptSessionController = ({
       }
       active = await uploadLocalLines(active);
       setHeader(toHeader(active));
-      await refreshDrafts();
       feedback.actionSuccess(
         'เก็บรายการไว้รับต่อภายหลังแล้ว',
         `quick-receipt:${active.id}:save-for-later:success`,
       );
+      try {
+        await refreshDrafts();
+      } catch (refreshError) {
+        feedback.actionError(
+          refreshError,
+          'บันทึกรายการรับต่อภายหลังสำเร็จแล้ว แต่รีเฟรชรายการฉบับร่างไม่สำเร็จ',
+          `quick-receipt:${active.id}:save-for-later:refresh:error`,
+        );
+      }
       return true;
     } catch (error) {
       feedback.actionError(
@@ -203,12 +213,14 @@ const useQuickReceiptSessionController = ({
       );
       return false;
     } finally {
+      busyRef.current = false;
       setIsBusy(false);
     }
   };
 
   const handleFinalize = async () => {
-    if (isBusy) return false;
+    if (isBusy || busyRef.current) return false;
+    busyRef.current = true;
     setIsBusy(true);
     try {
       validateHeader();
@@ -236,11 +248,19 @@ const useQuickReceiptSessionController = ({
       setHeader(toHeader(completed));
       setLocalLines([]);
       localStorage.removeItem(STORAGE_KEY);
-      await refreshDrafts();
       feedback.actionSuccess(
         'ยืนยันรับสินค้าครบแล้ว และนำสินค้าเข้าสต๊อกเรียบร้อย',
         `quick-receipt:${completed.id}:finalize:success`,
       );
+      try {
+        await refreshDrafts();
+      } catch (refreshError) {
+        feedback.actionError(
+          refreshError,
+          'รับสินค้าเข้าสต๊อกสำเร็จแล้ว แต่รีเฟรชรายการฉบับร่างไม่สำเร็จ',
+          `quick-receipt:${completed.id}:finalize:refresh:error`,
+        );
+      }
       return true;
     } catch (error) {
       feedback.actionError(
@@ -250,59 +270,73 @@ const useQuickReceiptSessionController = ({
       );
       return false;
     } finally {
+      busyRef.current = false;
       setIsBusy(false);
     }
   };
 
   const resumeDraft = async (draft) => {
-    if (isBusy) return false;
+    if (isBusy || busyRef.current) return false;
+    const draftIdSnapshot = draft?.id;
+    if (!draftIdSnapshot) return false;
+    busyRef.current = true;
     setIsBusy(true);
     try {
-      const detail = await getQuickReceipt(draft.id);
+      const detail = await getQuickReceipt(draftIdSnapshot);
       setReceipt(detail);
       setLocalLines([]);
       setHeader(toHeader(detail));
       localStorage.removeItem(STORAGE_KEY);
       return true;
     } catch (error) {
-      feedback.error(error?.message || 'เปิดรายการรับต่อไม่สำเร็จ');
+      feedback.actionError(
+        error,
+        'เปิดรายการรับต่อไม่สำเร็จ',
+        `quick-receipt:${draftIdSnapshot}:resume:error`,
+      );
       return false;
     } finally {
+      busyRef.current = false;
       setIsBusy(false);
     }
   };
 
   const removeLocalLine = (localId) => {
-    if (isBusy) return;
+    if (isBusy || busyRef.current) return;
     setLocalLines((current) => current.filter((line) => line.localId !== localId));
   };
 
   const removeServerLine = async (itemId) => {
-    if (!receipt?.id || isBusy) return false;
+    const receiptIdSnapshot = receipt?.id;
+    const itemIdSnapshot = itemId;
+    if (!receiptIdSnapshot || isBusy || busyRef.current) return false;
+    busyRef.current = true;
     setIsBusy(true);
     try {
-      const updated = await deleteQuickReceiptItem(receipt.id, itemId);
+      const updated = await deleteQuickReceiptItem(receiptIdSnapshot, itemIdSnapshot);
       setReceipt(updated);
       feedback.actionSuccess(
         'ลบสินค้าออกจากใบรับแล้ว',
-        `quick-receipt:${receipt.id}:item:${itemId}:delete:success`,
+        `quick-receipt:${receiptIdSnapshot}:item:${itemIdSnapshot}:delete:success`,
       );
       return true;
     } catch (error) {
       feedback.actionError(
         error,
         'ลบสินค้าไม่สำเร็จ',
-        `quick-receipt:${receipt.id}:item:${itemId}:delete:error`,
+        `quick-receipt:${receiptIdSnapshot}:item:${itemIdSnapshot}:delete:error`,
       );
       return false;
     } finally {
+      busyRef.current = false;
       setIsBusy(false);
     }
   };
 
   const handleCancelDraft = async () => {
-    if (!receipt?.id || receipt.status !== 'DRAFT' || isBusy) return false;
+    if (!receipt?.id || receipt.status !== 'DRAFT' || isBusy || busyRef.current) return false;
     const receiptId = receipt.id;
+    busyRef.current = true;
     setIsBusy(true);
     try {
       await cancelQuickReceipt(receiptId, 'ยกเลิกจากหน้ารับสินค้าด่วน');
@@ -310,11 +344,19 @@ const useQuickReceiptSessionController = ({
       setHeader(emptyHeader);
       setLocalLines([]);
       localStorage.removeItem(STORAGE_KEY);
-      await refreshDrafts();
       feedback.actionSuccess(
         'ยกเลิกรายการรับสินค้าด่วนแล้ว',
         `quick-receipt:${receiptId}:cancel:success`,
       );
+      try {
+        await refreshDrafts();
+      } catch (refreshError) {
+        feedback.actionError(
+          refreshError,
+          'ยกเลิกรายการรับสินค้าด่วนสำเร็จแล้ว แต่รีเฟรชรายการฉบับร่างไม่สำเร็จ',
+          `quick-receipt:${receiptId}:cancel:refresh:error`,
+        );
+      }
       return true;
     } catch (error) {
       feedback.actionError(
@@ -324,6 +366,7 @@ const useQuickReceiptSessionController = ({
       );
       return false;
     } finally {
+      busyRef.current = false;
       setIsBusy(false);
     }
   };

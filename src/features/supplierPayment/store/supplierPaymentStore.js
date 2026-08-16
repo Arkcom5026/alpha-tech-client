@@ -46,9 +46,11 @@ const useSupplierPaymentStore = create((set, get) => ({
     try {
       const data = await getAllSupplierPayments();
       set({ supplierPayments: data, isSupplierPaymentLoading: false });
+      return data;
     } catch (err) {
       console.error('❌ [fetchAllSupplierPaymentsAction] error:', err);
       set({ isSupplierPaymentLoading: false, supplierPaymentError: err?.message || 'ไม่สามารถโหลดข้อมูลได้' });
+      throw err;
     }
   },
 
@@ -76,32 +78,37 @@ const useSupplierPaymentStore = create((set, get) => ({
     try {
       const data = await getSupplierPaymentsBySupplier(supplierId);
       if (Array.isArray(data) && data.length > 0) {
-        set({ supplierPayments: data, selectedSupplier: data[0].supplier || null });
+        set({ supplierPayments: data, selectedSupplier: data[0].supplier || null, supplierPaymentError: null });
       } else {
-        set({ supplierPayments: [], selectedSupplier: null });
+        set({ supplierPayments: [], selectedSupplier: null, supplierPaymentError: null });
       }
+      return data;
     } catch (err) {
       console.error('❌ [fetchSupplierPaymentsBySupplierIdAction] error:', err);
+      set({ supplierPaymentError: err?.message || 'ไม่สามารถโหลดประวัติการชำระเงินผู้ขายได้' });
+      throw err;
     }
   },
 
   fetchAdvancePaymentsBySupplierAction: async (supplierId) => {
-    if (!supplierId) return;
+    if (!supplierId) return [];
     try {
       const data = await getAdvancePaymentsBySupplier(supplierId);
+      const normalized = Array.isArray(data) ? data : [];
       set((state) => ({
-        advancePayments: Array.isArray(data) ? data : [],
+        advancePayments: normalized,
         advancePaymentsBySupplier: {
           ...state.advancePaymentsBySupplier,
-          [supplierId]: Array.isArray(data) ? data : [],
+          [supplierId]: normalized,
         },
-        selectedSupplier: data?.[0]?.supplier || state.selectedSupplier || null,
+        selectedSupplier: normalized?.[0]?.supplier || state.selectedSupplier || null,
+        supplierPaymentError: null,
       }));
+      return normalized;
     } catch (err) {
       console.error('❌ [fetchAdvancePaymentsBySupplierAction] error:', err);
-      set((state) => ({
-        advancePaymentsBySupplier: { ...state.advancePaymentsBySupplier, [supplierId]: [] },
-      }));
+      set({ supplierPaymentError: err?.message || 'ไม่สามารถโหลดประวัติการชำระเงินล่วงหน้าได้' });
+      throw err;
     }
   },
 

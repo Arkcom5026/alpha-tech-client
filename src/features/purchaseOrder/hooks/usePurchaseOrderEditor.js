@@ -78,6 +78,8 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
   );
 
   const addProductToOrder = useCallback(async (product) => {
+    if (submitRef.current) return null;
+
     let operationalProduct = product;
 
     if (mode === 'create' && (product?.discoverySource === 'TEMPLATE' || product?.isTemplateProduct === true)) {
@@ -87,6 +89,8 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
       }
 
       const materialized = await materializePurchaseOrderTemplateProduct(templateProductId);
+      if (submitRef.current) return null;
+
       const localProduct = unwrapMaterializedProduct(materialized);
       const localProductId = toPositiveInt(localProduct?.productId || localProduct?.id);
       if (!localProductId) {
@@ -127,7 +131,7 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
     if (isSubmitting || submitRef.current) return;
     setSubmitError('');
 
-    const command = {
+    const submitSnapshot = {
       mode,
       id,
       currentBranchId,
@@ -136,9 +140,13 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
       note,
       shouldPrint,
       purchaseOrder,
+      shopSlug,
+    };
+
+    const command = {
+      ...submitSnapshot,
       createPurchaseOrder,
       updatePurchaseOrder,
-      shopSlug,
     };
 
     submitRef.current = true;

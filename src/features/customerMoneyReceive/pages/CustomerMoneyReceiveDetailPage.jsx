@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
@@ -22,21 +22,54 @@ const CustomerMoneyReceiveDetailPage = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelError, setCancelError] = useState('');
   const cancellingRef = useRef(false);
+  const recordContextRef = useRef(id);
+  const loadRequestRef = useRef(0);
+  const cancelRequestRef = useRef(0);
 
-  const loadRecord = async (recordId = id) => {
-    const data = await getCustomerMoneyReceive(recordId);
-    setRecord(data);
-    setRefreshWarning('');
-    return data;
-  };
+  recordContextRef.current = id;
+
+  const loadRecord = useCallback(async (recordId = id) => {
+    const recordIdSnapshot = String(recordId || '');
+    const requestId = ++loadRequestRef.current;
+    const ownsRequest = () => (
+      loadRequestRef.current === requestId
+      && String(recordContextRef.current || '') === recordIdSnapshot
+    );
+
+    try {
+      const data = await getCustomerMoneyReceive(recordIdSnapshot);
+      if (!ownsRequest()) return { ok: false, stale: true, data: null };
+      setRecord(data);
+      setError('');
+      setRefreshWarning('');
+      return { ok: true, stale: false, data };
+    } catch (err) {
+      if (!ownsRequest()) return { ok: false, stale: true, error: err };
+      const message = err?.response?.data?.message || err?.message || 'โหลดเอกสารไม่สำเร็จ';
+      setRecord(null);
+      setError(message);
+      return { ok: false, stale: false, error: err };
+    }
+  }, [id]);
 
   useEffect(() => {
-    let active = true;
-    getCustomerMoneyReceive(id)
-      .then((data) => { if (active) setRecord(data); })
-      .catch((err) => { if (active) setError(err?.response?.data?.message || err?.message || 'โหลดเอกสารไม่สำเร็จ'); });
-    return () => { active = false; };
-  }, [id]);
+    loadRequestRef.current += 1;
+    cancelRequestRef.current += 1;
+    cancellingRef.current = false;
+    setCancelling(false);
+    setCancelOpen(false);
+    setCancelReason('');
+    setCancelError('');
+    setRefreshWarning('');
+    setError('');
+    setRecord(null);
+    loadRecord(id);
+
+    return () => {
+      loadRequestRef.current += 1;
+      cancelRequestRef.current += 1;
+    };
+  }, [id, loadRecord]);
 
   const requestCancel = () => {
     if (cancelling || cancellingRef.current) return;
@@ -61,8 +94,14 @@ const CustomerMoneyReceiveDetailPage = () => {
     }
     if (cancelling || cancellingRef.current || !id) return;
 
-    const recordId = id;
+    const recordId = String(id);
     const reasonSnapshot = reason;
+    const cancelRequestId = ++cancelRequestRef.current;
+    const ownsCancelRequest = () => (
+      cancelRequestRef.current === cancelRequestId
+      && String(recordContextRef.current || '') === recordId
+    );
+
     cancellingRef.current = true;
     setCancelling(true);
     setCancelError('');
@@ -71,6 +110,7 @@ const CustomerMoneyReceiveDetailPage = () => {
     try {
       await cancelCustomerMoneyReceive(recordId, reasonSnapshot);
     } catch (err) {
+      if (!ownsCancelRequest()) return;
       const message = err?.response?.data?.error?.message || err?.response?.data?.message || err?.message || 'ยกเลิกเอกสารรับเงินไม่สำเร็จ';
       setCancelError(message);
       feedback.actionError(err, 'ยกเลิกเอกสารรับเงินไม่สำเร็จ', `customer-money-receive:cancel:${recordId}:error`);
@@ -79,21 +119,33 @@ const CustomerMoneyReceiveDetailPage = () => {
       return;
     }
 
+    if (!ownsCancelRequest()) {
+      feedback.actionError(
+        new Error('CUSTOMER_MONEY_RECEIVE_CONTEXT_CHANGED'),
+        'ยกเลิกเอกสารรับเงินสำเร็จแล้ว แต่หน้าปัจจุบันเปลี่ยนไปเป็นเอกสารอื่น',
+        `customer-money-receive:cancel:${recordId}:context-changed:error`,
+      );
+      return;
+    }
+
     feedback.actionSuccess('ยกเลิกเอกสารรับเงินเรียบร้อยแล้ว', `customer-money-receive:cancel:${recordId}:success`);
     setCancelOpen(false);
     setCancelReason('');
 
-    try {
-      await loadRecord(recordId);
-    } catch (refreshError) {
+    const refreshOutcome = await loadRecord(recordId);
+    if (!ownsCancelRequest()) return;
+
+    if (!refreshOutcome.ok && !refreshOutcome.stale) {
       const partialMessage = 'ยกเลิกเอกสารรับเงินสำเร็จแล้ว แต่โหลดสถานะเอกสารล่าสุดไม่สำเร็จ';
       setRefreshWarning(partialMessage);
       feedback.actionError(
-        refreshError,
+        refreshOutcome.error,
         partialMessage,
         `customer-money-receive:cancel:${recordId}:refresh:error`,
       );
-    } finally {
+    }
+
+    if (ownsCancelRequest()) {
       cancellingRef.current = false;
       setCancelling(false);
     }

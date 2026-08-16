@@ -103,6 +103,7 @@ const SupplierPayableWorkspacePage = () => {
   const settlementMutationRef = useRef(false);
   const advanceMutationRef = useRef(false);
   const payableMutationRef = useRef(false);
+  const disputeMutationRef = useRef(false);
 
   const load = useCallback(async ({ reportError = true } = {}) => {
     setLoading(true);
@@ -492,72 +493,170 @@ const SupplierPayableWorkspacePage = () => {
   };
 
   const openDispute = async () => {
+    if (disputeMutationRef.current) return;
+    const formSnapshot = { ...disputeForm };
+    const payableIdSnapshot = Number(formSnapshot.payableId);
+
+    disputeMutationRef.current = true;
     setSaving(true);
     try {
       await openSupplierDispute({
-        payableId: Number(disputeForm.payableId),
-        disputedAmount: Number(disputeForm.disputedAmount),
-        reason: disputeForm.reason,
+        payableId: payableIdSnapshot,
+        disputedAmount: Number(formSnapshot.disputedAmount),
+        reason: formSnapshot.reason,
       });
-      toast.success('เปิดข้อโต้แย้งและระงับการชำระรายการนี้แล้ว');
+      toast.actionSuccess(
+        'เปิดข้อโต้แย้งและระงับการชำระรายการนี้แล้ว',
+        `supplier-payable:${payableIdSnapshot}:dispute:open:success`,
+      );
       setDisputeForm({ payableId: '', disputedAmount: '', reason: '' });
-      await load();
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'เปิดข้อโต้แย้งสำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:${payableIdSnapshot}:dispute:open:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierDisputeErrorMessage(error));
-    } finally { setSaving(false); }
+      toast.actionError(
+        error,
+        getSupplierDisputeErrorMessage(error),
+        `supplier-payable:${payableIdSnapshot}:dispute:open:error`,
+      );
+    } finally {
+      disputeMutationRef.current = false;
+      setSaving(false);
+    }
   };
 
   const createAdjustment = async () => {
+    if (disputeMutationRef.current) return;
+    const formSnapshot = { ...adjustmentForm };
+    const payableIdSnapshot = Number(formSnapshot.payableId);
+
+    disputeMutationRef.current = true;
     setSaving(true);
     try {
       await createSupplierAdjustment({
-        ...adjustmentForm,
-        payableId: Number(adjustmentForm.payableId),
-        amount: Number(adjustmentForm.amount),
+        ...formSnapshot,
+        payableId: payableIdSnapshot,
+        amount: Number(formSnapshot.amount),
       });
-      toast.success('บันทึกรายการปรับยอดเจ้าหนี้แล้ว');
-      setAdjustmentForm({ ...adjustmentForm, amount: '', documentNumber: '', documentDate: '', note: '' });
-      await load();
+      toast.actionSuccess(
+        'บันทึกรายการปรับยอดเจ้าหนี้แล้ว',
+        `supplier-payable:${payableIdSnapshot}:adjustment:create:success`,
+      );
+      setAdjustmentForm((current) => ({
+        ...current,
+        amount: '',
+        documentNumber: '',
+        documentDate: '',
+        note: '',
+      }));
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'บันทึก Adjustment สำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:${payableIdSnapshot}:adjustment:create:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierDisputeErrorMessage(error));
-    } finally { setSaving(false); }
+      toast.actionError(
+        error,
+        getSupplierDisputeErrorMessage(error),
+        `supplier-payable:${payableIdSnapshot}:adjustment:create:error`,
+      );
+    } finally {
+      disputeMutationRef.current = false;
+      setSaving(false);
+    }
   };
 
   const resolveDispute = async (disputeId) => {
+    if (disputeMutationRef.current) return;
+    const disputeIdSnapshot = disputeId;
+    const formSnapshot = { ...resolutionForm };
+    const amountValue = Number(formSnapshot.amount);
+
+    disputeMutationRef.current = true;
     setSaving(true);
     try {
-      const amountValue = Number(resolutionForm.amount);
       await resolveSupplierDispute({
-        disputeId,
-        resolutionNote: resolutionForm.note,
+        disputeId: disputeIdSnapshot,
+        resolutionNote: formSnapshot.note,
         ...(amountValue > 0 ? {
           adjustment: {
             amount: amountValue,
-            direction: resolutionForm.direction,
-            type: resolutionForm.type,
-            documentNumber: resolutionForm.documentNumber,
+            direction: formSnapshot.direction,
+            type: formSnapshot.type,
+            documentNumber: formSnapshot.documentNumber,
           },
         } : {}),
       });
-      toast.success('ปิดข้อโต้แย้งและคืนรายการเข้าสู่กระบวนการเจ้าหนี้แล้ว');
+      toast.actionSuccess(
+        'ปิดข้อโต้แย้งและคืนรายการเข้าสู่กระบวนการเจ้าหนี้แล้ว',
+        `supplier-payable:dispute:${disputeIdSnapshot}:resolve:success`,
+      );
       setResolutionForm({ note: '', amount: '', direction: 'CREDIT', type: 'CREDIT_NOTE', documentNumber: '' });
-      await load();
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'ปิดข้อโต้แย้งสำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:dispute:${disputeIdSnapshot}:resolve:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierDisputeErrorMessage(error));
-    } finally { setSaving(false); }
+      toast.actionError(
+        error,
+        getSupplierDisputeErrorMessage(error),
+        `supplier-payable:dispute:${disputeIdSnapshot}:resolve:error`,
+      );
+    } finally {
+      disputeMutationRef.current = false;
+      setSaving(false);
+    }
   };
 
   const voidAdjustment = async (adjustmentId) => {
-    if (!adjustmentVoidReason.trim()) return toast.info('กรุณาระบุเหตุผลในการย้อน Adjustment');
+    const adjustmentIdSnapshot = adjustmentId;
+    const reasonSnapshot = adjustmentVoidReason.trim();
+    if (!reasonSnapshot) return toast.info('กรุณาระบุเหตุผลในการย้อน Adjustment');
+    if (disputeMutationRef.current) return;
+
+    disputeMutationRef.current = true;
     setSaving(true);
     try {
-      await voidSupplierAdjustment({ adjustmentId, reason: adjustmentVoidReason });
-      toast.success('ย้อน Adjustment และคืนยอดเจ้าหนี้แล้ว');
+      await voidSupplierAdjustment({ adjustmentId: adjustmentIdSnapshot, reason: reasonSnapshot });
+      toast.actionSuccess(
+        'ย้อน Adjustment และคืนยอดเจ้าหนี้แล้ว',
+        `supplier-payable:adjustment:${adjustmentIdSnapshot}:void:success`,
+      );
       setAdjustmentVoidReason('');
-      await load();
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'ย้อน Adjustment สำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:adjustment:${adjustmentIdSnapshot}:void:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierDisputeErrorMessage(error));
-    } finally { setSaving(false); }
+      toast.actionError(
+        error,
+        getSupplierDisputeErrorMessage(error),
+        `supplier-payable:adjustment:${adjustmentIdSnapshot}:void:error`,
+      );
+    } finally {
+      disputeMutationRef.current = false;
+      setSaving(false);
+    }
   };
 
   return (

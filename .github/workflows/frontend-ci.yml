@@ -58,6 +58,9 @@ jobs:
     - name: Sales printable performance contract
       run: npx vitest run tests/sales-printable-performance.contract.test.js
 
+    - name: Purchase receipt save refetch performance contract
+      run: node tests/purchase-receipt-save-refetch-performance.contract.test.js
+
     - name: UI modernization full-repository guard
       run: npm run guard:ui-modernization
 

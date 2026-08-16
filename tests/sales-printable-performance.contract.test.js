@@ -1,8 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
 import {
   clearPrintableSalesRequestCache,
   runPrintableSalesRequest,
 } from '../src/features/sales/history/api/printableRequestCoordinator';
+
+const root = process.cwd();
+const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
+
+const collectSourceFiles = (directory) => {
+  const results = [];
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    const absolutePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      results.push(...collectSourceFiles(absolutePath));
+      continue;
+    }
+    if (/\.(?:js|jsx|ts|tsx)$/.test(entry.name)) results.push(absolutePath);
+  }
+  return results;
+};
 
 describe('Sales printable performance contract', () => {
   beforeEach(() => {
@@ -82,5 +100,30 @@ describe('Sales printable performance contract', () => {
 
     await expect(runPrintableSalesRequest(params, freshRequest)).resolves.toEqual([{ id: 2026 }]);
     expect(freshRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps one canonical printable transport and no residual cache-busting caller', () => {
+    const transportPath = 'src/features/sales/history/api/printableSalesTransport.js';
+    const transport = read(transportPath);
+    const historyApi = read('src/features/sales/history/api/saleHistoryApi.js');
+    const legacyApi = read('src/features/sales/api/saleApi.js');
+    const dashboardApi = read('src/features/sales/history/dashboard/api/salesDashboardApi.js');
+    const documentSearchApi = read('src/features/sales/documents/search/api/saleDocumentSearchApi.js');
+
+    expect(transport).toContain("requestPrintableSales('/sales/printable', params)");
+    expect(transport).toContain("requestPrintableSales('/sales/printable-sales', params)");
+    expect(transport).not.toContain('_ts');
+    expect(historyApi).toContain('runPrintableSalesRequest(params, fetchPrintableSalesTransport)');
+    expect(legacyApi).toContain('export const searchPrintableSales = searchPrintableSalesFromHistory;');
+    expect(legacyApi).not.toContain("apiClient.get('/sales/printable'");
+    expect(dashboardApi).toContain("from '../../api/saleHistoryApi'");
+    expect(documentSearchApi).toContain("from '@/features/sales/history/api/saleHistoryApi'");
+
+    const sourceRoot = path.join(root, 'src');
+    const printableTransportOwners = collectSourceFiles(sourceRoot)
+      .filter((filePath) => read(path.relative(root, filePath)).includes("'/sales/printable'"))
+      .map((filePath) => path.relative(root, filePath).replaceAll('\\', '/'));
+
+    expect(printableTransportOwners).toEqual([transportPath]);
   });
 });

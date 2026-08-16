@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import PageHeader from '@/components/shared/layout/PageHeader';
 import { feedback } from '@/design-system/feedback';
@@ -24,6 +24,9 @@ const CreateProductProfilePage = () => {
   const dropdownLoading = !productStore?.dropdownsLoaded;
   const ensureDropdownsAction = productStore?.ensureDropdownsAction;
   const [errorMsg, setErrorMsg] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const mutationBusy = isSubmitting || submitting;
 
   const mergedDropdowns = useMemo(() => {
     const store = productStore || {};
@@ -65,23 +68,36 @@ const CreateProductProfilePage = () => {
   }, [ensureDropdownsAction]);
 
   const handleSubmit = async (formData) => {
-    if (!canManage || isSubmitting) return;
+    if (!canManage || mutationBusy || submittingRef.current) return;
+    const payload = {
+      name: (formData.name || '').trim(),
+      description: (formData.description || '').trim(),
+      categoryId: Number(formData.categoryId),
+      productTypeId: Number(formData.productTypeId),
+    };
+    const destination = listPath;
+
+    submittingRef.current = true;
+    setSubmitting(true);
     setErrorMsg('');
 
     try {
-      await createProfileAction({
-        name: (formData.name || '').trim(),
-        description: (formData.description || '').trim(),
-        categoryId: Number(formData.categoryId),
-        productTypeId: Number(formData.productTypeId),
-      });
+      await createProfileAction(payload);
       feedback.actionSuccess('บันทึกโปรไฟล์สินค้าเรียบร้อยแล้ว', 'product-profile:create:success');
-      navigate(listPath);
+      navigate(destination);
     } catch (error) {
       const message = error?.response?.data?.error?.message || error?.response?.data?.message || error?.message || 'บันทึกโปรไฟล์สินค้าไม่สำเร็จ';
       setErrorMsg(message);
       feedback.actionError(error, 'บันทึกโปรไฟล์สินค้าไม่สำเร็จ', 'product-profile:create:error');
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
     }
+  };
+
+  const guardNavigation = (event) => {
+    if (!mutationBusy && !submittingRef.current) return;
+    event?.preventDefault?.();
   };
 
   if (!canManage) {
@@ -115,10 +131,17 @@ const CreateProductProfilePage = () => {
             dropdowns={mergedDropdowns}
             isDropdownLoading={dropdownLoading}
             onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
+            isSubmitting={mutationBusy}
           />
           <div className="flex justify-between mt-4">
-            <Link to={listPath} className="btn btn-outline">กลับไปหน้ารายการโปรไฟล์สินค้า</Link>
+            <Link
+              to={listPath}
+              onClick={guardNavigation}
+              aria-disabled={mutationBusy}
+              className={`btn btn-outline ${mutationBusy ? 'pointer-events-none opacity-50' : ''}`}
+            >
+              กลับไปหน้ารายการโปรไฟล์สินค้า
+            </Link>
           </div>
         </div>
       </div>

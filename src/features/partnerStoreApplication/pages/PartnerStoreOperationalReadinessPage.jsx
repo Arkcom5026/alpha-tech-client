@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import {
   certifyPartnerStoreOperationalReadiness,
@@ -20,6 +20,7 @@ export default function PartnerStoreOperationalReadinessPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const submittingRef = useRef(false);
 
   const load = async () => {
     setLoading(true);
@@ -55,19 +56,26 @@ export default function PartnerStoreOperationalReadinessPage() {
   }
 
   const certify = async () => {
-    if (!assessment.allReady) {
+    if (submitting || submittingRef.current) return;
+
+    const readinessConfirmed = Boolean(assessment.allReady);
+    const destinationSlug = canonicalSlug;
+    if (!readinessConfirmed) {
       setError('ร้านยังมีรายการที่ต้องแก้ไขก่อนรับรองความพร้อม');
       return;
     }
+
+    submittingRef.current = true;
     setSubmitting(true);
     setError('');
     try {
       await certifyPartnerStoreOperationalReadiness();
-      navigate(`/${canonicalSlug}/pos/dashboard`, { replace: true });
+      navigate(`/${destinationSlug}/pos/dashboard`, { replace: true });
     } catch (requestError) {
       setError(messageFrom(requestError));
       await load();
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };

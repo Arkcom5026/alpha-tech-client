@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Archive, RefreshCw, Search, X } from 'lucide-react';
 import { feedback } from '@/design-system/feedback';
 import {
@@ -34,6 +34,7 @@ const PosHeldCartPanel = ({
   const [pendingCancelId, setPendingCancelId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [form, setForm] = useState({ customerName: '', customerPhone: '', note: '' });
+  const mutationRef = useRef(false);
 
   const load = async () => {
     setLoading(true);
@@ -54,19 +55,23 @@ const PosHeldCartPanel = ({
   if (!open) return null;
 
   const saveCurrent = async () => {
-    if (saving) return;
+    if (saving || mutationRef.current) return;
     if (!currentItems.length) {
       feedback.info('ยังไม่มีสินค้าให้พักรายการ');
       return;
     }
+
+    const payload = {
+      ...form,
+      customerId: currentCustomerId || null,
+      priceType: currentPriceType,
+      items: [...currentItems],
+    };
+
+    mutationRef.current = true;
     setSaving(true);
     try {
-      const cart = await createPosHeldCart({
-        ...form,
-        customerId: currentCustomerId || null,
-        priceType: currentPriceType,
-        items: currentItems,
-      });
+      const cart = await createPosHeldCart(payload);
       feedback.actionSuccess(`บันทึกใบพัก ${cart.code} แล้ว`, 'held-cart:create:success');
       setForm({ customerName: '', customerPhone: '', note: '' });
       await load();
@@ -75,18 +80,19 @@ const PosHeldCartPanel = ({
     } catch (error) {
       feedback.actionError(error, getPosHeldCartErrorMessage(error), 'held-cart:create:error');
     } finally {
+      mutationRef.current = false;
       setSaving(false);
     }
   };
 
   const requestCancel = (heldCartId) => {
-    if (cancellingId) return;
+    if (mutationRef.current || cancellingId) return;
     setPendingCancelId(heldCartId);
     setCancelReason('');
   };
 
   const closeCancel = () => {
-    if (cancellingId) return;
+    if (mutationRef.current || cancellingId) return;
     setPendingCancelId(null);
     setCancelReason('');
   };
@@ -97,8 +103,9 @@ const PosHeldCartPanel = ({
       feedback.info('กรุณาระบุเหตุผลยกเลิกใบพักรายการ');
       return;
     }
-    if (cancellingId) return;
+    if (cancellingId || mutationRef.current) return;
 
+    mutationRef.current = true;
     setCancellingId(heldCartId);
     try {
       await cancelPosHeldCart(heldCartId, reason);
@@ -109,9 +116,12 @@ const PosHeldCartPanel = ({
     } catch (error) {
       feedback.actionError(error, getPosHeldCartErrorMessage(error), `held-cart:cancel:${heldCartId}:error`);
     } finally {
+      mutationRef.current = false;
       setCancellingId(null);
     }
   };
+
+  const mutationBusy = saving || Boolean(cancellingId);
 
   return (
     <div className="fixed inset-0 z-[80] flex justify-end bg-slate-950/40" role="dialog" aria-modal="true" aria-label="ใบพักรายการขาย">
@@ -124,7 +134,7 @@ const PosHeldCartPanel = ({
           <button
             type="button"
             onClick={onClose}
-            disabled={saving || Boolean(cancellingId)}
+            disabled={mutationBusy}
             className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-teal-200 bg-white text-teal-900 transition hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="ปิดใบพักรายการขาย"
           >
@@ -144,27 +154,39 @@ const PosHeldCartPanel = ({
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <input
                 value={form.customerName}
-                onChange={(event) => setForm({ ...form, customerName: event.target.value })}
+                onChange={(event) => {
+                  if (mutationRef.current) return;
+                  setForm({ ...form, customerName: event.target.value });
+                }}
+                disabled={mutationBusy}
                 placeholder="ชื่อเรียกลูกค้า (ถ้ามี)"
                 className={inputClass}
               />
               <input
                 value={form.customerPhone}
-                onChange={(event) => setForm({ ...form, customerPhone: event.target.value })}
+                onChange={(event) => {
+                  if (mutationRef.current) return;
+                  setForm({ ...form, customerPhone: event.target.value });
+                }}
+                disabled={mutationBusy}
                 placeholder="เบอร์โทร (ถ้ามี)"
                 className={inputClass}
               />
             </div>
             <input
               value={form.note}
-              onChange={(event) => setForm({ ...form, note: event.target.value })}
+              onChange={(event) => {
+                if (mutationRef.current) return;
+                setForm({ ...form, note: event.target.value });
+              }}
+              disabled={mutationBusy}
               placeholder="หมายเหตุ เช่น รอเลือกรายการสินค้าเพิ่ม"
               className={`${inputClass} mt-3`}
             />
             <button
               type="button"
               onClick={saveCurrent}
-              disabled={!currentItems.length || saving}
+              disabled={!currentItems.length || mutationBusy}
               className="mt-4 inline-flex h-11 w-full items-center justify-center rounded-xl bg-teal-700 px-4 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? 'กำลังบันทึก...' : 'บันทึกและเริ่มรายการขายใหม่'}
@@ -177,8 +199,12 @@ const PosHeldCartPanel = ({
                 <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
                 <input
                   value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  onKeyDown={(event) => event.key === 'Enter' && load()}
+                  onChange={(event) => {
+                    if (mutationRef.current) return;
+                    setQuery(event.target.value);
+                  }}
+                  onKeyDown={(event) => event.key === 'Enter' && !mutationRef.current && load()}
+                  disabled={mutationBusy}
                   placeholder="ค้นหารหัส ชื่อ หรือเบอร์โทร"
                   className={`${inputClass} pl-10`}
                 />
@@ -186,7 +212,7 @@ const PosHeldCartPanel = ({
               <button
                 type="button"
                 onClick={load}
-                disabled={loading}
+                disabled={loading || mutationBusy}
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-4 text-sm font-semibold text-teal-900 transition hover:bg-teal-100 disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -221,17 +247,20 @@ const PosHeldCartPanel = ({
                         <textarea
                           id={`held-cart-cancel-${cart.id}`}
                           value={cancelReason}
-                          onChange={(event) => setCancelReason(event.target.value)}
-                          disabled={cancelling}
+                          onChange={(event) => {
+                            if (mutationRef.current) return;
+                            setCancelReason(event.target.value);
+                          }}
+                          disabled={mutationBusy}
                           rows={2}
                           className="mt-2 w-full rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm outline-none focus:border-rose-400 focus:ring-2 focus:ring-rose-100"
                           placeholder="ระบุเหตุผลก่อนยืนยันยกเลิก"
                         />
                         <div className="mt-3 flex justify-end gap-2">
-                          <button type="button" onClick={closeCancel} disabled={cancelling} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
+                          <button type="button" onClick={closeCancel} disabled={mutationBusy} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-50">
                             ไม่ยกเลิก
                           </button>
-                          <button type="button" onClick={() => confirmCancel(cart.id)} disabled={cancelling || !cancelReason.trim()} className="rounded-xl bg-rose-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+                          <button type="button" onClick={() => confirmCancel(cart.id)} disabled={mutationBusy || !cancelReason.trim()} className="rounded-xl bg-rose-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
                             {cancelling ? 'กำลังยกเลิก...' : 'ยืนยันยกเลิก'}
                           </button>
                         </div>
@@ -243,15 +272,17 @@ const PosHeldCartPanel = ({
                         <button
                           type="button"
                           onClick={() => requestCancel(cart.id)}
-                          disabled={Boolean(cancellingId)}
+                          disabled={mutationBusy}
                           className="inline-flex h-10 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                         >
                           ยกเลิก
                         </button>
                         <button
                           type="button"
-                          onClick={() => onLoad(cart.id)}
-                          disabled={Boolean(cancellingId)}
+                          onClick={() => {
+                            if (!mutationRef.current) onLoad(cart.id);
+                          }}
+                          disabled={mutationBusy}
                           className="inline-flex h-10 items-center justify-center rounded-xl bg-emerald-100 px-3 text-sm font-semibold text-emerald-900 transition hover:bg-emerald-200 disabled:opacity-50"
                         >
                           เปิดทำต่อ

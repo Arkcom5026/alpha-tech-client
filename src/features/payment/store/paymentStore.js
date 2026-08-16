@@ -12,6 +12,8 @@ const normalizeReceivedAt = (value) => {
   return raw;
 };
 
+let printablePaymentsRequestSequence = 0;
+
 const usePaymentStore = create(devtools((set, get) => ({
   paymentData: {
     paymentMethod: '',
@@ -159,30 +161,44 @@ const usePaymentStore = create(devtools((set, get) => ({
   },
 
   loadPrintablePaymentsAction: async (params = {}) => {
+    const requestId = ++printablePaymentsRequestSequence;
+    set({ isLoadingPrintablePayments: true, printablePaymentsError: null });
+
+    const limitSafe = Math.max(1, Number(params.limit || 100));
+    const querySnapshot = {
+      fromDate: params.fromDate || undefined,
+      toDate: params.toDate || undefined,
+      keyword: params.keyword || '',
+      limit: limitSafe,
+      _ts: Date.now(),
+    };
+
     try {
-      set({ isLoadingPrintablePayments: true, printablePaymentsError: null });
-
-      const limitSafe = Math.max(1, Number(params.limit || 100));
-
-      const data = await searchPrintablePayments({
-        fromDate: params.fromDate || undefined,
-        toDate: params.toDate || undefined,
-        keyword: params.keyword || '',
-        limit: limitSafe,
-        _ts: Date.now(),
-      });
-
+      const data = await searchPrintablePayments(querySnapshot);
       const listSafe = Array.isArray(data)
         ? data
         : Array.isArray(data?.items)
           ? data.items
           : [];
 
-      set({ printablePayments: listSafe, isLoadingPrintablePayments: false });
-      return listSafe;
+      if (requestId !== printablePaymentsRequestSequence) {
+        return { ok: false, stale: true, items: listSafe };
+      }
+
+      set({ printablePayments: listSafe, printablePaymentsError: null });
+      return { ok: true, stale: false, items: listSafe };
     } catch (err) {
-      set({ isLoadingPrintablePayments: false, printablePaymentsError: 'โหลดรายการพิมพ์ย้อนหลังไม่สำเร็จ' });
-      return [];
+      if (requestId !== printablePaymentsRequestSequence) {
+        return { ok: false, stale: true, error: err };
+      }
+
+      const message = 'โหลดรายการพิมพ์ย้อนหลังไม่สำเร็จ';
+      set({ printablePaymentsError: message });
+      return { ok: false, stale: false, error: err };
+    } finally {
+      if (requestId === printablePaymentsRequestSequence) {
+        set({ isLoadingPrintablePayments: false });
+      }
     }
   },
 })))

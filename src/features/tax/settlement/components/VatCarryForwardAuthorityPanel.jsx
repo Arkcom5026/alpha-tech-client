@@ -71,16 +71,26 @@ const VatCarryForwardAuthorityPanel = ({ branchId, taxPeriodId, onConfirmed }) =
     setError('');
     try {
       await confirmVatCarryForwardAuthority(payload);
-      feedback.actionSuccess('ยืนยันเครดิต VAT ยกมาแล้ว', 'tax-vat-carry-forward-confirm-success');
-      await load();
-      await onConfirmed?.();
     } catch (requestError) {
       const message = getVatSettlementErrorMessage(requestError);
       setError(message);
       feedback.actionError(requestError, message, 'tax-vat-carry-forward-confirm-error');
+      return;
     } finally {
       savingRef.current = false;
       setSaving(false);
+    }
+
+    feedback.actionSuccess('ยืนยันเครดิต VAT ยกมาแล้ว', 'tax-vat-carry-forward-confirm-success');
+    await load();
+    try {
+      await onConfirmed?.();
+    } catch (requestError) {
+      feedback.actionError(
+        requestError,
+        'ยืนยันเครดิต VAT ยกมาสำเร็จแล้ว แต่รีเฟรชข้อมูลส่วนที่เกี่ยวข้องไม่สำเร็จ',
+        'tax-vat-carry-forward-post-confirm-error',
+      );
     }
   };
 

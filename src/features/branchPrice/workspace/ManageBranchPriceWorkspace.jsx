@@ -1,5 +1,5 @@
 // 📄 ManageBranchPricePage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import useBranchPriceStore from '../store/branchPriceStore';
 
@@ -39,6 +39,7 @@ const ManageBranchPriceWorkspace = () => {
   const [pendingList, setPendingList] = useState([]);
   const [filteredEntries, setFilteredEntries] = useState([]);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const pid = (x) => Number(x?.product?.id ?? x?.id);
 
@@ -62,6 +63,8 @@ const ManageBranchPriceWorkspace = () => {
   ]);
 
   const handleConfirmOne = (productId, newEntry) => {
+    if (savingRef.current) return;
+
     setPendingList((prev) => {
       const id = Number(productId);
       const exists = prev.some((it) => pid(it) === id);
@@ -78,35 +81,52 @@ const ManageBranchPriceWorkspace = () => {
   };
 
   const handleRemoveOne = (productId) => {
+    if (savingRef.current) return;
     setPendingList((prev) => prev.filter((item) => pid(item) !== Number(productId)));
   };
 
   const handleSaveAll = async () => {
-    if (pendingList.length === 0 || saving) return;
+    if (pendingList.length === 0 || saving || savingRef.current) return;
 
+    const updates = pendingList.map((item) => ({
+      productId: item.product?.id || item.id,
+      costPrice: item.costPrice,
+      retailPrice: item.retailPrice,
+      wholesalePrice: item.wholesalePrice,
+      technicianPrice: item.technicianPrice,
+      priceOnline: item.priceOnline,
+    }));
+    const refreshFilters = {
+      categoryId: filter.categoryId || undefined,
+      productTypeId: filter.productTypeId || undefined,
+      brandId: filter.brandId || undefined,
+      searchText: committedSearchText?.trim() || undefined,
+    };
+
+    savingRef.current = true;
     setSaving(true);
     try {
-      const updates = pendingList.map((item) => ({
-        productId: item.product?.id || item.id,
-        costPrice: item.costPrice,
-        retailPrice: item.retailPrice,
-        wholesalePrice: item.wholesalePrice,
-        technicianPrice: item.technicianPrice,
-        priceOnline: item.priceOnline,
-      }));
-
       await updateMultipleBranchPricesAction(updates);
-      setPendingList([]);
-      await fetchAllProductsWithPriceByTokenAction({
-        categoryId: filter.categoryId || undefined,
-        productTypeId: filter.productTypeId || undefined,
-        brandId: filter.brandId || undefined,
-        searchText: committedSearchText?.trim() || undefined,
-      });
-      feedback.actionSuccess('บันทึกการเปลี่ยนราคาสินค้าเรียบร้อยแล้ว', 'branch-price:update:success');
     } catch (saveError) {
       feedback.actionError(saveError, 'บันทึกการเปลี่ยนราคาสินค้าไม่สำเร็จ', 'branch-price:update:error');
+      return;
     } finally {
+      // Keep the authority lock until the post-save refresh below is complete.
+    }
+
+    setPendingList([]);
+    feedback.actionSuccess('บันทึกการเปลี่ยนราคาสินค้าเรียบร้อยแล้ว', 'branch-price:update:success');
+
+    try {
+      await fetchAllProductsWithPriceByTokenAction(refreshFilters);
+    } catch (refreshError) {
+      feedback.actionError(
+        refreshError,
+        'บันทึกราคาเรียบร้อยแล้ว แต่โหลดรายการล่าสุดไม่สำเร็จ กรุณากดโหลดใหม่',
+        'branch-price:update:refresh-error',
+      );
+    } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -120,6 +140,7 @@ const ManageBranchPriceWorkspace = () => {
           <CascadingFilterGroup
             value={filter}
             onChange={(next) => {
+              if (savingRef.current) return;
               setFilter((prev) => ({
                 ...prev,
                 categoryId: next.categoryId ?? '',
@@ -130,19 +151,26 @@ const ManageBranchPriceWorkspace = () => {
             hiddenFields={['product']}
             showSearch
             searchText={filter.searchText}
-            onSearchTextChange={(text) => setFilter((prev) => ({ ...prev, searchText: text }))}
-            onSearchCommit={(text) => setCommittedSearchText(text)}
+            onSearchTextChange={(text) => {
+              if (savingRef.current) return;
+              setFilter((prev) => ({ ...prev, searchText: text }));
+            }}
+            onSearchCommit={(text) => {
+              if (savingRef.current) return;
+              setCommittedSearchText(text);
+            }}
           />
 
           <select
             aria-label="แบรนด์สินค้า"
             value={filter.brandId}
-            onChange={(event) =>
+            onChange={(event) => {
+              if (savingRef.current) return;
               setFilter((prev) => ({
                 ...prev,
                 brandId: event.target.value,
-              }))
-            }
+              }));
+            }}
             className="h-10 rounded border px-3 text-sm"
             disabled={saving}
           >

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Cable,
   Link2,
@@ -50,6 +50,7 @@ const ServerPrinterSettingsPanel = ({ branchId, workstationId, settingsService, 
   const [status, setStatus] = useState('IDLE')
   const [message, setMessage] = useState('')
   const [clearRouteConfirmationOpen, setClearRouteConfirmationOpen] = useState(false)
+  const actionRef = useRef(null)
 
   const load = useCallback(async () => {
     setStatus('LOADING')
@@ -62,10 +63,12 @@ const ServerPrinterSettingsPanel = ({ branchId, workstationId, settingsService, 
       setLocalPrinterId((current) => current || String(next.localPrinters[0]?.id || ''))
       if (next.warnings.length) setMessage(next.warnings.join(' · '))
       setStatus('READY')
+      return { ok: true, error: null }
     } catch (error) {
       setStatus('ERROR')
       setMessage(getErrorMessage(error, 'โหลดการตั้งค่าเครื่องพิมพ์ไม่สำเร็จ'))
       feedback.actionError(error, 'โหลดการตั้งค่าเครื่องพิมพ์ไม่สำเร็จ', 'server-printer-settings:load:error')
+      return { ok: false, error }
     }
   }, [settingsService])
 
@@ -89,35 +92,49 @@ const ServerPrinterSettingsPanel = ({ branchId, workstationId, settingsService, 
   }, [purposeId, selectedRoute])
 
   const perform = async (action, successMessage, eventKey) => {
-    if (busy) return false
+    if (busy || actionRef.current) return false
+    actionRef.current = eventKey
     setStatus('SAVING')
     setMessage('')
+
     try {
       await action()
-      await load()
-      setMessage(successMessage)
-      feedback.actionSuccess(successMessage, `${eventKey}:success`)
-      return true
     } catch (error) {
       setStatus('ERROR')
       setMessage(getErrorMessage(error, 'บันทึกการตั้งค่าไม่สำเร็จ'))
       feedback.actionError(error, 'บันทึกการตั้งค่าเครื่องพิมพ์ไม่สำเร็จ', `${eventKey}:error`)
+      if (actionRef.current === eventKey) actionRef.current = null
       return false
     }
+
+    feedback.actionSuccess(successMessage, `${eventKey}:success`)
+    const refreshResult = await load()
+    if (refreshResult?.ok === false) {
+      const partialMessage = `${successMessage} แต่โหลดการตั้งค่าล่าสุดไม่สำเร็จ`
+      setMessage(partialMessage)
+      feedback.actionError(refreshResult.error, partialMessage, `${eventKey}:refresh:error`)
+    } else {
+      setMessage(successMessage)
+    }
+
+    if (actionRef.current === eventKey) actionRef.current = null
+    return true
   }
 
   const saveRoute = () => {
     if (!purposeId || !profileId) return setMessage('กรุณาเลือกประเภทเอกสารและโปรไฟล์เครื่องพิมพ์')
+    const command = { definitionId: Number(purposeId), printerProfileId: Number(profileId) }
     return perform(
-      () => settingsService.configureRoute({ definitionId: Number(purposeId), printerProfileId: Number(profileId) }),
+      () => settingsService.configureRoute(command),
       'บันทึกเส้นทางการพิมพ์แล้ว',
       'server-printer-settings:route:save',
     )
   }
 
   const clearRoute = async () => {
+    const command = { definitionId: Number(purposeId) }
     const ok = await perform(
-      () => settingsService.disableRoute({ definitionId: Number(purposeId) }),
+      () => settingsService.disableRoute(command),
       'ปิดเส้นทางการพิมพ์แล้ว',
       'server-printer-settings:route:disable',
     )
@@ -126,8 +143,9 @@ const ServerPrinterSettingsPanel = ({ branchId, workstationId, settingsService, 
 
   const createProfile = async () => {
     if (!profileDraft.code.trim() || !profileDraft.displayName.trim()) return setMessage('กรุณาระบุรหัสและชื่อโปรไฟล์')
+    const command = { ...profileDraft, capabilities: { print: true }, adapterKind: 'DRIVER', isActive: true }
     const ok = await perform(
-      () => settingsService.createProfile({ ...profileDraft, capabilities: { print: true }, adapterKind: 'DRIVER', isActive: true }),
+      () => settingsService.createProfile(command),
       'สร้างโปรไฟล์เครื่องพิมพ์แล้ว',
       'server-printer-settings:profile:create',
     )
@@ -136,8 +154,9 @@ const ServerPrinterSettingsPanel = ({ branchId, workstationId, settingsService, 
 
   const assignDevice = () => {
     if (!deviceId || !deviceProfileCode) return setMessage('กรุณาเลือกเครื่องจริงและโปรไฟล์')
+    const command = { deviceId, printerProfileCode: deviceProfileCode }
     return perform(
-      () => settingsService.assignDevice({ deviceId, printerProfileCode: deviceProfileCode }),
+      () => settingsService.assignDevice(command),
       'ผูกเครื่องจริงกับโปรไฟล์แล้ว',
       'server-printer-settings:device:assign',
     )
@@ -146,8 +165,9 @@ const ServerPrinterSettingsPanel = ({ branchId, workstationId, settingsService, 
   const registerLocalPrinter = () => {
     const printer = catalog.localPrinters.find((item) => item.id === localPrinterId)
     if (!printer) return setMessage('กรุณาเลือกเครื่องพิมพ์ที่ Local Print Bridge ค้นพบ')
+    const command = { printer: { ...printer }, workstationId }
     return perform(
-      () => settingsService.registerLocalPrinter({ printer, workstationId }),
+      () => settingsService.registerLocalPrinter(command),
       `ลงทะเบียน ${printer.name} กับสาขาแล้ว`,
       'server-printer-settings:local-printer:register',
     )
@@ -156,18 +176,31 @@ const ServerPrinterSettingsPanel = ({ branchId, workstationId, settingsService, 
   const testRoute = async () => {
     const readyDevice = matchingDevices.find((device) => device.connectionState === 'ONLINE')
     if (!readyDevice || !selectedPurpose) return setMessage('ยังไม่มีเครื่องจริงที่ออนไลน์สำหรับโปรไฟล์นี้')
-    if (busy) return
+    if (busy || actionRef.current) return
+
+    const eventKey = 'server-printer-settings:test'
+    const command = {
+      branchId,
+      workstationId,
+      documentPurpose: selectedPurpose.normalizedCode,
+      printerProfileId: readyDevice.deviceId,
+    }
+    const printerName = readyDevice.name
+
+    actionRef.current = eventKey
     setStatus('TESTING')
     setMessage('กำลังส่งงานทดสอบพิมพ์...')
     try {
-      await printerTestService.test({ branchId, workstationId, documentPurpose: selectedPurpose.normalizedCode, printerProfileId: readyDevice.deviceId })
+      await printerTestService.test(command)
       setStatus('READY')
-      setMessage(`ทดสอบพิมพ์สำเร็จที่ ${readyDevice.name}`)
-      feedback.actionSuccess(`ทดสอบพิมพ์สำเร็จที่ ${readyDevice.name}`, 'server-printer-settings:test:success')
+      setMessage(`ทดสอบพิมพ์สำเร็จที่ ${printerName}`)
+      feedback.actionSuccess(`ทดสอบพิมพ์สำเร็จที่ ${printerName}`, `${eventKey}:success`)
     } catch (error) {
       setStatus('ERROR')
       setMessage(getErrorMessage(error, 'ทดสอบพิมพ์ไม่สำเร็จ'))
-      feedback.actionError(error, 'ทดสอบพิมพ์ไม่สำเร็จ', 'server-printer-settings:test:error')
+      feedback.actionError(error, 'ทดสอบพิมพ์ไม่สำเร็จ', `${eventKey}:error`)
+    } finally {
+      if (actionRef.current === eventKey) actionRef.current = null
     }
   }
 

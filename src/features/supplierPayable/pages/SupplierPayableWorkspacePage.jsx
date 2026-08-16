@@ -102,6 +102,7 @@ const SupplierPayableWorkspacePage = () => {
   });
   const settlementMutationRef = useRef(false);
   const advanceMutationRef = useRef(false);
+  const payableMutationRef = useRef(false);
 
   const load = useCallback(async ({ reportError = true } = {}) => {
     setLoading(true);
@@ -166,21 +167,42 @@ const SupplierPayableWorkspacePage = () => {
   };
 
   const createPayable = async () => {
-    if (!selected.length) return;
+    if (payableMutationRef.current || !selected.length) return;
+    const supplierIdSnapshot = selectedSupplierId;
+    const receiptIdsSnapshot = [...selectedIds];
+    const formSnapshot = { ...form };
+
+    payableMutationRef.current = true;
     setSaving(true);
     try {
       await createSupplierPayableFromReceipts({
-        supplierId: selectedSupplierId,
-        receiptIds: selectedIds,
-        ...form,
+        supplierId: supplierIdSnapshot,
+        receiptIds: receiptIdsSnapshot,
+        ...formSnapshot,
       });
-      toast.success('ตั้งรายการเจ้าหนี้จากใบรับสินค้าแล้ว');
+      toast.actionSuccess(
+        'ตั้งรายการเจ้าหนี้จากใบรับสินค้าแล้ว',
+        `supplier-payable:${supplierIdSnapshot}:payable:create:success`,
+      );
       setSelectedIds([]);
       setForm({ documentNumber: '', documentDate: '', dueDate: '', note: '' });
-      await load();
+
+      const refresh = await load({ reportError: false });
+      if (!refresh.ok) {
+        toast.actionError(
+          refresh.error,
+          'ตั้งรายการเจ้าหนี้สำเร็จแล้ว แต่รีเฟรชข้อมูลเจ้าหนี้ล่าสุดไม่สำเร็จ',
+          `supplier-payable:${supplierIdSnapshot}:payable:create:refresh:error`,
+        );
+      }
     } catch (error) {
-      toast.error(getSupplierPayableErrorMessage(error));
+      toast.actionError(
+        error,
+        getSupplierPayableErrorMessage(error),
+        `supplier-payable:${supplierIdSnapshot}:payable:create:error`,
+      );
     } finally {
+      payableMutationRef.current = false;
       setSaving(false);
     }
   };
@@ -668,8 +690,8 @@ const SupplierPayableWorkspacePage = () => {
           <div><h2 className="font-black">ตั้งหนี้จากใบรับสินค้า</h2><p className="text-xs text-slate-500">เลือกได้หลายใบ แต่ต้องเป็น Supplier เดียวกัน</p></div>
           <div className="max-h-80 space-y-2 overflow-auto">
             {candidates.map((item) => (
-              <label key={item.id} className="flex cursor-pointer items-start gap-3 rounded-xl border p-3 hover:bg-emerald-50">
-                <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggle(item)} className="mt-1" />
+              <label key={item.id} className={`flex items-start gap-3 rounded-xl border p-3 ${saving ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:bg-emerald-50'}`}>
+                <input type="checkbox" checked={selectedIds.includes(item.id)} onChange={() => toggle(item)} disabled={saving} className="mt-1" />
                 <span className="min-w-0 flex-1"><span className="block font-bold">{item.code} · {item.supplierName}</span><span className="block text-xs text-slate-500">{item.source} · {item.deliveryNoteNumber || 'ไม่มีเลขใบส่งสินค้า'}</span></span>
                 <strong className="text-sm">{money(item.totalAmount)}</strong>
               </label>
@@ -677,12 +699,12 @@ const SupplierPayableWorkspacePage = () => {
             {!loading && !candidates.length && <p className="py-6 text-center text-sm text-slate-500">ไม่มีใบรับที่รอตั้งหนี้</p>}
           </div>
           {selected.some((item) => Number(item.legacyPaidAmount || 0) > 0) && <div className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold text-amber-800"><AlertTriangle size={16} /> ระบบจะยกยอดที่เคยชำระจาก Legacy Payment มาคำนวณยอดคงเหลือ</div>}
-          <div className="grid gap-3 sm:grid-cols-2">
+          <fieldset disabled={saving} className="grid gap-3 sm:grid-cols-2 disabled:opacity-60">
             <input value={form.documentNumber} onChange={(event) => setForm({ ...form, documentNumber: event.target.value })} placeholder="เลขเอกสารเรียกเก็บ (ถ้ามี)" className="rounded-xl border px-3 py-2 text-sm" />
             <input type="date" value={form.documentDate} onChange={(event) => setForm({ ...form, documentDate: event.target.value })} className="rounded-xl border px-3 py-2 text-sm" />
             <input type="date" value={form.dueDate} onChange={(event) => setForm({ ...form, dueDate: event.target.value })} className="rounded-xl border px-3 py-2 text-sm" />
             <input value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} placeholder="หมายเหตุ" className="rounded-xl border px-3 py-2 text-sm" />
-          </div>
+          </fieldset>
           <div className="flex items-center justify-between"><strong>รวม {money(selectedTotal)}</strong><button type="button" onClick={createPayable} disabled={!selected.length || saving} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">{saving ? 'กำลังบันทึก...' : 'ตั้งรายการเจ้าหนี้'}</button></div>
         </div>
       </div>

@@ -25,6 +25,7 @@ describe('Sales printable performance contract', () => {
     const first = runPrintableSalesRequest(params, request);
     const second = runPrintableSalesRequest({ ...params }, request);
 
+    await Promise.resolve();
     expect(request).toHaveBeenCalledTimes(1);
     resolveRequest([{ id: 1013 }]);
 

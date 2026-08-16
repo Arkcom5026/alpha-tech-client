@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { feedback } from '@/design-system';
 import { getRepairCommunicationPreference, listRepairCommunicationActivities, recordRepairCommunicationActivity } from '../../communication/api/communicationApi';
 import { dedupeRepairRead } from '../api/repairRequestCoordinator';
 
@@ -45,11 +46,30 @@ const RepairCommunicationPanel = ({ repairJobId }) => {
   const record = async () => {
     if (!preference?.channelType || saving) return;
     setSaving(true);
+    setError('');
     try {
-      await recordRepairCommunicationActivity(repairJobId, { ...draft, channelType: preference.channelType, destinationSnapshot: destination || null });
-      setDraft((current) => ({ ...current, note: '' })); await load();
-    } catch (saveError) { setError(saveError.message); }
-    finally { setSaving(false); }
+      await recordRepairCommunicationActivity(repairJobId, {
+        ...draft,
+        channelType: preference.channelType,
+        destinationSnapshot: destination || null,
+      });
+      setDraft((current) => ({ ...current, note: '' }));
+      feedback.actionSuccess(
+        'บันทึกการติดต่อลูกค้าเรียบร้อยแล้ว',
+        `repair:communication:${repairJobId}:record:success`,
+      );
+      await load();
+    } catch (saveError) {
+      const message = saveError?.message || 'บันทึกการติดต่อลูกค้าไม่สำเร็จ';
+      setError(message);
+      feedback.actionError(
+        saveError,
+        message,
+        `repair:communication:${repairJobId}:record:error`,
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -67,14 +87,14 @@ const RepairCommunicationPanel = ({ repairJobId }) => {
             <p className="mt-1 text-xs text-sky-700">Consent: {preference.consentGranted ? 'ยินยอมแล้ว' : 'ยังไม่ยืนยัน'}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {href ? <a href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noreferrer" className="min-h-11 rounded-xl bg-sky-700 px-4 py-3 text-sm font-black text-white">เปิดช่องทางติดต่อ</a> : null}
-              {destination ? <button type="button" onClick={() => navigator.clipboard?.writeText(destination)} className="min-h-11 rounded-xl border border-sky-300 bg-white px-4 text-sm font-black text-sky-800">คัดลอก</button> : null}
+              {destination ? <button type="button" disabled={saving} onClick={() => navigator.clipboard?.writeText(destination)} className="min-h-11 rounded-xl border border-sky-300 bg-white px-4 text-sm font-black text-sky-800 disabled:cursor-not-allowed disabled:opacity-50">คัดลอก</button> : null}
             </div>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <select value={draft.activityType} onChange={(event) => setDraft({ ...draft, activityType: event.target.value })} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4">{ACTIVITY_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
-            <select value={draft.direction} onChange={(event) => setDraft({ ...draft, direction: event.target.value })} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4"><option value="OUTBOUND">ร้านติดต่อลูกค้า</option><option value="INBOUND">ลูกค้าติดต่อร้าน</option><option value="INTERNAL">บันทึกภายใน</option></select>
-            <textarea rows={2} value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} placeholder="หมายเหตุ (ถ้ามี)" className="rounded-xl border border-slate-300 px-4 py-3 sm:col-span-2" />
-            <button type="button" disabled={saving} onClick={record} className="min-h-12 rounded-xl bg-slate-900 px-5 font-black text-white disabled:opacity-40 sm:col-span-2">{saving ? 'กำลังบันทึก' : 'บันทึกการติดต่อ'}</button>
+            <select disabled={saving} value={draft.activityType} onChange={(event) => setDraft({ ...draft, activityType: event.target.value })} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 disabled:cursor-not-allowed disabled:bg-slate-100">{ACTIVITY_TYPES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+            <select disabled={saving} value={draft.direction} onChange={(event) => setDraft({ ...draft, direction: event.target.value })} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 disabled:cursor-not-allowed disabled:bg-slate-100"><option value="OUTBOUND">ร้านติดต่อลูกค้า</option><option value="INBOUND">ลูกค้าติดต่อร้าน</option><option value="INTERNAL">บันทึกภายใน</option></select>
+            <textarea disabled={saving} rows={2} value={draft.note} onChange={(event) => setDraft({ ...draft, note: event.target.value })} placeholder="หมายเหตุ (ถ้ามี)" className="rounded-xl border border-slate-300 px-4 py-3 sm:col-span-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
+            <button type="button" disabled={saving} onClick={record} className="min-h-12 rounded-xl bg-slate-900 px-5 font-black text-white disabled:cursor-not-allowed disabled:opacity-40 sm:col-span-2">{saving ? 'กำลังบันทึก' : 'บันทึกการติดต่อ'}</button>
           </div>
         </>
       )}

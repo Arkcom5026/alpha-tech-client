@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, RefreshCw, Save, UserRound } from 'lucide-react';
 import { feedback } from '@/design-system/feedback';
 import AddressForm from '@/features/address/components/AddressForm';
@@ -70,9 +70,10 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [ownerOptions, setOwnerOptions] = useState([]);
+  const savingRef = useRef(false);
 
   const load = useCallback(async () => {
-    if (!customerId) return;
+    if (!customerId || savingRef.current) return;
     setLoading(true);
     setError('');
     try {
@@ -90,7 +91,10 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
 
   useEffect(() => { load(); }, [load]);
 
-  const patch = (next) => setEditor((current) => ({ ...current, ...next }));
+  const patch = (next) => {
+    if (savingRef.current) return;
+    setEditor((current) => ({ ...current, ...next }));
+  };
   const isOrganization = ['ORGANIZATION', 'GOVERNMENT'].includes(editor.type);
   const taxIdDigits = String(editor.taxId || '').replace(/\D/g, '');
   const taxIdentityReady = !isOrganization || taxIdDigits.length === 13;
@@ -113,24 +117,33 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
   }, [customerId, editor.companyName, editor.type, isOrganization, taxIdDigits]);
 
   const save = async () => {
-    if (!customerId || saving) return;
-    if (isOrganization && editor.taxId && !taxIdentityReady) return;
+    if (!customerId || saving || savingRef.current) return;
 
+    const customerIdSnapshot = customerId;
+    const editorSnapshot = { ...editor };
+    const isOrganizationSnapshot = ['ORGANIZATION', 'GOVERNMENT'].includes(editorSnapshot.type);
+    const taxIdDigitsSnapshot = String(editorSnapshot.taxId || '').replace(/\D/g, '');
+    const taxIdentityReadySnapshot = !isOrganizationSnapshot || taxIdDigitsSnapshot.length === 13;
+    if (isOrganizationSnapshot && editorSnapshot.taxId && !taxIdentityReadySnapshot) return;
+
+    const payload = {
+      name: editorSnapshot.name,
+      phone: editorSnapshot.phone,
+      type: editorSnapshot.type,
+      companyName: editorSnapshot.companyName,
+      departmentName: isOrganizationSnapshot ? editorSnapshot.departmentName : '',
+      financialOwnerCustomerId: isOrganizationSnapshot ? (Number(editorSnapshot.financialOwnerCustomerId) || null) : null,
+      taxId: taxIdDigitsSnapshot || '',
+      addressDetail: editorSnapshot.addressDetail,
+      subdistrictCode: editorSnapshot.subdistrictCode || '',
+      postcode: editorSnapshot.postcode || '',
+    };
+
+    savingRef.current = true;
     setSaving(true);
     setError('');
     try {
-      const updated = await updateCustomerProfilePos(customerId, {
-        name: editor.name,
-        phone: editor.phone,
-        type: editor.type,
-        companyName: editor.companyName,
-        departmentName: isOrganization ? editor.departmentName : '',
-        financialOwnerCustomerId: isOrganization ? (Number(editor.financialOwnerCustomerId) || null) : null,
-        taxId: taxIdDigits || '',
-        addressDetail: editor.addressDetail,
-        subdistrictCode: editor.subdistrictCode || '',
-        postcode: editor.postcode || '',
-      });
+      const updated = await updateCustomerProfilePos(customerIdSnapshot, payload);
       setCustomer(updated);
       setEditor(toEditor(updated));
       feedback.actionSuccess(
@@ -146,6 +159,7 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
         'customer.detail.save',
       );
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -172,8 +186,8 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
               </div>
             </div>
             <div className="flex gap-2">
-              <button type="button" onClick={load} disabled={loading} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />โหลดใหม่</button>
-              <button type="button" onClick={onBack} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800"><ArrowLeft className="h-4 w-4" />กลับรายการลูกค้า</button>
+              <button type="button" onClick={load} disabled={loading || saving} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 disabled:opacity-50"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />โหลดใหม่</button>
+              <button type="button" onClick={() => { if (!savingRef.current) onBack?.(); }} disabled={saving} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 text-sm font-semibold text-emerald-800 disabled:opacity-50"><ArrowLeft className="h-4 w-4" />กลับรายการลูกค้า</button>
             </div>
           </div>
         </header>
@@ -190,38 +204,40 @@ const CustomerDetailWorkspace = ({ customerId, onBack }) => {
               <p className="mt-1 text-sm text-slate-500">ข้อมูลส่วนนี้เป็นแหล่งข้อมูลต้นทางสำหรับงานขาย เอกสาร และข้อมูลผู้รับในงานภาษี</p>
             </div>
 
-            <div>
-              <p className="mb-2 text-xs font-bold text-slate-700">ประเภทลูกค้า</p>
-              <div className="grid gap-2 sm:grid-cols-3">
-                {CUSTOMER_TYPES.map((item) => (
-                  <button key={item.value} type="button" onClick={() => patch({ type: item.value })} className={`min-h-11 rounded-xl border px-3 text-sm font-bold ${editor.type === item.value ? 'border-emerald-400 bg-emerald-100 text-emerald-950' : 'border-slate-200 bg-white text-slate-700'}`}>{item.label}</button>
-                ))}
+            <fieldset disabled={saving} className="contents">
+              <div>
+                <p className="mb-2 text-xs font-bold text-slate-700">ประเภทลูกค้า</p>
+                <div className="grid gap-2 sm:grid-cols-3">
+                  {CUSTOMER_TYPES.map((item) => (
+                    <button key={item.value} type="button" onClick={() => patch({ type: item.value })} className={`min-h-11 rounded-xl border px-3 text-sm font-bold ${editor.type === item.value ? 'border-emerald-400 bg-emerald-100 text-emerald-950' : 'border-slate-200 bg-white text-slate-700'}`}>{item.label}</button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="grid gap-3 md:grid-cols-2">
-              {isOrganization ? <>
-                <label className="text-sm font-semibold text-slate-700">ชื่อบริษัทหรือหน่วยงาน<input className={`${fieldClass} mt-1.5`} value={editor.companyName} onChange={(e) => patch({ companyName: e.target.value })} /></label>
-                <label className="text-sm font-semibold text-slate-700">เลขประจำตัวผู้เสียภาษี<input inputMode="numeric" className={`${fieldClass} mt-1.5 font-mono`} value={editor.taxId} onChange={(e) => patch({ taxId: e.target.value.replace(/\D/g, '').slice(0, 13) })} placeholder="13 หลัก" />{editor.taxId && !taxIdentityReady ? <span className="mt-1 block text-xs font-semibold text-amber-700">ต้องมี 13 หลักจึงพร้อมสำหรับใบกำกับภาษีเต็มรูป</span> : null}</label>
-                <label className="text-sm font-semibold text-slate-700">แผนก / กอง / สำนัก<input className={`${fieldClass} mt-1.5`} value={editor.departmentName} onChange={(e) => patch({ departmentName: e.target.value })} placeholder="เว้นว่างสำหรับหน่วยงานหลัก" /></label>
-                <label className="text-sm font-semibold text-slate-700">เจ้าของบัญชีการเงิน<select className={`${fieldClass} mt-1.5`} value={editor.financialOwnerCustomerId} onChange={(e) => patch({ financialOwnerCustomerId: e.target.value })}><option value="">หน่วยงานหลัก / ไม่เชื่อมกลุ่ม</option>{ownerOptions.map((item) => <option key={item.id} value={item.id}>{item.companyName || item.name} (#{item.id})</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-400">แสดงเฉพาะหน่วยงานหลักสาขาเดียวกันและข้อมูลนิติบุคคลตรงกัน</span></label>
-              </> : null}
-              <label className="text-sm font-semibold text-slate-700">ชื่อผู้ติดต่อ<input className={`${fieldClass} mt-1.5`} value={editor.name} onChange={(e) => patch({ name: e.target.value })} /></label>
-              <label className="text-sm font-semibold text-slate-700">เบอร์โทร<input className={`${fieldClass} mt-1.5 font-mono`} value={editor.phone} onChange={(e) => patch({ phone: e.target.value })} /></label>
-              <label className="text-sm font-semibold text-slate-700 md:col-span-2">อีเมล<input className={`${fieldClass} mt-1.5 bg-slate-50`} value={editor.email} readOnly /><span className="mt-1 block text-xs font-normal text-slate-400">อีเมลยังเป็นข้อมูลจากบัญชีผู้ใช้ จึงแสดงแบบอ่านอย่างเดียวในหน้านี้</span></label>
-            </div>
-
-            <div>
-              <h3 className="mb-2 text-sm font-black text-slate-800">ที่อยู่สำหรับเอกสารและภาษี</h3>
-              <div className="address-form-density-compact rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <AddressForm value={addressValue} onChange={(next) => patch({ addressDetail: next?.address || '', provinceCode: next?.provinceCode || '', districtCode: next?.districtCode || '', subdistrictCode: next?.subdistrictCode || '', postcode: next?.postalCode || next?.postcode || '' })} layout="subdistrict-with-postcode" required />
+              <div className="grid gap-3 md:grid-cols-2">
+                {isOrganization ? <>
+                  <label className="text-sm font-semibold text-slate-700">ชื่อบริษัทหรือหน่วยงาน<input className={`${fieldClass} mt-1.5`} value={editor.companyName} onChange={(e) => patch({ companyName: e.target.value })} /></label>
+                  <label className="text-sm font-semibold text-slate-700">เลขประจำตัวผู้เสียภาษี<input inputMode="numeric" className={`${fieldClass} mt-1.5 font-mono`} value={editor.taxId} onChange={(e) => patch({ taxId: e.target.value.replace(/\D/g, '').slice(0, 13) })} placeholder="13 หลัก" />{editor.taxId && !taxIdentityReady ? <span className="mt-1 block text-xs font-semibold text-amber-700">ต้องมี 13 หลักจึงพร้อมสำหรับใบกำกับภาษีเต็มรูป</span> : null}</label>
+                  <label className="text-sm font-semibold text-slate-700">แผนก / กอง / สำนัก<input className={`${fieldClass} mt-1.5`} value={editor.departmentName} onChange={(e) => patch({ departmentName: e.target.value })} placeholder="เว้นว่างสำหรับหน่วยงานหลัก" /></label>
+                  <label className="text-sm font-semibold text-slate-700">เจ้าของบัญชีการเงิน<select className={`${fieldClass} mt-1.5`} value={editor.financialOwnerCustomerId} onChange={(e) => patch({ financialOwnerCustomerId: e.target.value })}><option value="">หน่วยงานหลัก / ไม่เชื่อมกลุ่ม</option>{ownerOptions.map((item) => <option key={item.id} value={item.id}>{item.companyName || item.name} (#{item.id})</option>)}</select><span className="mt-1 block text-xs font-normal text-slate-400">แสดงเฉพาะหน่วยงานหลักสาขาเดียวกันและข้อมูลนิติบุคคลตรงกัน</span></label>
+                </> : null}
+                <label className="text-sm font-semibold text-slate-700">ชื่อผู้ติดต่อ<input className={`${fieldClass} mt-1.5`} value={editor.name} onChange={(e) => patch({ name: e.target.value })} /></label>
+                <label className="text-sm font-semibold text-slate-700">เบอร์โทร<input className={`${fieldClass} mt-1.5 font-mono`} value={editor.phone} onChange={(e) => patch({ phone: e.target.value })} /></label>
+                <label className="text-sm font-semibold text-slate-700 md:col-span-2">อีเมล<input className={`${fieldClass} mt-1.5 bg-slate-50`} value={editor.email} readOnly /><span className="mt-1 block text-xs font-normal text-slate-400">อีเมลยังเป็นข้อมูลจากบัญชีผู้ใช้ จึงแสดงแบบอ่านอย่างเดียวในหน้านี้</span></label>
               </div>
-            </div>
 
-            <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-sm text-slate-500">{dirty ? 'มีข้อมูลที่ยังไม่ได้บันทึก' : 'ข้อมูลล่าสุดถูกบันทึกแล้ว'}</div>
-              <button type="button" onClick={save} disabled={!dirty || saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"><Save className="h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}</button>
-            </div>
+              <div>
+                <h3 className="mb-2 text-sm font-black text-slate-800">ที่อยู่สำหรับเอกสารและภาษี</h3>
+                <div className="address-form-density-compact rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <AddressForm value={addressValue} onChange={(next) => patch({ addressDetail: next?.address || '', provinceCode: next?.provinceCode || '', districtCode: next?.districtCode || '', subdistrictCode: next?.subdistrictCode || '', postcode: next?.postalCode || next?.postcode || '' })} layout="subdistrict-with-postcode" required />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-slate-500">{dirty ? 'มีข้อมูลที่ยังไม่ได้บันทึก' : 'ข้อมูลล่าสุดถูกบันทึกแล้ว'}</div>
+                <button type="button" onClick={save} disabled={!dirty || saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 text-sm font-black text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"><Save className="h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}</button>
+              </div>
+            </fieldset>
           </section>
         </>
         ) : null}

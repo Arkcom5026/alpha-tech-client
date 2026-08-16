@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import { getCustomerMoneyReceive } from '../api/customerMoneyReceiveApi';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 
@@ -161,24 +162,46 @@ const CustomerMoneyReceiptPrintPage = () => {
   const [searchParams] = useSearchParams();
   const [record, setRecord] = useState(null);
   const [error, setError] = useState('');
-  const [mode, setMode] = useState(() => String(searchParams.get('mode') || '').toUpperCase() === 'SHORT' ? 'SHORT' : 'FULL');
+  const requestedMode = useMemo(() => String(searchParams.get('mode') || '').toUpperCase() === 'SHORT' ? 'SHORT' : 'FULL', [searchParams]);
+  const [mode, setMode] = useState(requestedMode);
   const autoPrinted = useRef(false);
+  const loadRequestRef = useRef(0);
+  const recordContextRef = useRef(String(id || ''));
   const autoPrint = useMemo(() => ['1', 'true', 'yes'].includes(String(searchParams.get('autoPrint') || '').toLowerCase()), [searchParams]);
 
   useEffect(() => {
-    let active = true;
-    getCustomerMoneyReceive(id)
-      .then((data) => { if (active) setRecord(data); })
-      .catch((err) => { if (active) setError(err?.response?.data?.message || err?.message || 'โหลดใบรับเงินไม่สำเร็จ'); });
-    return () => { active = false; };
-  }, [id]);
+    const recordIdSnapshot = String(id || '');
+    recordContextRef.current = recordIdSnapshot;
+    autoPrinted.current = false;
+    setRecord(null);
+    setError('');
+    setMode(requestedMode);
+    const requestId = ++loadRequestRef.current;
+
+    getCustomerMoneyReceive(recordIdSnapshot)
+      .then((data) => {
+        if (loadRequestRef.current !== requestId || recordContextRef.current !== recordIdSnapshot) return;
+        setRecord(data);
+      })
+      .catch((err) => {
+        if (loadRequestRef.current !== requestId || recordContextRef.current !== recordIdSnapshot) return;
+        const message = err?.response?.data?.message || err?.message || 'โหลดใบรับเงินไม่สำเร็จ';
+        setError(message);
+        feedback.actionError(err, message, `customer-money-receive:print:${recordIdSnapshot}:load:error`);
+      });
+
+    return () => {
+      if (loadRequestRef.current === requestId) loadRequestRef.current += 1;
+    };
+  }, [id, requestedMode]);
 
   useEffect(() => {
     if (!autoPrint || !record || error || autoPrinted.current) return;
+    if (String(record.id || '') !== String(id || '')) return;
     autoPrinted.current = true;
     const timer = window.setTimeout(() => window.print(), 250);
     return () => window.clearTimeout(timer);
-  }, [autoPrint, record, error]);
+  }, [autoPrint, record, error, id]);
 
   if (error) return <div className="p-8 text-center text-rose-700">{error}</div>;
   if (!record) return <div className="p-8 text-center text-slate-500">กำลังโหลดใบรับเงิน...</div>;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Store, Save, ShieldCheck, Mail, Phone, Globe, MessageSquare, Image, RefreshCw } from 'lucide-react';
@@ -11,6 +11,7 @@ const PartnerProfilePage = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState('');
+  const savingRef = useRef(false);
   const { register, handleSubmit, setValue, formState: { errors } } = useForm();
 
   useEffect(() => {
@@ -47,21 +48,27 @@ const PartnerProfilePage = () => {
   }, [setValue, shopSlug]);
 
   const onSubmit = async (data) => {
-    if (saving || !shopSlug) return;
+    if (saving || savingRef.current || !shopSlug) return;
+
+    const shopSlugSnapshot = shopSlug;
+    const payload = {
+      name: data.shopName.trim(),
+      slogan: data.slogan?.trim(),
+      phone: data.phone?.trim(),
+      email: data.email?.trim().toLowerCase(),
+      website: data.website?.trim(),
+      lineId: data.lineId?.trim(),
+    };
+
+    savingRef.current = true;
     setSaving(true);
     try {
-      await apiClient.put(`/branch-prices/profile-by-slug/${shopSlug}`, {
-        name: data.shopName.trim(),
-        slogan: data.slogan?.trim(),
-        phone: data.phone?.trim(),
-        email: data.email?.trim().toLowerCase(),
-        website: data.website?.trim(),
-        lineId: data.lineId?.trim(),
-      });
+      await apiClient.put(`/branch-prices/profile-by-slug/${shopSlugSnapshot}`, payload);
       feedback.actionSuccess('บันทึกข้อมูลโปรไฟล์ร้านค้าเรียบร้อยแล้ว', 'partner-profile:save:success');
     } catch (error) {
       feedback.actionError(error, 'เกิดข้อผิดพลาดในการบันทึกข้อมูลโปรไฟล์ร้านค้า', 'partner-profile:save:error');
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };

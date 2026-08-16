@@ -65,4 +65,22 @@ describe('Sales printable performance contract', () => {
 
     expect(request).toHaveBeenCalledTimes(3);
   });
+
+  it('does not let an invalidated in-flight result repopulate the recent cache', async () => {
+    let resolveOldRequest;
+    const oldRequest = vi.fn(() => new Promise((resolve) => {
+      resolveOldRequest = resolve;
+    }));
+    const freshRequest = vi.fn(async () => [{ id: 2026 }]);
+    const params = { fromDate: '2026-08-16', toDate: '2026-08-16', limit: 100 };
+
+    const oldPending = runPrintableSalesRequest(params, oldRequest);
+    await Promise.resolve();
+    clearPrintableSalesRequestCache();
+    resolveOldRequest([{ id: 1013 }]);
+    await oldPending;
+
+    await expect(runPrintableSalesRequest(params, freshRequest)).resolves.toEqual([{ id: 2026 }]);
+    expect(freshRequest).toHaveBeenCalledTimes(1);
+  });
 });

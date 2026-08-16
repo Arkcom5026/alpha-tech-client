@@ -78,14 +78,24 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
     setSaving(true);
     try {
       await confirmTaxExpenseAssessment(expenseIdSnapshot, payload);
-      feedback.actionSuccess('ยืนยันผลการประเมินภาษีแล้ว', `tax-expense:assessment:${expenseIdSnapshot}:success`);
-      await load();
-      onConfirmed?.();
     } catch (error) {
       feedback.actionError(error, 'ไม่สามารถยืนยันผลการประเมินภาษีได้', `tax-expense:assessment:${expenseIdSnapshot}:error`);
+      return;
     } finally {
       savingRef.current = false;
       setSaving(false);
+    }
+
+    feedback.actionSuccess('ยืนยันผลการประเมินภาษีแล้ว', `tax-expense:assessment:${expenseIdSnapshot}:success`);
+    await load();
+    try {
+      await onConfirmed?.();
+    } catch (error) {
+      feedback.actionError(
+        error,
+        'ยืนยันผลการประเมินสำเร็จแล้ว แต่รีเฟรชข้อมูลส่วนที่เกี่ยวข้องไม่สำเร็จ',
+        `tax-expense:assessment:${expenseIdSnapshot}:post-confirm:error`,
+      );
     }
   };
 

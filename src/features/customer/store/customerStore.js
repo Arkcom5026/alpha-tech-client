@@ -13,6 +13,7 @@ import {
 } from '../api/customerApi';
 
 const mutationBusyError = () => new Error('กำลังบันทึกข้อมูลลูกค้า กรุณารอสักครู่');
+let customerSearchRequestSequence = 0;
 
 const useCustomerStore = create((set, get) => ({
   customer: null,
@@ -24,36 +25,47 @@ const useCustomerStore = create((set, get) => ({
   searchError: null,
 
   searchStoreCustomersAction: async (query) => {
+    const requestId = ++customerSearchRequestSequence;
+    const ownsSearchRequest = () => customerSearchRequestSequence === requestId;
     set({ isSearching: true, searchError: null });
     try {
       const payload = await searchStoreCustomers(query);
+      if (!ownsSearchRequest()) return null;
       const results = Array.isArray(payload?.results) ? payload.results : [];
       set({ searchedCustomers: results });
       return payload;
     } catch (err) {
+      if (!ownsSearchRequest()) return null;
       const message = err?.response?.data?.message || err?.message || 'ไม่สามารถค้นหาลูกค้าได้';
       set({ searchedCustomers: [], searchError: message });
       throw err;
     } finally {
-      set({ isSearching: false });
+      if (ownsSearchRequest()) set({ isSearching: false });
     }
   },
 
   searchCustomers: async (query) => {
+    const requestId = ++customerSearchRequestSequence;
+    const ownsSearchRequest = () => customerSearchRequestSequence === requestId;
     set({ isSearching: true, searchError: null });
     try {
       const data = await getCustomerByName(query);
+      if (!ownsSearchRequest()) return null;
       set({ searchedCustomers: data });
       return data;
     } catch (err) {
+      if (!ownsSearchRequest()) return null;
       set({ searchedCustomers: [], searchError: 'ไม่สามารถค้นหาลูกค้าได้' });
       throw err;
     } finally {
-      set({ isSearching: false });
+      if (ownsSearchRequest()) set({ isSearching: false });
     }
   },
 
-  clearSearchedCustomers: () => set({ searchedCustomers: [], searchError: null }),
+  clearSearchedCustomers: () => {
+    customerSearchRequestSequence += 1;
+    set({ searchedCustomers: [], searchError: null, isSearching: false });
+  },
 
   getCustomerByPhone: async (phone) => {
     set({ isLoading: true, error: null });

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import {
   completePartnerStoreOnboarding,
   getPartnerStoreOnboarding,
@@ -16,6 +17,7 @@ export default function PartnerStoreOnboardingPage() {
   const [error, setError] = useState('');
   const [confirmStoreProfile, setConfirmStoreProfile] = useState(false);
   const [confirmOwnerContact, setConfirmOwnerContact] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -49,21 +51,45 @@ export default function PartnerStoreOnboardingPage() {
   }
 
   const submit = async () => {
-    if (!confirmStoreProfile || !confirmOwnerContact) {
+    if (submitting || submittingRef.current) return;
+
+    const storeProfileConfirmed = Boolean(confirmStoreProfile);
+    const ownerContactConfirmed = Boolean(confirmOwnerContact);
+    const destinationSlug = canonicalSlug;
+
+    if (!storeProfileConfirmed || !ownerContactConfirmed) {
       setError('กรุณาตรวจสอบและยืนยันข้อมูลทั้งสองส่วนก่อนเริ่มใช้งานร้าน');
       return;
     }
+
+    submittingRef.current = true;
     setSubmitting(true);
     setError('');
     try {
-      await completePartnerStoreOnboarding({ confirmStoreProfile, confirmOwnerContact });
-      navigate(`/${canonicalSlug}/pos/dashboard`, { replace: true });
+      await completePartnerStoreOnboarding({
+        confirmStoreProfile: storeProfileConfirmed,
+        confirmOwnerContact: ownerContactConfirmed,
+      });
+      feedback.actionSuccess(
+        'ยืนยันข้อมูลเริ่มใช้งานร้านเรียบร้อยแล้ว',
+        `partner-store:onboarding:${application.applicationCode || destinationSlug}:complete:success`,
+      );
+      navigate(`/${destinationSlug}/pos/dashboard`, { replace: true });
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      const message = messageFrom(requestError);
+      setError(message);
+      feedback.actionError(
+        requestError,
+        message,
+        `partner-store:onboarding:${application.applicationCode || destinationSlug}:complete:error`,
+      );
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
+
+  const mutationBusy = submitting || submittingRef.current;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10">
@@ -92,7 +118,7 @@ export default function PartnerStoreOnboardingPage() {
           </section>
         </div>
 
-        <div className="mt-6 space-y-3 rounded-2xl bg-emerald-50 p-5">
+        <fieldset disabled={mutationBusy} className="mt-6 space-y-3 rounded-2xl bg-emerald-50 p-5 disabled:opacity-70">
           <label className="flex cursor-pointer items-start gap-3 text-sm font-bold text-slate-700">
             <input type="checkbox" checked={confirmStoreProfile} onChange={(event) => setConfirmStoreProfile(event.target.checked)} className="mt-1" />
             <span>ฉันตรวจสอบแล้วว่าร้านและสาขาที่แสดงเป็นร้านที่ฉันกำลังจะเข้าใช้งาน</span>
@@ -101,12 +127,12 @@ export default function PartnerStoreOnboardingPage() {
             <input type="checkbox" checked={confirmOwnerContact} onChange={(event) => setConfirmOwnerContact(event.target.checked)} className="mt-1" />
             <span>ฉันตรวจสอบชื่อ อีเมล และเบอร์โทรศัพท์ของบัญชีเจ้าของร้านแล้ว</span>
           </label>
-        </div>
+        </fieldset>
 
         <button
           type="button"
           onClick={submit}
-          disabled={submitting || !confirmStoreProfile || !confirmOwnerContact}
+          disabled={mutationBusy || !confirmStoreProfile || !confirmOwnerContact}
           className="mt-6 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           {submitting ? 'กำลังบันทึก…' : 'ยืนยันและเข้าสู่ระบบร้าน'}

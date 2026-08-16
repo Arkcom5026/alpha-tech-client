@@ -15,6 +15,7 @@ const FormBank = () => {
 
   const banks = useBankStore((state) => state.banks);
   const fetchBanks = useBankStore((state) => state.fetchBanks);
+  const mutating = saving || deleting;
 
   useEffect(() => {
     fetchBanks(token);
@@ -22,7 +23,7 @@ const FormBank = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (saving) return;
+    if (mutating) return;
     if (!name.trim()) {
       setNameError('กรุณาระบุชื่อธนาคาร');
       return;
@@ -39,7 +40,6 @@ const FormBank = () => {
       setName('');
       await fetchBanks(token);
     } catch (err) {
-      console.log(err);
       feedback.actionError(
         err,
         'เพิ่มธนาคารไม่สำเร็จ',
@@ -51,7 +51,7 @@ const FormBank = () => {
   };
 
   const confirmRemove = async () => {
-    if (!pendingDelete?.id || deleting) return;
+    if (!pendingDelete?.id || mutating) return;
     setDeleting(true);
     try {
       const res = await removeBank(token, pendingDelete.id);
@@ -62,7 +62,6 @@ const FormBank = () => {
       setPendingDelete(null);
       await fetchBanks(token);
     } catch (err) {
-      console.log(err);
       feedback.actionError(
         err,
         'ลบธนาคารไม่สำเร็จ',
@@ -84,14 +83,14 @@ const FormBank = () => {
               setName(e.target.value);
               if (nameError) setNameError('');
             }}
-            disabled={saving}
+            disabled={mutating}
             className="mr-5 rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:opacity-60"
             type="text"
             aria-invalid={Boolean(nameError)}
             aria-describedby={nameError ? 'admin-bank-name-error' : undefined}
           />
-          <button disabled={saving} className="rounded bg-emerald-600 px-3 py-1 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
-            {saving ? 'กำลังเพิ่ม...' : 'Add Bank'}
+          <button disabled={mutating} className="rounded bg-emerald-600 px-3 py-1 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+            {saving ? 'กำลังเพิ่ม...' : deleting ? 'กำลังลบ...' : 'Add Bank'}
           </button>
           <FieldMessage id="admin-bank-name-error">{nameError}</FieldMessage>
         </form>
@@ -105,7 +104,7 @@ const FormBank = () => {
               <button
                 type="button"
                 className="rounded bg-red-500 px-2 py-1 text-white hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={deleting || saving}
+                disabled={mutating}
                 onClick={() => setPendingDelete(item)}
               >
                 Delete

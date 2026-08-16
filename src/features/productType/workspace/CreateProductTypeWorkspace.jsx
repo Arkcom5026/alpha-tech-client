@@ -1,5 +1,5 @@
 // CreateProductTypePage.jsx
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PageHeader from '@/components/shared/layout/PageHeader';
 import { feedback } from '@/design-system';
@@ -16,13 +16,20 @@ const CreateProductTypePage = () => {
 
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [mutationBusy, setMutationBusy] = useState(false);
+  const submittingRef = useRef(false);
+  const busy = isSubmitting || mutationBusy;
 
   const handleSubmit = async (formData) => {
-    if (!canManage || isSubmitting) return;
+    if (!canManage || busy || submittingRef.current) return;
+
+    const payload = { ...formData };
+    submittingRef.current = true;
+    setMutationBusy(true);
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      await createProductTypeAction(formData);
+      await createProductTypeAction(payload);
       const message = 'บันทึกประเภทสินค้าเรียบร้อยแล้ว';
       setSuccessMsg(message);
       feedback.actionSuccess(message, 'product-type:create:success');
@@ -31,6 +38,9 @@ const CreateProductTypePage = () => {
       const message = parseApiError(err) || 'ไม่สามารถบันทึกประเภทสินค้าได้';
       setErrorMsg(message);
       feedback.actionError(err, message, 'product-type:create:error');
+    } finally {
+      submittingRef.current = false;
+      setMutationBusy(false);
     }
   };
 
@@ -59,7 +69,7 @@ const CreateProductTypePage = () => {
         {errorMsg && <div className="mt-3 mb-4 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-700">{String(errorMsg)}</div>}
         {successMsg && <div className="mt-3 mb-4 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">{successMsg}</div>}
         <div className="border rounded-xl p-4 shadow-sm bg-white dark:bg-zinc-900">
-          <ProductTypeForm mode="create" isSubmitting={isSubmitting} onSubmit={handleSubmit} />
+          <ProductTypeForm mode="create" isSubmitting={busy} onSubmit={handleSubmit} />
         </div>
       </div>
     </div>

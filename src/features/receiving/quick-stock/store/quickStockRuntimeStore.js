@@ -19,10 +19,18 @@ const initialDropdowns = {
   units: [],
 };
 
+const dropdownInFlightByKey = new Map();
+let dropdownRequestSequence = 0;
+
 const toFiniteNumber = (value) => {
   if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+};
+
+const toDropdownRequestKey = ({ productTypeId } = {}) => {
+  const normalizedProductTypeId = toFiniteNumber(productTypeId);
+  return `productType:${normalizedProductTypeId || "all"}`;
 };
 
 const normalizeName = (value) =>
@@ -69,46 +77,67 @@ const useQuickStockRuntimeStore = create((set, get) => ({
 
   normalizeError: normalizeQuickStockError,
 
-  loadDropdownsAction: async ({ productTypeId } = {}) => {
+  loadDropdownsAction: ({ productTypeId } = {}) => {
+    const requestKey = toDropdownRequestKey({ productTypeId });
+    const existingRequest = dropdownInFlightByKey.get(requestKey);
+    if (existingRequest) return existingRequest;
+
+    const requestId = ++dropdownRequestSequence;
     set({ dropdownsLoading: true, error: null });
 
-    try {
-      const raw = await getQuickStockDropdowns({ productTypeId });
-      const dropdowns = {
-        productTypes: dedupeOptions(raw?.productTypes || []),
-        brands: dedupeOptions(raw?.brands || []),
-        units: dedupeOptions(raw?.units || []),
-      };
+    const requestPromise = (async () => {
+      try {
+        const raw = await getQuickStockDropdowns({ productTypeId });
+        const dropdowns = {
+          productTypes: dedupeOptions(raw?.productTypes || []),
+          brands: dedupeOptions(raw?.brands || []),
+          units: dedupeOptions(raw?.units || []),
+        };
 
-      set({
-        dropdowns,
-        dropdownsLoaded: true,
-        dropdownsLoading: false,
-      });
+        if (requestId === dropdownRequestSequence) {
+          set({
+            dropdowns,
+            dropdownsLoaded: true,
+            dropdownsLoading: false,
+          });
+        }
 
-      return dropdowns;
-    } catch (error) {
-      const mapped = normalizeQuickStockError(
-        error,
-        "โหลด QuickStock Dropdown ไม่สำเร็จ"
-      );
+        return dropdowns;
+      } catch (error) {
+        const mapped = normalizeQuickStockError(
+          error,
+          "โหลด QuickStock Dropdown ไม่สำเร็จ"
+        );
 
-      set({
-        error: mapped,
-        dropdownsLoading: false,
-        dropdownsLoaded: false,
-      });
+        if (requestId === dropdownRequestSequence) {
+          set({
+            error: mapped,
+            dropdownsLoading: false,
+            dropdownsLoaded: false,
+          });
+        }
 
-      return get().dropdowns;
-    }
+        return get().dropdowns;
+      } finally {
+        if (dropdownInFlightByKey.get(requestKey) === requestPromise) {
+          dropdownInFlightByKey.delete(requestKey);
+        }
+      }
+    })();
+
+    dropdownInFlightByKey.set(requestKey, requestPromise);
+    return requestPromise;
   },
 
-  resetDropdownsAction: () =>
+  resetDropdownsAction: () => {
+    dropdownRequestSequence += 1;
+    dropdownInFlightByKey.clear();
     set({
       dropdowns: initialDropdowns,
       dropdownsLoaded: false,
       dropdownsLoading: false,
-    }),
+    });
+  },
 
   searchProductsAction: async (filters = {}) => {
     set({ isLoading: true, error: null });

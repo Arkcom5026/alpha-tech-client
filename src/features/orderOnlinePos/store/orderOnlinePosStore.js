@@ -9,11 +9,14 @@ import {
   getOrderOnlineSummary,
 } from '../api/orderOnlinePosApi';
 
+const mutationBusyError = () => new Error('กำลังดำเนินการคำสั่งซื้ออยู่ กรุณารอสักครู่');
+
 export const useOrderOnlinePosStore = create((set, get) => ({
   orderList: [],
   selectedOrder: null,
   summary: null,
   isLoading: false,
+  mutationAction: null,
   error: null,
 
   loadOrderOnlinePosListAction: async () => {
@@ -21,8 +24,10 @@ export const useOrderOnlinePosStore = create((set, get) => ({
     try {
       const data = await getOrderOnlinePosList();
       set({ orderList: data, isLoading: false });
+      return data;
     } catch (err) {
       set({ error: err.message || 'ไม่สามารถโหลดรายการได้', isLoading: false });
+      throw err;
     }
   },
 
@@ -31,8 +36,10 @@ export const useOrderOnlinePosStore = create((set, get) => ({
     try {
       const data = await getOrderOnlinePosById(id);
       set({ selectedOrder: data, isLoading: false });
+      return data;
     } catch (err) {
       set({ error: err.message || 'ไม่สามารถโหลดคำสั่งซื้อได้', isLoading: false });
+      throw err;
     }
   },
 
@@ -41,59 +48,107 @@ export const useOrderOnlinePosStore = create((set, get) => ({
     try {
       const summary = await getOrderOnlineSummary(id);
       set({ summary, isLoading: false });
+      return summary;
     } catch (err) {
       set({ error: err.message || 'ไม่สามารถโหลดข้อมูลสรุปได้', isLoading: false });
+      throw err;
     }
   },
 
   updateOrderOnlineStatusAction: async (id, status) => {
-    set({ isLoading: true, error: null });
+    if (get().mutationAction) throw mutationBusyError();
+    const idSnapshot = Number(id);
+    const statusSnapshot = status;
+    set({ mutationAction: `status:${idSnapshot}`, isLoading: true, error: null });
     try {
-      await updateOrderOnlinePosStatus(id, status);
-      set({ isLoading: false });
+      await updateOrderOnlinePosStatus(idSnapshot, statusSnapshot);
+      return true;
     } catch (err) {
-      set({ error: err.message || 'อัปเดตสถานะไม่สำเร็จ', isLoading: false });
+      set({ error: err.message || 'อัปเดตสถานะไม่สำเร็จ' });
       throw err;
+    } finally {
+      set({ mutationAction: null, isLoading: false });
     }
   },
 
   approveOrderOnlinePaymentSlipAction: async (id) => {
-    set({ isLoading: true, error: null });
+    if (get().mutationAction) throw mutationBusyError();
+    const idSnapshot = Number(id);
+    set({ mutationAction: `approve:${idSnapshot}`, isLoading: true, error: null });
+
+    let result;
     try {
-      const result = await approveOrderOnlineSlip(id);
-      await get().loadOrderOnlinePosByIdAction(id);
-      set({ isLoading: false });
-      return result;
+      result = await approveOrderOnlineSlip(idSnapshot);
     } catch (err) {
-      set({ error: err.message || 'ไม่สามารถอนุมัติสลิปได้', isLoading: false });
+      set({ error: err.message || 'ไม่สามารถอนุมัติสลิปได้' });
       throw err;
     }
+
+    let refreshError = null;
+    try {
+      const refreshed = await getOrderOnlinePosById(idSnapshot);
+      set({ selectedOrder: refreshed });
+    } catch (err) {
+      refreshError = err;
+      set({ error: err.message || 'อนุมัติสลิปสำเร็จแล้ว แต่รีเฟรชคำสั่งซื้อไม่สำเร็จ' });
+    } finally {
+      set({ mutationAction: null, isLoading: false });
+    }
+
+    return { result, refreshError };
   },
 
   rejectOrderOnlineSlipAction: async (id) => {
-    set({ isLoading: true, error: null });
+    if (get().mutationAction) throw mutationBusyError();
+    const idSnapshot = Number(id);
+    set({ mutationAction: `reject:${idSnapshot}`, isLoading: true, error: null });
+
+    let result;
     try {
-      const result = await rejectOrderOnlineSlip(id);
-      await get().loadOrderOnlinePosByIdAction(id);
-      set({ isLoading: false });
-      return result;
+      result = await rejectOrderOnlineSlip(idSnapshot);
     } catch (err) {
-      set({ error: err.message || 'ไม่สามารถปฏิเสธสลิปได้', isLoading: false });
+      set({ error: err.message || 'ไม่สามารถปฏิเสธสลิปได้' });
       throw err;
     }
+
+    let refreshError = null;
+    try {
+      const refreshed = await getOrderOnlinePosById(idSnapshot);
+      set({ selectedOrder: refreshed });
+    } catch (err) {
+      refreshError = err;
+      set({ error: err.message || 'ปฏิเสธสลิปสำเร็จแล้ว แต่รีเฟรชคำสั่งซื้อไม่สำเร็จ' });
+    } finally {
+      set({ mutationAction: null, isLoading: false });
+    }
+
+    return { result, refreshError };
   },
 
   deleteOrderOnlineAction: async (id) => {
-    set({ isLoading: true, error: null });
+    if (get().mutationAction) throw mutationBusyError();
+    const idSnapshot = Number(id);
+    set({ mutationAction: `delete:${idSnapshot}`, isLoading: true, error: null });
+
     try {
-      await deleteOrderOnline(id);
-      await get().loadOrderOnlinePosListAction();
-      set({ isLoading: false });
-      return true;
+      await deleteOrderOnline(idSnapshot);
     } catch (err) {
-      set({ error: err.message || 'ไม่สามารถลบคำสั่งซื้อได้', isLoading: false });
+      set({ error: err.message || 'ไม่สามารถลบคำสั่งซื้อได้' });
       throw err;
     }
+
+    let refreshError = null;
+    try {
+      const refreshedList = await getOrderOnlinePosList();
+      set({ orderList: refreshedList });
+    } catch (err) {
+      refreshError = err;
+      set({ error: err.message || 'ลบคำสั่งซื้อสำเร็จแล้ว แต่รีเฟรชรายการไม่สำเร็จ' });
+    } finally {
+      set({ mutationAction: null, isLoading: false });
+    }
+
+    return { result: true, refreshError };
   },
 
   getOrderOnlineTotalSummary: () => {
@@ -117,6 +172,4 @@ export const useOrderOnlinePosStore = create((set, get) => ({
 
     return { subtotal, vat, total };
   },
-
-  
 }));

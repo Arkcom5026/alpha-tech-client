@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useNavigate } from 'react-router-dom';
@@ -7,6 +8,7 @@ import { registerUser } from '@/features/auth/api/authApi';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const submittingRef = useRef(false);
   const {
     register,
     handleSubmit,
@@ -17,14 +19,20 @@ const RegisterPage = () => {
   });
 
   const onSubmit = async (data) => {
+    if (submittingRef.current) return;
+
+    const { name, phone, email, password } = data;
+    const payloadSnapshot = { name, phone, email, password, role: 'customer' };
+    submittingRef.current = true;
     try {
-      const { name, phone, email, password } = data;
-      await registerUser({ name, phone, email, password, role: 'customer' });
+      await registerUser(payloadSnapshot);
       reset();
       feedback.actionSuccess('สมัครสำเร็จแล้ว', 'auth-customer-register-success');
       navigate('/partner-portal', { replace: true });
     } catch (error) {
       feedback.actionError(error, 'สมัครบัญชีไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'auth-customer-register-error');
+    } finally {
+      submittingRef.current = false;
     }
   };
 
@@ -37,34 +45,39 @@ const RegisterPage = () => {
           <input
             type="text"
             placeholder="ชื่อของคุณ"
-            className="w-full border px-3 py-2 rounded"
+            disabled={isSubmitting}
+            className="w-full border px-3 py-2 rounded disabled:opacity-60"
             {...register('name')}
           />
 
           <input
             type="tel"
             placeholder="เบอร์โทรศัพท์ (ไม่บังคับ)"
-            className="w-full border px-3 py-2 rounded"
+            disabled={isSubmitting}
+            className="w-full border px-3 py-2 rounded disabled:opacity-60"
             {...register('phone')}
           />
           <input
             type="email"
             placeholder="อีเมลของคุณ"
-            className="w-full border px-3 py-2 rounded"
+            disabled={isSubmitting}
+            className="w-full border px-3 py-2 rounded disabled:opacity-60"
             {...register('email')}
           />
 
           <input
             type="password"
             placeholder="รหัสผ่าน"
-            className="w-full border px-3 py-2 rounded"
+            disabled={isSubmitting}
+            className="w-full border px-3 py-2 rounded disabled:opacity-60"
             {...register('password')}
           />
 
           <input
             type="password"
             placeholder="ยืนยันรหัสผ่าน"
-            className="w-full border px-3 py-2 rounded"
+            disabled={isSubmitting}
+            className="w-full border px-3 py-2 rounded disabled:opacity-60"
             {...register('confirmPassword')}
           />
 

@@ -43,13 +43,14 @@ const PosHeldCartPanel = ({
       setRows(Array.isArray(result) ? result : []);
     } catch (error) {
       feedback.actionError(error, getPosHeldCartErrorMessage(error), 'held-cart:list:error');
+      throw error;
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (open) load();
+    if (open) load().catch(() => {});
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!open) return null;
@@ -70,15 +71,32 @@ const PosHeldCartPanel = ({
 
     mutationRef.current = true;
     setSaving(true);
+    let cart;
     try {
-      const cart = await createPosHeldCart(payload);
-      feedback.actionSuccess(`บันทึกใบพัก ${cart.code} แล้ว`, 'held-cart:create:success');
-      setForm({ customerName: '', customerPhone: '', note: '' });
-      await load();
-      onSavedAndClear(cart);
-      onClose();
+      cart = await createPosHeldCart(payload);
     } catch (error) {
       feedback.actionError(error, getPosHeldCartErrorMessage(error), 'held-cart:create:error');
+      mutationRef.current = false;
+      setSaving(false);
+      return;
+    }
+
+    feedback.actionSuccess(`บันทึกใบพัก ${cart.code} แล้ว`, 'held-cart:create:success');
+    setForm({ customerName: '', customerPhone: '', note: '' });
+
+    try {
+      await load();
+    } catch (refreshError) {
+      feedback.actionError(
+        refreshError,
+        'บันทึกใบพักสำเร็จแล้ว แต่รีเฟรชรายการใบพักไม่สำเร็จ กรุณาเปิดรายการใหม่อีกครั้ง',
+        'held-cart:create:refresh:error',
+      );
+    }
+
+    try {
+      onSavedAndClear(cart);
+      onClose();
     } finally {
       mutationRef.current = false;
       setSaving(false);
@@ -105,16 +123,32 @@ const PosHeldCartPanel = ({
     }
     if (cancellingId || mutationRef.current) return;
 
+    const heldCartIdSnapshot = heldCartId;
+    const reasonSnapshot = reason;
     mutationRef.current = true;
-    setCancellingId(heldCartId);
+    setCancellingId(heldCartIdSnapshot);
+
     try {
-      await cancelPosHeldCart(heldCartId, reason);
-      feedback.actionSuccess('ยกเลิกใบพักรายการแล้ว', `held-cart:cancel:${heldCartId}:success`);
-      setPendingCancelId(null);
-      setCancelReason('');
-      await load();
+      await cancelPosHeldCart(heldCartIdSnapshot, reasonSnapshot);
     } catch (error) {
-      feedback.actionError(error, getPosHeldCartErrorMessage(error), `held-cart:cancel:${heldCartId}:error`);
+      feedback.actionError(error, getPosHeldCartErrorMessage(error), `held-cart:cancel:${heldCartIdSnapshot}:error`);
+      mutationRef.current = false;
+      setCancellingId(null);
+      return;
+    }
+
+    feedback.actionSuccess('ยกเลิกใบพักรายการแล้ว', `held-cart:cancel:${heldCartIdSnapshot}:success`);
+    setPendingCancelId(null);
+    setCancelReason('');
+
+    try {
+      await load();
+    } catch (refreshError) {
+      feedback.actionError(
+        refreshError,
+        'ยกเลิกใบพักรายการสำเร็จแล้ว แต่รีเฟรชรายการใบพักไม่สำเร็จ กรุณาค้นหาใหม่อีกครั้ง',
+        `held-cart:cancel:${heldCartIdSnapshot}:refresh:error`,
+      );
     } finally {
       mutationRef.current = false;
       setCancellingId(null);

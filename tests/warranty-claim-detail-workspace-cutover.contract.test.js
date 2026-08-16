@@ -19,15 +19,22 @@ describe('warranty claim detail workspace cutover contract', () => {
     expect(pageSource).toContain('error={error}');
   });
 
-  it('keeps route, lifecycle, mutation, and repair navigation authority in the page', () => {
+  it('keeps route, lifecycle, serialized mutation, and repair navigation authority in the page', () => {
     expect(pageSource).toContain('useRepairRuntimeStore');
     expect(pageSource).toContain('useNavigate');
     expect(pageSource).toContain('useParams');
     expect(pageSource).toContain('useEffect');
+    expect(pageSource).toContain('useRef');
     expect(pageSource).toContain('loadClaim');
     expect(pageSource).toContain('transitionClaim');
+    expect(pageSource).toContain('const handleTransition = async (payload) =>');
+    expect(pageSource).toContain('transitionRef.current');
+    expect(pageSource).toContain('await transitionClaim(claimId, payload)');
+    expect(pageSource).toContain('await loadClaim(claimId)');
+    expect(pageSource).toContain('feedback.actionSuccess');
+    expect(pageSource).toContain('feedback.actionError');
     expect(pageSource).toContain('onRetry={() => loadClaim(claimId)}');
-    expect(pageSource).toContain('onTransition={(payload) => transitionClaim(claimId, payload)}');
+    expect(pageSource).toContain('onTransition={handleTransition}');
     expect(pageSource).toContain('/pos/services/repairs/${id}');
   });
 

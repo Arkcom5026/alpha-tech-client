@@ -1,8 +1,9 @@
 // refund/pages/CreateRefundPage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import RefundForm from '../components/RefundForm';
 import RefundHistoryTable from '../components/RefundHistoryTable';
 import { useParams, useNavigate } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import useSaleReturnStore from '@/features/saleReturn/store/saleReturnStore';
 
 const CreateRefundPage = () => {
@@ -13,21 +14,28 @@ const CreateRefundPage = () => {
   const [saleReturn, setSaleReturn] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const loadSaleReturn = useCallback(async ({ showLoading = false } = {}) => {
+    if (!params.saleReturnId) return null;
+    if (showLoading) setLoading(true);
+    try {
+      const result = await getSaleReturnByIdAction(params.saleReturnId);
+      setSaleReturn(result);
+      return result;
+    } catch (err) {
+      feedback.actionError(
+        err,
+        'โหลดข้อมูลใบคืนสินค้าไม่สำเร็จ',
+        `refund:${params.saleReturnId}:load:error`,
+      );
+      throw err;
+    } finally {
+      if (showLoading) setLoading(false);
+    }
+  }, [getSaleReturnByIdAction, params.saleReturnId]);
+
   useEffect(() => {
-    const load = async () => {
-      if (params.saleReturnId) {
-        try {
-          const result = await getSaleReturnByIdAction(params.saleReturnId);
-          setSaleReturn(result);
-        } catch (err) {
-          console.error('❌ โหลด saleReturn ไม่สำเร็จ:', err);
-        } finally {
-          setLoading(false);
-        }
-      }
-    };
-    load();
-  }, [params.saleReturnId, getSaleReturnByIdAction]);
+    loadSaleReturn({ showLoading: true }).catch(() => {});
+  }, [loadSaleReturn]);
 
   if (loading) return <div className="p-4">⏳ กำลังโหลดข้อมูล...</div>;
   if (!saleReturn) return <div className="p-4 text-red-600">❌ ไม่พบข้อมูลใบคืนสินค้า</div>;
@@ -52,7 +60,10 @@ const CreateRefundPage = () => {
           <p><span className="font-semibold text-blue-700">ยอดคงเหลือ:</span> {remain.toFixed(2)} ฿</p>
         </div>
 
-        <RefundForm saleReturn={saleReturn} />
+        <RefundForm
+          saleReturn={saleReturn}
+          onSuccess={() => loadSaleReturn({ showLoading: false })}
+        />
         <RefundHistoryTable transactions={saleReturn.refundTransaction || []} />
 
         {(saleReturn.refundTransaction || []).length > 0 && (

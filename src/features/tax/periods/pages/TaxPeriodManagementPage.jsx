@@ -138,14 +138,21 @@ const TaxPeriodManagementPage = () => {
   };
 
   const handleEnsureCurrentPeriod = async () => {
-    if (!branchId) return;
+    if (!branchId || busyKey) return;
     setBusyKey('ensure');
     try {
       const result = await ensureMonthlyTaxPeriod({ branchId });
-      toast.success(result?.created ? 'สร้างรอบภาษีประจำเดือนเรียบร้อยแล้ว' : 'รอบภาษีประจำเดือนนี้มีอยู่แล้ว');
+      toast.actionSuccess(
+        result?.created ? 'สร้างรอบภาษีประจำเดือนเรียบร้อยแล้ว' : 'รอบภาษีประจำเดือนนี้มีอยู่แล้ว',
+        'tax-period:ensure-current:success',
+      );
       await loadData();
     } catch (requestError) {
-      toast.error(getTaxPeriodErrorMessage(requestError));
+      toast.actionError(
+        requestError,
+        getTaxPeriodErrorMessage(requestError),
+        'tax-period:ensure-current:error',
+      );
     } finally {
       setBusyKey('');
     }
@@ -153,13 +160,13 @@ const TaxPeriodManagementPage = () => {
 
   const handleAction = (period, action) => {
     const meta = ACTION_META[action];
-    if (!meta) return false;
+    if (!meta || busyKey) return false;
     setPendingAction({ period, action });
     return false;
   };
 
   const confirmAction = async () => {
-    if (!pendingAction) return false;
+    if (!pendingAction || busyKey) return false;
     const { period, action } = pendingAction;
 
     const key = `${period.id}:${action}`;
@@ -171,12 +178,19 @@ const TaxPeriodManagementPage = () => {
         action,
         occurredAt: new Date().toISOString(),
       });
-      toast.success(result?.replayed ? 'สถานะนี้ถูกบันทึกไว้แล้ว' : 'อัปเดตสถานะรอบภาษีเรียบร้อยแล้ว');
+      toast.actionSuccess(
+        result?.replayed ? 'สถานะนี้ถูกบันทึกไว้แล้ว' : 'อัปเดตสถานะรอบภาษีเรียบร้อยแล้ว',
+        `tax-period:${period.id}:${action}:success`,
+      );
       await loadData();
       setPendingAction(null);
       return true;
     } catch (requestError) {
-      toast.error(getTaxPeriodErrorMessage(requestError));
+      toast.actionError(
+        requestError,
+        getTaxPeriodErrorMessage(requestError),
+        `tax-period:${period.id}:${action}:error`,
+      );
       return false;
     } finally {
       setBusyKey('');

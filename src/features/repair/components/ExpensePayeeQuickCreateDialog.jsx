@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, X } from 'lucide-react';
+import { feedback } from '@/design-system';
 import { createExpensePayee } from '@/features/taxExpense/api/taxExpenseApi';
 
 const initialForm = {
@@ -34,10 +35,14 @@ const ExpensePayeeQuickCreateDialog = ({ open, onClose, onCreated }) => {
 
   if (!open) return null;
 
-  const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const update = (key, value) => {
+    if (saving) return;
+    setForm((current) => ({ ...current, [key]: value }));
+  };
 
   const submit = async (event) => {
     event.preventDefault();
+    if (saving) return;
     setError('');
 
     if (!form.name.trim()) {
@@ -67,9 +72,19 @@ const ExpensePayeeQuickCreateDialog = ({ open, onClose, onCreated }) => {
         notes: form.notes || undefined,
       });
       await onCreated?.(created);
+      feedback.actionSuccess(
+        'เพิ่มผู้รับซ่อมและเลือกใช้งานเรียบร้อยแล้ว',
+        `repair:expense-payee:${created?.id || 'new'}:create:success`,
+      );
       onClose?.();
     } catch (requestError) {
-      setError(requestError?.response?.data?.message || requestError?.message || 'ไม่สามารถเพิ่มผู้รับซ่อมได้');
+      const message = requestError?.response?.data?.message || requestError?.message || 'ไม่สามารถเพิ่มผู้รับซ่อมได้';
+      setError(message);
+      feedback.actionError(
+        requestError,
+        message,
+        'repair:expense-payee:create:error',
+      );
     } finally {
       setSaving(false);
     }
@@ -84,7 +99,7 @@ const ExpensePayeeQuickCreateDialog = ({ open, onClose, onCreated }) => {
             <h3 className="mt-1 text-lg font-black text-slate-950">เพิ่มผู้รับซ่อมภายนอก</h3>
             <p className="mt-1 text-sm text-slate-600">สร้างผู้รับเงินค่าใช้จ่ายแล้วระบบจะเลือกผู้รับซ่อมรายนี้ให้ทันที เลขผู้เสียภาษีไม่บังคับ</p>
           </div>
-          <button type="button" onClick={onClose} disabled={saving} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="ปิด">
+          <button type="button" onClick={onClose} disabled={saving} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50" aria-label="ปิด">
             <X size={18} />
           </button>
         </div>
@@ -92,41 +107,41 @@ const ExpensePayeeQuickCreateDialog = ({ open, onClose, onCreated }) => {
         <form onSubmit={submit} className="mt-5 space-y-4">
           <div className="grid gap-3 md:grid-cols-2">
             <label className="text-xs font-bold text-slate-700">ประเภทผู้รับเงิน
-              <select value={form.payeeType} onChange={(event) => update('payeeType', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3">
+              <select disabled={saving} value={form.payeeType} onChange={(event) => update('payeeType', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 disabled:cursor-not-allowed disabled:bg-slate-100">
                 {typeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
             <label className="text-xs font-bold text-slate-700">ชื่อผู้รับซ่อม *
-              <input value={form.name} onChange={(event) => update('name', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3" autoFocus />
+              <input disabled={saving} value={form.name} onChange={(event) => update('name', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 disabled:cursor-not-allowed disabled:bg-slate-100" autoFocus />
             </label>
             <label className="text-xs font-bold text-slate-700">โทรศัพท์
-              <input value={form.phone} onChange={(event) => update('phone', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3" />
+              <input disabled={saving} value={form.phone} onChange={(event) => update('phone', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700">ผู้ติดต่อ
-              <input value={form.contactPerson} onChange={(event) => update('contactPerson', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3" />
+              <input disabled={saving} value={form.contactPerson} onChange={(event) => update('contactPerson', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700">เลขผู้เสียภาษี (ถ้ามี)
-              <input inputMode="numeric" maxLength={13} value={form.taxId} onChange={(event) => update('taxId', event.target.value.replace(/\D/g, ''))} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3" />
+              <input disabled={saving} inputMode="numeric" maxLength={13} value={form.taxId} onChange={(event) => update('taxId', event.target.value.replace(/\D/g, ''))} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700">รหัสสาขาภาษี
-              <input inputMode="numeric" maxLength={5} value={form.taxBranchCode} onChange={(event) => update('taxBranchCode', event.target.value.replace(/\D/g, ''))} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3" />
+              <input disabled={saving} inputMode="numeric" maxLength={5} value={form.taxBranchCode} onChange={(event) => update('taxBranchCode', event.target.value.replace(/\D/g, ''))} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700">อีเมล
-              <input type="email" value={form.email} onChange={(event) => update('email', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3" />
+              <input disabled={saving} type="email" value={form.email} onChange={(event) => update('email', event.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700 md:col-span-2">ที่อยู่ตามเอกสาร
-              <textarea rows={2} value={form.address} onChange={(event) => update('address', event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 p-3" />
+              <textarea disabled={saving} rows={2} value={form.address} onChange={(event) => update('address', event.target.value)} className="mt-1 w-full rounded-xl border border-slate-200 p-3 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700 md:col-span-2">หมายเหตุ
-              <textarea rows={2} value={form.notes} onChange={(event) => update('notes', event.target.value)} placeholder="เช่น ร้านซ่อมโน้ตบุ๊ก / ช่างรับซ่อมบอร์ด" className="mt-1 w-full rounded-xl border border-slate-200 p-3" />
+              <textarea disabled={saving} rows={2} value={form.notes} onChange={(event) => update('notes', event.target.value)} placeholder="เช่น ร้านซ่อมโน้ตบุ๊ก / ช่างรับซ่อมบอร์ด" className="mt-1 w-full rounded-xl border border-slate-200 p-3 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
           </div>
 
           {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm font-bold text-rose-700">{error}</p> : null}
 
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} disabled={saving} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 disabled:opacity-50">ยกเลิก</button>
-            <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-black text-white disabled:opacity-50">
+            <button type="button" onClick={onClose} disabled={saving} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50">ยกเลิก</button>
+            <button type="submit" disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-violet-700 px-4 py-2.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">
               <Plus size={16} />{saving ? 'กำลังบันทึก...' : 'บันทึกและเลือกผู้รับซ่อม'}
             </button>
           </div>

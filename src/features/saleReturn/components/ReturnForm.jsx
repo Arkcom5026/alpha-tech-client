@@ -1,28 +1,40 @@
-
-// ReturnForm.jsx
 import { useState } from 'react';
 
-const ReturnForm = ({ items = [], onSubmit, sale }) => {
+const ReturnForm = ({ items = [], onSubmit, sale, submitting = false }) => {
   const [selectedItems, setSelectedItems] = useState({});
   const [reason, setReason] = useState('');
+  const [formError, setFormError] = useState('');
 
   const toggleItem = (itemId) => {
+    if (submitting) return;
     setSelectedItems((prev) => ({
       ...prev,
       [itemId]: !prev[itemId],
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (submitting) return;
     const selected = items.filter((item) => selectedItems[item.id]);
-    if (selected.length === 0) return;
+    if (selected.length === 0) {
+      setFormError('กรุณาเลือกรายการสินค้าที่ต้องการคืน');
+      return;
+    }
 
+    setFormError('');
     const payload = {
-      reason,
+      reason: reason.trim(),
       items: selected.map((item) => ({ saleItemId: item.id })),
     };
 
-    onSubmit(payload);
+    try {
+      const result = await onSubmit?.(payload);
+      if (!result) return;
+      setSelectedItems({});
+      setReason('');
+    } catch (_) {
+      // Parent owns the standardized action error feedback; keep the current form intact for retry.
+    }
   };
 
   return (
@@ -46,11 +58,17 @@ const ReturnForm = ({ items = [], onSubmit, sale }) => {
         <label className="block font-medium mb-1">เหตุผลการคืน</label>
         <textarea
           value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          className="w-full border px-2 py-1 rounded"
+          onChange={(e) => {
+            setReason(e.target.value);
+            if (formError) setFormError('');
+          }}
+          disabled={submitting}
+          className="w-full border px-2 py-1 rounded disabled:cursor-not-allowed disabled:bg-slate-100"
           rows={3}
         />
       </div>
+
+      {formError && <p className="mb-3 text-sm font-medium text-rose-600">{formError}</p>}
 
       <table className="w-full text-sm border table-fixed">
         <thead className="bg-gray-100">
@@ -69,17 +87,14 @@ const ReturnForm = ({ items = [], onSubmit, sale }) => {
                 <input
                   type="checkbox"
                   checked={!!selectedItems[item.id]}
+                  disabled={submitting}
                   onChange={() => toggleItem(item.id)}
                 />
               </td>
               <td className="border px-2 py-1">{item.stockItem?.barcode || '-'}</td>
               <td className="border px-2 py-1">{item.stockItem?.product?.name || '-'}</td>
-              <td className="border px-2 py-1 whitespace-pre-wrap text-xs">
-                {item.stockItem?.product?.description || '-'}
-              </td>
-              <td className="border px-2 py-1 text-right">
-                {item.costPrice?.toLocaleString('th-TH', { minimumFractionDigits: 2 }) || '0.00'}
-              </td>
+              <td className="border px-2 py-1 whitespace-pre-wrap text-xs">{item.stockItem?.product?.description || '-'}</td>
+              <td className="border px-2 py-1 text-right">{item.costPrice?.toLocaleString('th-TH', { minimumFractionDigits: 2 }) || '0.00'}</td>
             </tr>
           ))}
         </tbody>
@@ -87,10 +102,12 @@ const ReturnForm = ({ items = [], onSubmit, sale }) => {
 
       <div className="pt-4 text-right">
         <button
+          type="button"
           onClick={handleSubmit}
-          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+          disabled={submitting}
+          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300"
         >
-          ยืนยันการคืนสินค้า
+          {submitting ? 'กำลังบันทึก...' : 'ยืนยันการคืนสินค้า'}
         </button>
       </div>
     </div>

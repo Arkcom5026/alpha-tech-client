@@ -49,6 +49,8 @@ export default function ManageRolesPage() {
   const [changingEmployeeId, setChangingEmployeeId] = useState(null);
 
   const limit = 20;
+  const mutating = changingRole || Boolean(changingEmployeeId);
+  const interactionLocked = mutating || Boolean(pending) || Boolean(pendingLifecycle);
 
   const filtered = useMemo(() => {
     const query = String(search || '').trim().toLowerCase();
@@ -102,6 +104,7 @@ export default function ManageRolesPage() {
   }, [branchFilter, filterRole, search]);
 
   const requestRoleChange = (employee) => {
+    if (interactionLocked) return;
     if (employee.status !== 'active') {
       setError('เปลี่ยน Role ได้เฉพาะพนักงานที่ได้รับอนุมัติและกำลังใช้งานอยู่');
       feedback.warning('เปลี่ยน Role ได้เฉพาะพนักงานที่ได้รับอนุมัติและกำลังใช้งานอยู่', { eventKey: 'employee:role:not-active' });
@@ -112,7 +115,7 @@ export default function ManageRolesPage() {
   };
 
   const confirmRoleChange = async () => {
-    if (!pending?.employee || changingRole) return;
+    if (!pending?.employee || mutating) return;
     const target = pending;
     try {
       setChangingRole(true);
@@ -132,7 +135,7 @@ export default function ManageRolesPage() {
   };
 
   const requestLifecycleChange = (employee) => {
-    if (employee.status === 'pending') return;
+    if (interactionLocked || employee.status === 'pending') return;
     setPendingLifecycle({
       employee,
       nextActive: employee.status !== 'active',
@@ -142,7 +145,7 @@ export default function ManageRolesPage() {
   const confirmLifecycleChange = async () => {
     const employee = pendingLifecycle?.employee;
     const nextActive = pendingLifecycle?.nextActive;
-    if (!employee || typeof nextActive !== 'boolean' || changingEmployeeId) return;
+    if (!employee || typeof nextActive !== 'boolean' || mutating) return;
 
     const actionText = nextActive ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
     try {
@@ -174,7 +177,7 @@ export default function ManageRolesPage() {
     );
   }
 
-  const filterClassName = 'border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-950/40 transition';
+  const filterClassName = 'border border-zinc-300 dark:border-zinc-700 rounded-md px-3 py-2 bg-white dark:bg-zinc-900 focus:outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 dark:focus:ring-emerald-950/40 transition disabled:cursor-not-allowed disabled:opacity-60';
 
   return (
     <>
@@ -191,13 +194,14 @@ export default function ManageRolesPage() {
               placeholder="ค้นหาชื่อ / อีเมล..."
               value={search}
               onChange={(event) => setSearch(event.target.value)}
+              disabled={interactionLocked}
             />
-            <select className={filterClassName} value={filterRole} onChange={(event) => setFilterRole(event.target.value)}>
+            <select className={filterClassName} value={filterRole} onChange={(event) => setFilterRole(event.target.value)} disabled={interactionLocked}>
               <option value="all">Role: ทั้งหมด</option>
               <option value="admin">admin</option>
               <option value="employee">employee</option>
             </select>
-            <select className={`${filterClassName} min-w-[220px]`} value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)}>
+            <select className={`${filterClassName} min-w-[220px]`} value={branchFilter} onChange={(event) => setBranchFilter(event.target.value)} disabled={interactionLocked}>
               <option value="all">สาขา: ทั้งหมด</option>
               {branches.map((branch) => <option key={branch.id} value={branch.id}>{branch.name}</option>)}
             </select>
@@ -237,12 +241,12 @@ export default function ManageRolesPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                          <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" disabled={!roleChangeAllowed || changingRole} onClick={() => requestRoleChange(employee)}>
+                          <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" disabled={!roleChangeAllowed || interactionLocked} onClick={() => requestRoleChange(employee)}>
                             เปลี่ยน Role
                           </ActionButton>
                           <ActionButton
                             className={isActive ? 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-400' : 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400'}
-                            disabled={!lifecycleAllowed || changingEmployeeId === employee.id}
+                            disabled={!lifecycleAllowed || interactionLocked}
                             onClick={() => requestLifecycleChange(employee)}
                           >
                             {changingEmployeeId === employee.id ? 'กำลังบันทึก...' : isActive ? 'ระงับ' : 'เปิดใช้งาน'}
@@ -259,7 +263,7 @@ export default function ManageRolesPage() {
           {pages > 1 && (
             <div className="flex gap-2 p-4 justify-center border-t border-zinc-200 dark:border-zinc-800">
               {Array.from({ length: pages }, (_, index) => index + 1).map((pageNumber) => (
-                <button key={pageNumber} className={`px-3 py-1.5 border rounded transition ${pageNumber === page ? 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' : 'hover:bg-emerald-50 hover:border-emerald-200'}`} onClick={() => setPage(pageNumber)}>
+                <button key={pageNumber} disabled={interactionLocked} className={`px-3 py-1.5 border rounded transition disabled:cursor-not-allowed disabled:opacity-50 ${pageNumber === page ? 'bg-emerald-100 border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300' : 'hover:bg-emerald-50 hover:border-emerald-200'}`} onClick={() => setPage(pageNumber)}>
                   {pageNumber}
                 </button>
               ))}
@@ -272,8 +276,8 @@ export default function ManageRolesPage() {
                 ยืนยันเปลี่ยน Role ของ “{pending.employee.name || pending.employee.email}” เป็น “{pending.nextRole}” หรือไม่?
               </div>
               <div className="flex gap-2">
-                <ActionButton className="border border-amber-300 text-amber-900" disabled={changingRole} onClick={() => setPending(null)}>ยกเลิก</ActionButton>
-                <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" disabled={changingRole} onClick={confirmRoleChange}>
+                <ActionButton className="border border-amber-300 text-amber-900" disabled={mutating} onClick={() => setPending(null)}>ยกเลิก</ActionButton>
+                <ActionButton className="bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-400" disabled={mutating} onClick={confirmRoleChange}>
                   {changingRole ? 'กำลังบันทึก...' : 'ยืนยัน'}
                 </ActionButton>
               </div>
@@ -292,7 +296,7 @@ export default function ManageRolesPage() {
         intent={pendingLifecycle?.nextActive ? 'primary' : 'destructive'}
         loading={Boolean(changingEmployeeId)}
         loadingLabel="กำลังบันทึก..."
-        onClose={() => !changingEmployeeId && setPendingLifecycle(null)}
+        onClose={() => !mutating && setPendingLifecycle(null)}
         onConfirm={confirmLifecycleChange}
       />
     </>

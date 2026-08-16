@@ -18,13 +18,21 @@ const ListCustomerDepositPage = () => {
   }, [fetchCustomerDepositsAction]);
 
   const handleCancel = async (id) => {
+    if (!id || isCanceling) return;
     try {
       setIsCanceling(true);
       await cancelCustomerDepositAction(id);
-      feedback.success('ยกเลิกรายการเงินมัดจำเรียบร้อยแล้ว');
+      feedback.actionSuccess(
+        'ยกเลิกรายการเงินมัดจำเรียบร้อยแล้ว',
+        `customer-deposit:${id}:cancel:success`,
+      );
       setPendingCancelId(null);
     } catch (error) {
-      feedback.error(error, { fallback: 'ไม่สามารถยกเลิกรายการเงินมัดจำได้ กรุณาลองใหม่อีกครั้ง' });
+      feedback.actionError(
+        error,
+        'ไม่สามารถยกเลิกรายการเงินมัดจำได้ กรุณาลองใหม่อีกครั้ง',
+        `customer-deposit:${id}:cancel:error`,
+      );
     } finally {
       setIsCanceling(false);
     }

@@ -12,6 +12,7 @@ const TableOrders = () => {
   const [orders, setOrders] = useState([]);
   const [pendingCancellation, setPendingCancellation] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
+  const statusInteractionLocked = savingStatus || Boolean(pendingCancellation);
 
   const handleGetOrder = useCallback(() => {
     getOrdersAdmin(token)
@@ -19,7 +20,6 @@ const TableOrders = () => {
         setOrders(res.data);
       })
       .catch((err) => {
-        console.log('handleGetOrder err --> ', err);
         feedback.error(err?.response?.data?.message || 'โหลดรายการคำสั่งซื้อไม่สำเร็จ');
       });
   }, [token]);
@@ -40,7 +40,6 @@ const TableOrders = () => {
       handleGetOrder();
       setPendingCancellation(null);
     } catch (err) {
-      console.log('handleChangeOrderStatus err --> ', err);
       feedback.actionError(
         err,
         'อัปเดตสถานะคำสั่งซื้อไม่สำเร็จ',
@@ -52,7 +51,7 @@ const TableOrders = () => {
   };
 
   const handleChangeOrderStatus = (order, nextStatus) => {
-    if (savingStatus || nextStatus === order.orderStatus) return;
+    if (statusInteractionLocked || nextStatus === order.orderStatus) return;
     if (nextStatus === 'Cancelled') {
       setPendingCancellation({ order, nextStatus });
       return;
@@ -105,7 +104,7 @@ const TableOrders = () => {
                     <select
                       value={item.orderStatus}
                       onChange={(e) => handleChangeOrderStatus(item, e.target.value)}
-                      disabled={savingStatus}
+                      disabled={statusInteractionLocked}
                       className="rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <option>Not Process</option>
@@ -129,7 +128,9 @@ const TableOrders = () => {
         intent="destructive"
         loading={savingStatus}
         loadingLabel="กำลังยกเลิก..."
-        onClose={() => setPendingCancellation(null)}
+        onClose={() => {
+          if (!savingStatus) setPendingCancellation(null);
+        }}
         onConfirm={() => pendingCancellation && applyOrderStatus(pendingCancellation.order.id, pendingCancellation.nextStatus)}
       />
     </>

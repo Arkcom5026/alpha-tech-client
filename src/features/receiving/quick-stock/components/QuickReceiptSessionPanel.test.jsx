@@ -70,7 +70,9 @@ describe('Quick Receipt executable vertical-slice contract', () => {
 
   it('supports cancelling a server draft and starting a clean receipt', () => {
     expect(controllerSource).toContain('cancelQuickReceipt');
-    expect(controllerSource).toMatch(/await cancelQuickReceipt\(receipt\.id/);
+    expect(controllerSource).toContain('const receiptId = receipt.id');
+    expect(controllerSource).toMatch(/await cancelQuickReceipt\(receiptId,/);
+    expect(controllerSource).toContain('if (!receipt?.id || receipt.status !== \'DRAFT\' || isBusy) return false');
     expect(workflowSource).toContain('ยกเลิกใบรับนี้');
     expect(panelSource).toContain('เริ่มใบรับใหม่');
     expect(controllerSource).toMatch(/setHeader\(emptyHeader\)/);

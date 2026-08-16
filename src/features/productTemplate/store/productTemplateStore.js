@@ -103,7 +103,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } catch (error) {
       console.error('[productTemplateStore] addTemplateAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถเพิ่มข้อมูลได้') });
-      return null;
+      throw error;
     } finally {
       set({ isSaving: false });
     }
@@ -119,7 +119,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } catch (error) {
       console.error('[productTemplateStore] updateTemplateAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถอัปเดตข้อมูลได้') });
-      return null;
+      throw error;
     } finally {
       set({ isSaving: false });
     }
@@ -134,7 +134,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } catch (error) {
       console.error('[productTemplateStore] uploadTemplateImageAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถอัปโหลดรูป Template ได้') });
-      return null;
+      throw error;
     } finally {
       set({ isUploadingImage: false });
     }
@@ -149,7 +149,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } catch (error) {
       console.error('[productTemplateStore] deleteTemplateImageAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถลบรูป Template ได้') });
-      return null;
+      throw error;
     } finally {
       set({ isUploadingImage: false });
     }
@@ -164,7 +164,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
     } catch (error) {
       console.error('[productTemplateStore] setTemplateCoverImageAction error:', error);
       set({ error: getErrorMessage(error, 'ไม่สามารถตั้งรูปปก Template ได้') });
-      return null;
+      throw error;
     } finally {
       set({ isUploadingImage: false });
     }
@@ -179,7 +179,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       return updated;
     } catch (error) {
       set({ error: getErrorMessage(error, 'ไม่สามารถปิดใช้งาน Template ได้') });
-      return null;
+      throw error;
     } finally {
       set({ isSaving: false });
     }
@@ -194,7 +194,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       return updated;
     } catch (error) {
       set({ error: getErrorMessage(error, 'ไม่สามารถเปิดใช้งาน Template ได้') });
-      return null;
+      throw error;
     } finally {
       set({ isSaving: false });
     }
@@ -209,7 +209,7 @@ const useProductTemplateStore = create(devtools((set, get) => ({
       return updated;
     } catch (error) {
       set({ error: getErrorMessage(error, 'ไม่สามารถเปลี่ยนสถานะได้') });
-      return null;
+      throw error;
     } finally {
       set({ isSaving: false });
     }

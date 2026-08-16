@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { feedback } from '@/design-system';
 import repairApi from '../api/repairApi';
 import MobileIntakeEvidenceFields from './MobileIntakeEvidenceFields';
 
@@ -68,11 +69,13 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
   }, [load]);
 
   const beginEdit = () => {
+    if (loading) return;
     setDraft(draftFromEvidence(evidence));
     setEditing(true);
   };
 
   const cancelEdit = () => {
+    if (loading) return;
     setDraft(emptyDraft);
     setEditing(false);
     setRetryNotice('');
@@ -85,23 +88,43 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
   );
 
   const save = async () => {
-    if (!canSave) return;
+    if (loading || !canSave) return;
     setLoading(true);
     setError('');
+
+    let saved = null;
     try {
       const payload = shouldWriteConsent
         ? draft
         : { ...draft, confirmed: false };
-      const saved = await repairApi.saveIntakeEvidence(repairJobId, payload);
+      saved = await repairApi.saveIntakeEvidence(repairJobId, payload);
       setEvidence(saved);
       setDraft(emptyDraft);
       setEditing(false);
       setRetryNotice('');
-      await onSaved?.(saved);
+      feedback.actionSuccess(
+        'บันทึกหลักฐานการรับเครื่องเรียบร้อยแล้ว',
+        `repair:intake-evidence:${repairJobId}:save:success`,
+      );
     } catch (saveError) {
-      setError(saveError.message);
+      const message = saveError?.message || 'บันทึกหลักฐานการรับเครื่องไม่สำเร็จ';
+      setError(message);
+      feedback.actionError(
+        saveError,
+        message,
+        `repair:intake-evidence:${repairJobId}:save:error`,
+      );
     } finally {
       setLoading(false);
+    }
+
+    if (!saved) return;
+
+    try {
+      await onSaved?.(saved);
+    } catch (reloadError) {
+      setError('บันทึกหลักฐานสำเร็จแล้ว แต่ยังรีเฟรชข้อมูลใบงานไม่สำเร็จ กรุณากดโหลดใหม่');
+      feedback.warning?.('บันทึกหลักฐานแล้ว แต่รีเฟรชข้อมูลใบงานไม่สำเร็จ');
     }
   };
 
@@ -119,8 +142,9 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
         </div>
         <button
           type="button"
+          disabled={loading}
           onClick={editing ? cancelEdit : beginEdit}
-          className="min-h-10 rounded-xl border border-emerald-300 px-3 text-sm font-black text-emerald-700"
+          className="min-h-10 rounded-xl border border-emerald-300 px-3 text-sm font-black text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {editing ? 'ยกเลิก' : '+ เพิ่มหลักฐาน'}
         </button>
@@ -154,12 +178,14 @@ const IntakeEvidencePanel = ({ repairJobId, warning, retryDraft, onSaved }) => {
 
       {editing ? (
         <div className="mt-4 space-y-3">
-          <MobileIntakeEvidenceFields value={draft} onChange={setDraft} />
+          <fieldset disabled={loading} className="disabled:opacity-60">
+            <MobileIntakeEvidenceFields value={draft} onChange={setDraft} />
+          </fieldset>
           <button
             type="button"
             disabled={loading || !canSave}
             onClick={save}
-            className="min-h-12 w-full rounded-xl bg-emerald-700 px-4 font-black text-white disabled:opacity-40"
+            className="min-h-12 w-full rounded-xl bg-emerald-700 px-4 font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
           >
             {loading ? 'กำลังบันทึก...' : 'บันทึกหลักฐานดิจิทัล'}
           </button>

@@ -26,19 +26,24 @@ const TaxExpenseCreateForm = ({ categories, payees, repairReasons = [], saving, 
     return sum + (quantity * unit) + vat;
   }, 0), [items]);
 
-  const updateItem = (index, key, value) =>
+  const updateItem = (index, key, value) => {
+    if (saving) return;
     setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item));
+  };
 
   const submit = async (event) => {
     event.preventDefault();
+    if (saving) return;
+
     setFormError('');
     if (!expensePayeeId || !documentNumber || items.some((item) => !item.categoryId || !item.description || !item.unitAmount)) {
       setFormError('กรุณาระบุผู้รับเงิน เลขเอกสาร และข้อมูลค่าใช้จ่ายทุกรายการ');
       return;
     }
+
     try {
       const repairReason = repairReasons.find((item) => Number(item.id) === Number(repairSubcontractId));
-      await onSubmit({
+      const created = await onSubmit({
         expensePayeeId: Number(expensePayeeId),
         repairJobId: repairReason?.repairJob?.id,
         repairSubcontractId: repairReason?.id,
@@ -55,10 +60,18 @@ const TaxExpenseCreateForm = ({ categories, payees, repairReasons = [], saving, 
           withholdingTaxAmount: Number(item.withholdingTaxAmount || 0),
         })),
       });
+      if (!created) return;
       setDocumentNumber('');
+      setRepairSubcontractId('');
       setNote('');
       setItems([newItem()]);
-    } catch (_) {}
+    } catch (requestError) {
+      setFormError(
+        requestError?.response?.data?.message
+          || requestError?.message
+          || 'ไม่สามารถบันทึกค่าใช้จ่ายได้',
+      );
+    }
   };
 
   return (
@@ -75,16 +88,16 @@ const TaxExpenseCreateForm = ({ categories, payees, repairReasons = [], saving, 
 
       <div className="grid gap-3 md:grid-cols-3">
         <label className="text-xs font-bold text-slate-700">ผู้รับเงินค่าใช้จ่าย
-          <select value={expensePayeeId} onChange={(event) => setExpensePayeeId(event.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2">
+          <select value={expensePayeeId} onChange={(event) => setExpensePayeeId(event.target.value)} disabled={saving} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 disabled:cursor-not-allowed disabled:bg-slate-100">
             <option value="">เลือกผู้รับเงินค่าใช้จ่าย</option>
             {payees.map((payee) => <option key={payee.id} value={payee.id}>{payee.name}{payee.taxId ? ` · ${payee.taxId}` : ''}</option>)}
           </select>
         </label>
         <label className="text-xs font-bold text-slate-700">เลขที่เอกสาร
-          <input value={documentNumber} onChange={(event) => setDocumentNumber(event.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2" />
+          <input value={documentNumber} onChange={(event) => setDocumentNumber(event.target.value)} disabled={saving} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
         </label>
         <label className="text-xs font-bold text-slate-700">วันที่ค่าใช้จ่าย
-          <input type="date" value={expenseDate} onChange={(event) => setExpenseDate(event.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2" />
+          <input type="date" value={expenseDate} onChange={(event) => setExpenseDate(event.target.value)} disabled={saving} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
         </label>
       </div>
 
@@ -94,7 +107,7 @@ const TaxExpenseCreateForm = ({ categories, payees, repairReasons = [], saving, 
           setRepairSubcontractId(value);
           const reason = repairReasons.find((item) => String(item.id) === value);
           if (reason) setExpensePayeeId(String(reason.expensePayeeId));
-        }} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-2">
+        }} disabled={saving} className="mt-1 h-10 w-full rounded-lg border border-slate-200 bg-white px-2 disabled:cursor-not-allowed disabled:bg-slate-100">
           <option value="">ค่าใช้จ่ายทั่วไป — ไม่อ้างอิงงานซ่อม</option>
           {repairReasons.map((reason) => <option key={reason.id} value={reason.id}>{reason.repairJob?.jobNo} · {reason.repairJob?.repairAsset?.displayName || 'ไม่พบข้อมูลอุปกรณ์'} · {reason.providerName} · {reason.status}</option>)}
         </select>
@@ -103,22 +116,22 @@ const TaxExpenseCreateForm = ({ categories, payees, repairReasons = [], saving, 
       <div className="space-y-2">
         {items.map((item, index) => (
           <div key={index} className="grid gap-2 rounded-xl bg-slate-50 p-3 md:grid-cols-[1.1fr_1.5fr_.5fr_.7fr_.7fr_auto]">
-            <select value={item.categoryId} onChange={(event) => updateItem(index, 'categoryId', event.target.value)} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs">
+            <select value={item.categoryId} onChange={(event) => updateItem(index, 'categoryId', event.target.value)} disabled={saving} className="h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs disabled:cursor-not-allowed disabled:bg-slate-100">
               <option value="">หมวดค่าใช้จ่าย</option>
               {categories.map((category) => <option key={category.id} value={category.id}>{category.code} · {category.name}</option>)}
             </select>
-            <input value={item.description} onChange={(event) => updateItem(index, 'description', event.target.value)} placeholder="รายละเอียด" className="h-9 rounded-lg border border-slate-200 px-2 text-xs" />
-            <input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} placeholder="จำนวน" className="h-9 rounded-lg border border-slate-200 px-2 text-xs" />
-            <input type="number" min="0" step="0.01" value={item.unitAmount} onChange={(event) => updateItem(index, 'unitAmount', event.target.value)} placeholder="ก่อน VAT" className="h-9 rounded-lg border border-slate-200 px-2 text-xs" />
-            <input type="number" min="0" step="0.01" value={item.vatAmount} onChange={(event) => updateItem(index, 'vatAmount', event.target.value)} placeholder="VAT" className="h-9 rounded-lg border border-slate-200 px-2 text-xs" />
-            <button type="button" disabled={items.length === 1} onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50 disabled:text-slate-300"><Trash2 size={16} /></button>
+            <input value={item.description} onChange={(event) => updateItem(index, 'description', event.target.value)} disabled={saving} placeholder="รายละเอียด" className="h-9 rounded-lg border border-slate-200 px-2 text-xs disabled:cursor-not-allowed disabled:bg-slate-100" />
+            <input type="number" min="0.01" step="0.01" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} disabled={saving} placeholder="จำนวน" className="h-9 rounded-lg border border-slate-200 px-2 text-xs disabled:cursor-not-allowed disabled:bg-slate-100" />
+            <input type="number" min="0" step="0.01" value={item.unitAmount} onChange={(event) => updateItem(index, 'unitAmount', event.target.value)} disabled={saving} placeholder="ก่อน VAT" className="h-9 rounded-lg border border-slate-200 px-2 text-xs disabled:cursor-not-allowed disabled:bg-slate-100" />
+            <input type="number" min="0" step="0.01" value={item.vatAmount} onChange={(event) => updateItem(index, 'vatAmount', event.target.value)} disabled={saving} placeholder="VAT" className="h-9 rounded-lg border border-slate-200 px-2 text-xs disabled:cursor-not-allowed disabled:bg-slate-100" />
+            <button type="button" disabled={saving || items.length === 1} onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))} className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-rose-600 hover:bg-rose-50 disabled:text-slate-300"><Trash2 size={16} /></button>
           </div>
         ))}
-        <button type="button" onClick={() => setItems((current) => [...current, newItem()])} className="inline-flex items-center gap-1 text-xs font-bold text-slate-700"><Plus size={15} /> เพิ่มรายการ</button>
+        <button type="button" disabled={saving} onClick={() => setItems((current) => [...current, newItem()])} className="inline-flex items-center gap-1 text-xs font-bold text-slate-700 disabled:cursor-not-allowed disabled:text-slate-300"><Plus size={15} /> เพิ่มรายการ</button>
       </div>
 
       <label className="block text-xs font-bold text-slate-700">หมายเหตุ
-        <textarea value={note} onChange={(event) => setNote(event.target.value)} rows={2} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-xs" />
+        <textarea value={note} onChange={(event) => setNote(event.target.value)} disabled={saving} rows={2} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-xs disabled:cursor-not-allowed disabled:bg-slate-100" />
       </label>
 
       <button type="submit" disabled={saving || !categories.length || !payees.length} className="inline-flex h-10 items-center gap-2 rounded-lg bg-slate-900 px-4 text-sm font-bold text-white disabled:bg-slate-300"><Save size={16} />{saving ? 'กำลังบันทึก...' : 'บันทึกค่าใช้จ่าย'}</button>

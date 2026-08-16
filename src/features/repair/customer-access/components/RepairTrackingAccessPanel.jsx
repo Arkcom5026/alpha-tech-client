@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import QRCode from 'react-qr-code';
 import repairApi from '../../api/repairApi';
-import { ConfirmActionDialog } from '@/design-system';
+import { ConfirmActionDialog, feedback } from '@/design-system';
 
 const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
   const [access, setAccess] = useState(null);
@@ -14,30 +14,38 @@ const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
   }, [access]);
 
   const issue = async (rotate = false) => {
+    if (state.loading) return;
     setState({ loading: true, error: null, notice: null });
     try {
       const payload = rotate
         ? await repairApi.rotateTrackingAccess(repairJobId, { expiryDays: 90 })
         : await repairApi.createTrackingAccess(repairJobId, { expiryDays: 90 });
       setAccess(payload);
-      setState({
-        loading: false,
-        error: null,
-        notice: rotate ? 'ออกลิงก์ใหม่และยกเลิกลิงก์เดิมแล้ว' : 'สร้างลิงก์ติดตามงานแล้ว',
-      });
+      const notice = rotate ? 'ออกลิงก์ใหม่และยกเลิกลิงก์เดิมแล้ว' : 'สร้างลิงก์ติดตามงานแล้ว';
+      setState({ loading: false, error: null, notice });
+      feedback.actionSuccess(
+        notice,
+        `repair:tracking-access:${repairJobId}:${rotate ? 'rotate' : 'create'}:success`,
+      );
     } catch (error) {
-      setState({ loading: false, error: error?.message || 'ไม่สามารถสร้างลิงก์ได้', notice: null });
+      const message = error?.message || 'ไม่สามารถสร้างลิงก์ได้';
+      setState({ loading: false, error: message, notice: null });
+      feedback.actionError(
+        error,
+        message,
+        `repair:tracking-access:${repairJobId}:${rotate ? 'rotate' : 'create'}:error`,
+      );
     }
   };
 
   const copyLink = async () => {
-    if (!trackingUrl) return;
+    if (!trackingUrl || state.loading) return;
     await navigator.clipboard.writeText(trackingUrl);
     setState((current) => ({ ...current, notice: 'คัดลอกลิงก์แล้ว', error: null }));
   };
 
   const shareLink = async () => {
-    if (!trackingUrl) return;
+    if (!trackingUrl || state.loading) return;
     const shareData = {
       title: `ติดตามงานซ่อม ${jobNo}`,
       text: `ติดตามสถานะงานซ่อมเลขที่ ${jobNo}`,
@@ -51,14 +59,26 @@ const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
   };
 
   const revoke = async () => {
+    if (state.loading) return;
     setState({ loading: true, error: null, notice: null });
     try {
       await repairApi.revokeTrackingAccess(repairJobId);
       setAccess(null);
       setRevokeConfirmationOpen(false);
-      setState({ loading: false, error: null, notice: 'ยกเลิกลิงก์ติดตามงานแล้ว' });
+      const notice = 'ยกเลิกลิงก์ติดตามงานแล้ว';
+      setState({ loading: false, error: null, notice });
+      feedback.actionSuccess(
+        notice,
+        `repair:tracking-access:${repairJobId}:revoke:success`,
+      );
     } catch (error) {
-      setState({ loading: false, error: error?.message || 'ไม่สามารถยกเลิกลิงก์ได้', notice: null });
+      const message = error?.message || 'ไม่สามารถยกเลิกลิงก์ได้';
+      setState({ loading: false, error: message, notice: null });
+      feedback.actionError(
+        error,
+        message,
+        `repair:tracking-access:${repairJobId}:revoke:error`,
+      );
     }
   };
 
@@ -77,7 +97,7 @@ const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
             type="button"
             disabled={state.loading}
             onClick={() => issue(false)}
-            className="min-h-11 rounded-xl bg-blue-700 px-5 text-sm font-black text-white disabled:opacity-50"
+            className="min-h-11 rounded-xl bg-blue-700 px-5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {state.loading ? 'กำลังสร้าง' : 'สร้างลิงก์และ QR'}
           </button>
@@ -98,16 +118,16 @@ const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
               ใช้ได้ถึง {new Intl.DateTimeFormat('th-TH', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(access.expiresAt))}
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-              <button type="button" onClick={copyLink} className="min-h-11 rounded-xl border border-blue-200 px-4 text-sm font-black text-blue-700">
+              <button type="button" disabled={state.loading} onClick={copyLink} className="min-h-11 rounded-xl border border-blue-200 px-4 text-sm font-black text-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
                 คัดลอกลิงก์
               </button>
-              <button type="button" onClick={shareLink} className="min-h-11 rounded-xl bg-emerald-600 px-4 text-sm font-black text-white">
+              <button type="button" disabled={state.loading} onClick={shareLink} className="min-h-11 rounded-xl bg-emerald-600 px-4 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-50">
                 ส่งให้ลูกค้า
               </button>
-              <button type="button" disabled={state.loading} onClick={() => issue(true)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-black text-slate-600">
+              <button type="button" disabled={state.loading} onClick={() => issue(true)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-black text-slate-600 disabled:cursor-not-allowed disabled:opacity-50">
                 ออกลิงก์ใหม่
               </button>
-              <button type="button" disabled={state.loading} onClick={() => setRevokeConfirmationOpen(true)} className="min-h-11 rounded-xl border border-red-200 px-4 text-sm font-black text-red-600">
+              <button type="button" disabled={state.loading} onClick={() => setRevokeConfirmationOpen(true)} className="min-h-11 rounded-xl border border-red-200 px-4 text-sm font-black text-red-600 disabled:cursor-not-allowed disabled:opacity-50">
                 ยกเลิกลิงก์
               </button>
             </div>

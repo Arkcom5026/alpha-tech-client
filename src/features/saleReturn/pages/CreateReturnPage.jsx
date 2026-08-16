@@ -1,6 +1,6 @@
-// ✅ CreateReturnPage.jsx + ReturnForm.jsx (แก้ handleSubmitReturn ให้เชื่อม API จริง)
 import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import useSaleStore from '../../sales/store/salesStore';
 import useSaleReturnStore from '../store/saleReturnStore';
 import ReturnForm from '../components/ReturnForm';
@@ -8,25 +8,31 @@ import ReturnForm from '../components/ReturnForm';
 const CreateReturnPage = () => {
   const { saleId } = useParams();
   const { getSaleByIdAction, selectedSale } = useSaleStore();
-  const { createSaleReturnAction } = useSaleReturnStore();
+  const { createSaleReturnAction, loading } = useSaleReturnStore();
 
   useEffect(() => {
     if (saleId) {
-      console.log('📥 เรียก getSaleByIdAction');
       getSaleByIdAction(saleId);
     }
-  }, [saleId]);
-
-  useEffect(() => {
-    console.log('🟦 selectedSale updated:', selectedSale);
-  }, [selectedSale]);
+  }, [saleId, getSaleByIdAction]);
 
   const handleSubmitReturn = async (payload) => {
+    if (loading) return null;
     try {
       const result = await createSaleReturnAction(saleId, payload);
-      console.log('✅ คืนสินค้าแล้ว:', result);
+      if (!result) return null;
+      feedback.actionSuccess(
+        'บันทึกการคืนสินค้าเรียบร้อยแล้ว',
+        `sale-return:${saleId}:create:success`,
+      );
+      return result;
     } catch (err) {
-      console.error('❌ คืนสินค้าไม่สำเร็จ:', err);
+      feedback.actionError(
+        err,
+        'คืนสินค้าไม่สำเร็จ',
+        `sale-return:${saleId}:create:error`,
+      );
+      throw err;
     }
   };
 
@@ -37,7 +43,12 @@ const CreateReturnPage = () => {
 
       {Array.isArray(selectedSale?.items) ? (
         selectedSale.items.length > 0 ? (
-          <ReturnForm items={selectedSale.items} sale={selectedSale} onSubmit={handleSubmitReturn} />
+          <ReturnForm
+            items={selectedSale.items}
+            sale={selectedSale}
+            onSubmit={handleSubmitReturn}
+            submitting={loading}
+          />
         ) : (
           <div className="text-center py-6 text-gray-500">ไม่มีรายการสินค้าสำหรับคืน</div>
         )
@@ -49,4 +60,3 @@ const CreateReturnPage = () => {
 };
 
 export default CreateReturnPage;
-

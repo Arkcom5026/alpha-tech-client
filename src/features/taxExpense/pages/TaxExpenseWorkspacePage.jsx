@@ -47,7 +47,7 @@ const TaxExpenseWorkspacePage = () => {
   };
 
   const verifyEvidence = (expense) => {
-    if (!expense?.id || expense.evidenceStatus === 'VERIFIED') return;
+    if (!expense?.id || expense.evidenceStatus === 'VERIFIED' || verifyingEvidenceId) return;
     setPendingEvidenceExpense(expense);
   };
 
@@ -57,11 +57,18 @@ const TaxExpenseWorkspacePage = () => {
     setVerifyingEvidenceId(expense.id);
     try {
       await verifyTaxExpenseEvidence(expense.id, { note: 'Verified from Tax Expense workspace' });
-      feedback.success('ยืนยันหลักฐานค่าใช้จ่ายแล้ว');
+      feedback.actionSuccess(
+        'ยืนยันหลักฐานค่าใช้จ่ายแล้ว',
+        `tax-expense:${expense.id}:evidence-verify:success`,
+      );
       setPendingEvidenceExpense(null);
       await load();
     } catch (requestError) {
-      feedback.error(requestError?.response?.data?.message || requestError?.message || 'ไม่สามารถยืนยันหลักฐานค่าใช้จ่ายได้');
+      feedback.actionError(
+        requestError,
+        'ไม่สามารถยืนยันหลักฐานค่าใช้จ่ายได้',
+        `tax-expense:${expense.id}:evidence-verify:error`,
+      );
     } finally {
       setVerifyingEvidenceId(null);
     }
@@ -103,7 +110,7 @@ const TaxExpenseWorkspacePage = () => {
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="border-b text-slate-500"><tr><th className="pb-2">เลขที่</th><th className="pb-2">ผู้รับเงิน</th><th className="pb-2">เอกสาร</th><th className="pb-2">หลักฐาน</th><th className="pb-2 text-right">ยอดรวม</th><th className="pb-2 text-right">การทำงาน</th></tr></thead>
-                <tbody>{expenses.map((expense) => <tr key={expense.id} className="border-b border-slate-100"><td className="py-3 font-bold">{expense.expenseNumber}</td><td className="py-3">{expense.counterpartyName}</td><td className="py-3">{expense.documentNumber || '-'}</td><td className="py-3"><span className={`rounded-full px-2 py-1 font-bold ${expense.evidenceStatus === 'VERIFIED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{expense.evidenceStatus || 'MISSING'}</span></td><td className="py-3 text-right font-bold">฿{money(expense.totalAmount)}</td><td className="py-3"><div className="flex justify-end gap-1.5"><button type="button" onClick={() => openAssessment(expense.id)} className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 font-bold text-blue-700 hover:bg-blue-100">ประเมินภาษี</button><button type="button" onClick={() => verifyEvidence(expense)} disabled={expense.evidenceStatus === 'VERIFIED' || verifyingEvidenceId === expense.id} className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 font-bold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"><ShieldCheck size={13} />{expense.evidenceStatus === 'VERIFIED' ? 'หลักฐานครบแล้ว' : verifyingEvidenceId === expense.id ? 'กำลังยืนยัน...' : 'ยืนยันหลักฐาน'}</button></div></td></tr>)}</tbody>
+                <tbody>{expenses.map((expense) => <tr key={expense.id} className="border-b border-slate-100"><td className="py-3 font-bold">{expense.expenseNumber}</td><td className="py-3">{expense.counterpartyName}</td><td className="py-3">{expense.documentNumber || '-'}</td><td className="py-3"><span className={`rounded-full px-2 py-1 font-bold ${expense.evidenceStatus === 'VERIFIED' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>{expense.evidenceStatus || 'MISSING'}</span></td><td className="py-3 text-right font-bold">฿{money(expense.totalAmount)}</td><td className="py-3"><div className="flex justify-end gap-1.5"><button type="button" onClick={() => openAssessment(expense.id)} className="rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 font-bold text-blue-700 hover:bg-blue-100">ประเมินภาษี</button><button type="button" onClick={() => verifyEvidence(expense)} disabled={expense.evidenceStatus === 'VERIFIED' || Boolean(verifyingEvidenceId)} className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1.5 font-bold text-emerald-700 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"><ShieldCheck size={13} />{expense.evidenceStatus === 'VERIFIED' ? 'หลักฐานครบแล้ว' : verifyingEvidenceId === expense.id ? 'กำลังยืนยัน...' : 'ยืนยันหลักฐาน'}</button></div></td></tr>)}</tbody>
               </table>
               {!loading && !expenses.length && <p className="py-8 text-center text-sm text-slate-400">ยังไม่มีรายการค่าใช้จ่าย</p>}
             </div>
@@ -125,7 +132,9 @@ const TaxExpenseWorkspacePage = () => {
         intent="primary"
         loading={Boolean(verifyingEvidenceId)}
         loadingLabel="กำลังยืนยัน..."
-        onClose={() => setPendingEvidenceExpense(null)}
+        onClose={() => {
+          if (!verifyingEvidenceId) setPendingEvidenceExpense(null);
+        }}
         onConfirm={confirmVerifyEvidence}
       />
     </>

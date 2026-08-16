@@ -32,27 +32,37 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
   if (!handoverRelevant) return null;
 
   const finalizeAndClose = async () => {
+    if (state.saving) return;
+
     setState((v) => ({ ...v, saving: true, error: null }));
+    let handoverFinalized = false;
     try {
       const finalized = await repairApi.finalizeHandover(repairJobId, {
         receiverName: handover?.customerConfirmedAt ? undefined : form.receiverName,
         handoverConfirmed: form.handoverConfirmed,
         note: form.note,
       });
+      handoverFinalized = true;
       setHandover(finalized);
 
       if (onWorkflowAction) {
-        await onWorkflowAction({
+        const closed = await onWorkflowAction({
           action: 'CLOSE',
           expectedWorkflowStatus: 'DELIVERED',
           note: 'ปิดใบงานอัตโนมัติหลังยืนยันส่งมอบเครื่องคืนลูกค้าเรียบร้อยแล้ว',
         });
+        if (closed === false) {
+          throw new Error('ส่งมอบเครื่องสำเร็จแล้ว แต่ยังปิดใบงานไม่สำเร็จ กรุณาลองปิดใบงานอีกครั้ง');
+        }
       } else {
         await onJobReload?.();
       }
       setState({ loading: false, saving: false, error: null });
     } catch (error) {
-      setState({ loading: false, saving: false, error: error.message });
+      const message = handoverFinalized
+        ? error?.message || 'ส่งมอบเครื่องสำเร็จแล้ว แต่ปิดใบงานไม่สำเร็จ'
+        : error?.message || 'ส่งมอบเครื่องไม่สำเร็จ';
+      setState({ loading: false, saving: false, error: message });
     }
   };
 
@@ -102,9 +112,10 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
           {!handover?.customerConfirmedAt ? (
             <input
               value={form.receiverName}
+              disabled={state.saving}
               onChange={(e) => setForm((v) => ({ ...v, receiverName: e.target.value }))}
               placeholder="ชื่อผู้รับเครื่อง *"
-              className="min-h-12 w-full rounded-xl border border-slate-300 px-4"
+              className="min-h-12 w-full rounded-xl border border-slate-300 px-4 disabled:cursor-not-allowed disabled:bg-slate-100"
             />
           ) : null}
 
@@ -112,6 +123,7 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
             <input
               type="checkbox"
               checked={form.handoverConfirmed}
+              disabled={state.saving}
               onChange={(e) => setForm((v) => ({ ...v, handoverConfirmed: e.target.checked }))}
               className="mt-0.5 h-5 w-5"
             />
@@ -123,10 +135,11 @@ const RepairHandoverPanel = ({ repairJobId, job, onWorkflowAction, onJobReload }
 
           <textarea
             value={form.note}
+            disabled={state.saving}
             onChange={(e) => setForm((v) => ({ ...v, note: e.target.value }))}
             rows={2}
             placeholder="หมายเหตุการส่งมอบ (ถ้ามี)"
-            className="w-full rounded-xl border border-slate-300 px-4 py-3"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
 
           <button

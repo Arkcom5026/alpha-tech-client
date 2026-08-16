@@ -1,5 +1,5 @@
 // ✅ CheckoutPage.jsx 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useCartStore } from "../../cart/store/cartStore";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { useOrderOnlineStore } from "../store/orderOnlineStore";
@@ -25,13 +25,16 @@ const CheckoutPage = () => {
   const [showRegister, setShowRegister] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
   const [calculatedTotal, setCalculatedTotal] = useState(0);
+  const submitRef = useRef(false);
 
   const submitOrderAction = useOrderOnlineStore(
     (state) => state.submitOrderAction
   );
   const isSubmitting = useOrderOnlineStore((state) => state.isSubmitting);
+  const interactionBusy = isSubmitting || submitRef.current;
 
   const handleLoginSuccess = async () => {
+    if (interactionBusy) return;
     await fetchCartAction();
     await fetchCartBranchPricesAction();
     const items = useCartStore.getState().cartItems;
@@ -78,6 +81,7 @@ const CheckoutPage = () => {
   }, [selectedCartItemsWithPrice]);
 
   const toggleSelection = (id) => {
+    if (interactionBusy) return;
     setSelectedItems((prev) =>
       prev.includes(id)
         ? prev.filter((itemId) => itemId !== id)
@@ -86,41 +90,48 @@ const CheckoutPage = () => {
   };
 
   const handleIncrease = (item) => {
+    if (interactionBusy) return;
     increaseQuantity(item.id);
   };
 
   const handleDecrease = (item) => {
+    if (interactionBusy) return;
     decreaseQuantity(item.id);
   };
 
   const submitOrder = async () => {
-    if (isSubmitting) return;
+    if (interactionBusy) return;
+
+    if (!token || !customer || !selectedBranchId) {
+      feedback.warning("ข้อมูลลูกค้าหรือสาขายังไม่พร้อม กรุณาตรวจสอบก่อนยืนยันคำสั่งซื้อ", {
+        eventKey: "checkout-context-not-ready",
+      });
+      return;
+    }
+
+    if (!selectedCartItemsWithPrice.length) {
+      feedback.warning("กรุณาเลือกสินค้าก่อนทำรายการ", { eventKey: "checkout-no-selection" });
+      return;
+    }
+
+    const payload = {
+      customerId: customer.id,
+      branchId: selectedBranchId,
+      note: "คำสั่งซื้อจากลูกค้าออนไลน์",
+      items: selectedCartItemsWithPrice.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        price:
+          item.branchPrice?.price ||
+          item.priceOnline ||
+          item.price ||
+          item.priceAtThatTime ||
+          0,
+      })),
+    };
+
+    submitRef.current = true;
     try {
-      if (!token || !customer || !selectedBranchId) {
-        return;
-      }
-
-      if (!selectedCartItemsWithPrice.length) {
-        feedback.warning("กรุณาเลือกสินค้าก่อนทำรายการ", { eventKey: "checkout-no-selection" });
-        return;
-      }
-
-      const payload = {
-        customerId: customer.id,
-        branchId: selectedBranchId,
-        note: "คำสั่งซื้อจากลูกค้าออนไลน์",
-        items: selectedCartItemsWithPrice.map((item) => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price:
-            item.branchPrice?.price ||
-            item.priceOnline ||
-            item.price ||
-            item.priceAtThatTime ||
-            0,
-        })),
-      };
-
       const result = await submitOrderAction(payload);
       if (result?.order?.id) {
         feedback.actionSuccess(
@@ -135,6 +146,8 @@ const CheckoutPage = () => {
         "ไม่สามารถยืนยันคำสั่งซื้อได้",
         "online-order.checkout.submit",
       );
+    } finally {
+      submitRef.current = false;
     }
   };
 
@@ -167,7 +180,8 @@ const CheckoutPage = () => {
                     type="checkbox"
                     checked={selectedItems.includes(item.id)}
                     onChange={() => toggleSelection(item.id)}
-                    className="mt-2"
+                    disabled={interactionBusy}
+                    className="mt-2 disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   <img
                     src={imageUrl}
@@ -178,8 +192,10 @@ const CheckoutPage = () => {
                     <div className="font-medium text-gray-800">{name}</div>
                     <div className="flex items-center gap-2 mt-1 text-xs text-gray-500">
                       <button
+                        type="button"
                         onClick={() => handleDecrease(item)}
-                        className="px-2 py-0.5 border rounded hover:bg-gray-100"
+                        disabled={interactionBusy}
+                        className="px-2 py-0.5 border rounded hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         -
                       </button>
@@ -187,8 +203,10 @@ const CheckoutPage = () => {
                         {item.quantity}
                       </span>
                       <button
+                        type="button"
                         onClick={() => handleIncrease(item)}
-                        className="px-2 py-0.5 border rounded hover:bg-gray-100"
+                        disabled={interactionBusy}
+                        className="px-2 py-0.5 border rounded hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         +
                       </button>
@@ -208,11 +226,12 @@ const CheckoutPage = () => {
             </div>
             {token && customer && (
               <button
+                type="button"
                 onClick={submitOrder}
-                disabled={isSubmitting}
+                disabled={interactionBusy}
                 className="mt-6 w-full bg-green-600 text-white py-2 rounded-md hover:bg-green-700 transition disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSubmitting ? "กำลังยืนยันคำสั่งซื้อ..." : "ยืนยันการสั่งซื้อ"}
+                {interactionBusy ? "กำลังยืนยันคำสั่งซื้อ..." : "ยืนยันการสั่งซื้อ"}
               </button>
             )}
           </div>
@@ -221,7 +240,7 @@ const CheckoutPage = () => {
 
       <div className="bg-white p-6 rounded-xl shadow-md h-fit">
         {token && customer ? (
-          <CustomerInfoForm />
+          <CustomerInfoForm disabled={interactionBusy} />
         ) : showRegister ? (
           <RegisterForm setShowRegister={setShowRegister} />
         ) : (

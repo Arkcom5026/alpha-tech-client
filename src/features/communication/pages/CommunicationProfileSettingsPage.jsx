@@ -22,8 +22,11 @@ const CommunicationProfileSettingsPage = () => {
     setError('');
     try {
       setProfiles(await listCommunicationProfiles() || []);
+      return { ok: true };
     } catch (loadError) {
-      setError(loadError?.message || 'โหลดช่องทางติดต่อไม่สำเร็จ');
+      const message = loadError?.message || 'โหลดช่องทางติดต่อไม่สำเร็จ';
+      setError(message);
+      return { ok: false, error: loadError, message };
     } finally {
       setLoading(false);
     }
@@ -75,7 +78,15 @@ const CommunicationProfileSettingsPage = () => {
         `communication-profile:${payload.channelType}:${payload.displayName}:save:success`,
       );
       setDraft(emptyDraft);
-      await load();
+
+      const refreshResult = await load();
+      if (!refreshResult?.ok) {
+        feedback.actionError(
+          refreshResult?.error,
+          'บันทึกช่องทางติดต่อสำเร็จแล้ว แต่รีเฟรชรายการช่องทางไม่สำเร็จ',
+          `communication-profile:${payload.channelType}:${payload.displayName}:refresh:error`,
+        );
+      }
     } catch (saveError) {
       const message = saveError?.response?.data?.message || saveError?.message || 'บันทึกช่องทางติดต่อไม่สำเร็จ';
       setError(message);

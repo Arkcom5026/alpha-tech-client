@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { feedback } from '@/design-system';
 import { useNavigate, useParams } from 'react-router-dom';
 import useEmployeeStore from '@/features/employee/store/employeeStore';
@@ -10,37 +10,74 @@ const RegisterCustomerForm = () => {
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
+  const shopSlugRef = useRef(shopSlug || 'advancetech');
+  const loginRequestRef = useRef(0);
+
+  useEffect(() => {
+    const nextSlug = shopSlug || 'advancetech';
+    if (shopSlugRef.current === nextSlug) return;
+    shopSlugRef.current = nextSlug;
+    loginRequestRef.current += 1;
+    submittingRef.current = false;
+    setSubmitting(false);
+  }, [shopSlug]);
 
   const handleChange = (event) => {
+    if (submittingRef.current) return;
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
-  };
-
-  const roleRedirect = () => {
-    const targetSlug = shopSlug || 'advancetech';
-    navigate(`/${targetSlug}/pos`);
   };
 
   const handleRegisterClick = (event) => {
     event.preventDefault();
-    const targetSlug = shopSlug || 'advancetech';
-    navigate(`/${targetSlug}/pos/registerpos`);
+    if (submittingRef.current) return;
+    navigate(`/${shopSlugRef.current}/pos/registerpos`);
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (submitting) return;
+    if (submittingRef.current) return;
 
+    const targetSlug = shopSlugRef.current;
+    const credentialsSnapshot = { ...form };
+    const requestId = loginRequestRef.current + 1;
+    loginRequestRef.current = requestId;
+    submittingRef.current = true;
     setSubmitting(true);
+
     try {
-      await actionLoginEmployee(form);
-      feedback.actionSuccess('เข้าสู่ระบบเรียบร้อยแล้ว', 'auth-employee-login-success');
-      roleRedirect();
+      await actionLoginEmployee(credentialsSnapshot);
+      feedback.actionSuccess(
+        'เข้าสู่ระบบเรียบร้อยแล้ว',
+        `auth-employee-login:${targetSlug}:success`,
+      );
+
+      if (shopSlugRef.current !== targetSlug || loginRequestRef.current !== requestId) {
+        feedback.actionError(
+          new Error('Login completed after the route context changed.'),
+          'เข้าสู่ระบบสำเร็จแล้ว แต่หน้าร้านเปลี่ยนระหว่างดำเนินการ กรุณาไปยังพื้นที่ร้านปัจจุบันต่อ',
+          `auth-employee-login:${targetSlug}:context-changed:error`,
+        );
+        return;
+      }
+
+      navigate(`/${targetSlug}/pos`);
     } catch (error) {
-      feedback.actionError(error, 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบอีเมลและรหัสผ่าน', 'auth-employee-login-error');
+      if (shopSlugRef.current !== targetSlug || loginRequestRef.current !== requestId) return;
+      feedback.actionError(
+        error,
+        'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบอีเมลและรหัสผ่าน',
+        `auth-employee-login:${targetSlug}:error`,
+      );
     } finally {
-      setSubmitting(false);
+      if (loginRequestRef.current === requestId && shopSlugRef.current === targetSlug) {
+        submittingRef.current = false;
+        setSubmitting(false);
+      }
     }
   };
+
+  const interactionBusy = submitting || submittingRef.current;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -56,6 +93,7 @@ const RegisterCustomerForm = () => {
               type="email"
               value={form.email}
               required
+              disabled={interactionBusy}
             />
             <input
               placeholder="Password"
@@ -65,10 +103,11 @@ const RegisterCustomerForm = () => {
               type="password"
               value={form.password}
               required
+              disabled={interactionBusy}
             />
             <button
               type="submit"
-              disabled={submitting}
+              disabled={interactionBusy}
               className="bg-slate-800 rounded-xl w-full text-white font-black py-2.5 shadow-sm hover:bg-slate-900 active:scale-98 transform transition-all text-sm tracking-wide disabled:cursor-not-allowed disabled:opacity-50"
             >
               {submitting ? 'กำลังเข้าสู่ระบบ...' : 'Login'}
@@ -76,7 +115,7 @@ const RegisterCustomerForm = () => {
             <button
               type="button"
               onClick={handleRegisterClick}
-              disabled={submitting}
+              disabled={interactionBusy}
               className="bg-slate-100 border border-slate-200 text-slate-700 rounded-xl w-full font-bold py-2.5 hover:bg-slate-200 active:scale-98 transform transition-all text-sm disabled:cursor-not-allowed disabled:opacity-50"
             >
               Register

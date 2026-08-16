@@ -52,8 +52,8 @@ jobs:
     - name: Home startup performance contracts
       run: npx vitest run tests/home-startup-performance.contract.test.js src/features/system/operational-status/operationalStatusBadge.contract.test.js
 
-    - name: Auth initial bootstrap performance contract
-      run: npx vitest run tests/auth-initial-bootstrap-performance.contract.test.js
+    - name: Auth public-first and protected bootstrap performance contracts
+      run: npx vitest run tests/auth-initial-bootstrap-performance.contract.test.js tests/public-login-auth-bootstrap.contract.test.js
 
     - name: UI modernization full-repository guard
       run: npm run guard:ui-modernization

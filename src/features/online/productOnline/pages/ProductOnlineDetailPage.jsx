@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import { useProductOnlineStore } from '../store/productOnlineStore';
 import { numberFormat } from '@/utils/number';
 import { useCartStore } from '../../cart/store/cartStore';
@@ -20,15 +21,14 @@ const ProductOnlineDetailPage = () => {
 
   const [activeTab, setActiveTab] = useState('spec');
   const [mainImage, setMainImage] = useState(null);
+  const [addingToCart, setAddingToCart] = useState(false);
 
-  // ✅ ตั้งค่า branchId จาก query → store
   useEffect(() => {
     if (branchIdFromQuery) {
       setSelectedBranchId(Number(branchIdFromQuery));
     }
-  }, [branchIdFromQuery]);
+  }, [branchIdFromQuery, setSelectedBranchId]);
 
-  // ✅ ดึงข้อมูลสินค้าเมื่อ id + branchId พร้อมแล้ว
   useEffect(() => {
     if (id && branchId) getProductByIdAction(id, branchId);
   }, [id, branchId, getProductByIdAction]);
@@ -45,7 +45,6 @@ const ProductOnlineDetailPage = () => {
     id: productId,
     name,
     description,
-    imageUrl,
     category,
     productType,
     productProfile,
@@ -63,22 +62,52 @@ const ProductOnlineDetailPage = () => {
   const rawPriceOnline = branchPrice?.priceOnline ?? priceOnlineFallback ?? 0;
   const priceOnline = typeof rawPriceOnline === 'number' ? rawPriceOnline : 0;
 
+  const handleAddToCart = async () => {
+    if (addingToCart) return;
+    setAddingToCart(true);
+    try {
+      await addToCart({
+        id: productId,
+        productId,
+        branchId,
+        name,
+        description,
+        imageUrl: mainImage,
+        price: priceOnline,
+        priceAtThatTime: priceOnline,
+        category,
+        productType,
+        productProfile,
+        productTemplate,
+        quantity: 1,
+      });
+      feedback.actionSuccess(
+        'เพิ่มสินค้าในตะกร้าแล้ว',
+        `online-cart:${productId}:add:success`,
+      );
+    } catch (error) {
+      feedback.actionError(
+        error,
+        'เพิ่มสินค้าในตะกร้าไม่สำเร็จ',
+        `online-cart:${productId}:add:error`,
+      );
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
   return (
     <div className="max-w-screen-xl mx-auto px-4 py-6 sm:py-10">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-        {/* รูปภาพสินค้า */}
         <div className="lg:col-span-5">
           <div className="bg-white rounded-md overflow-hidden shadow-sm">
             {mainImage ? (
               <img src={mainImage} alt={name} className="w-full aspect-square sm:aspect-video object-contain" />
             ) : (
-              <div className="w-full h-80 bg-gray-100 flex items-center justify-center text-gray-400">
-                No Image
-              </div>
+              <div className="w-full h-80 bg-gray-100 flex items-center justify-center text-gray-400">No Image</div>
             )}
           </div>
 
-          {/* Thumbnails */}
           {productImages.length > 1 && (
             <div className="flex gap-2 mt-4 overflow-x-auto">
               {productImages.map((img, idx) => (
@@ -96,33 +125,19 @@ const ProductOnlineDetailPage = () => {
           )}
         </div>
 
-        {/* ข้อมูลสินค้า */}
         <div className="lg:col-span-7 flex flex-col justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{name || 'ไม่พบคำเรียกสินค้า'}</h1>
             <p className="text-gray-600 mb-4 text-sm sm:text-base leading-relaxed">{description || '-'}</p>
-            <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-2">
-              {numberFormat(priceOnline)} บาท
-            </div>
+            <div className="text-xl sm:text-2xl font-bold text-blue-600 mb-2">{numberFormat(priceOnline)} บาท</div>
             {isReady && <div className="text-green-600 text-sm font-medium mb-4">✅ พร้อมรับที่สาขา</div>}
 
             <button
-              onClick={() =>
-                addToCart({
-                  id: productId,
-                  name,
-                  description,
-                  imageUrl: mainImage,
-                  price: priceOnline,
-                  category,
-                  productType,
-                  productProfile,
-                  productTemplate,
-                })
-              }
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded w-full sm:w-auto"
+              onClick={handleAddToCart}
+              disabled={addingToCart}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded w-full sm:w-auto disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              เพิ่มลงตะกร้า
+              {addingToCart ? 'กำลังเพิ่ม...' : 'เพิ่มลงตะกร้า'}
             </button>
 
             <div className="mt-6 grid grid-cols-1 md:grid-cols-2 text-sm text-gray-500 gap-y-1 gap-x-6">
@@ -138,51 +153,21 @@ const ProductOnlineDetailPage = () => {
         </div>
       </div>
 
-      {/* Tabs */}
       <div className="mt-10 sm:mt-12">
         <div className="flex flex-wrap gap-x-4 gap-y-2 border-b mb-4 text-sm sm:text-base">
-          <button
-            className={`pb-2 px-4 font-medium border-b-2 ${
-              activeTab === 'spec' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'
-            }`}
-            onClick={() => setActiveTab('spec')}
-          >
-            รายละเอียดสินค้า
-          </button>
-          <button
-            className={`pb-2 px-4 font-medium border-b-2 ${
-              activeTab === 'warranty' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'
-            }`}
-            onClick={() => setActiveTab('warranty')}
-          >
-            การรับประกัน
-          </button>
-          <button
-            className={`pb-2 px-4 font-medium border-b-2 ${
-              activeTab === 'review' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'
-            }`}
-            onClick={() => setActiveTab('review')}
-          >
-            รีวิวสินค้า
-          </button>
+          <button className={`pb-2 px-4 font-medium border-b-2 ${activeTab === 'spec' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`} onClick={() => setActiveTab('spec')}>รายละเอียดสินค้า</button>
+          <button className={`pb-2 px-4 font-medium border-b-2 ${activeTab === 'warranty' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`} onClick={() => setActiveTab('warranty')}>การรับประกัน</button>
+          <button className={`pb-2 px-4 font-medium border-b-2 ${activeTab === 'review' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500'}`} onClick={() => setActiveTab('review')}>รีวิวสินค้า</button>
         </div>
 
         {activeTab === 'spec' && (
-          <div className="whitespace-pre-wrap text-gray-700 text-sm leading-relaxed bg-white p-4 rounded shadow-sm">
-            {spec || '-'}
-          </div>
+          <div className="whitespace-pre-wrap text-gray-700 text-sm leading-relaxed bg-white p-4 rounded shadow-sm">{spec || '-'}</div>
         )}
-
         {activeTab === 'warranty' && (
-          <div className="text-sm text-gray-700 bg-white p-4 rounded shadow-sm">
-            การรับประกันสินค้า {warranty ?? '-'} วัน โดยบริษัทผู้ผลิตหรือศูนย์บริการที่กำหนด
-          </div>
+          <div className="text-sm text-gray-700 bg-white p-4 rounded shadow-sm">การรับประกันสินค้า {warranty ?? '-'} วัน โดยบริษัทผู้ผลิตหรือศูนย์บริการที่กำหนด</div>
         )}
-
         {activeTab === 'review' && (
-          <div className="text-sm text-gray-700 bg-white p-4 rounded shadow-sm italic">
-            ยังไม่มีรีวิวสำหรับสินค้านี้
-          </div>
+          <div className="text-sm text-gray-700 bg-white p-4 rounded shadow-sm italic">ยังไม่มีรีวิวสำหรับสินค้านี้</div>
         )}
       </div>
     </div>
@@ -190,8 +175,3 @@ const ProductOnlineDetailPage = () => {
 };
 
 export default ProductOnlineDetailPage;
-
-
-
-
-

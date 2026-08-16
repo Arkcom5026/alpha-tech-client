@@ -3,15 +3,21 @@ import {
   receiveScannedStockItem,
 } from '..';
 
+const busyError = () => new Error('มีรายการรับสินค้ากำลังดำเนินการอยู่ กรุณารอให้รายการปัจจุบันเสร็จก่อน');
+
 export const createStockItemReceiveSlice = (set, get) => ({
   scannedList: [],
   loading: false,
   error: null,
+  mutationAction: null,
 
   receiveSNAction: async ({ barcode, serialNumber, receiptItemId } = {}) => {
-    const normalizedBarcode = String(barcode || '').trim();
-    const normalizedSerialNumber = String(serialNumber || '').trim();
-    const code = normalizedBarcode;
+    const command = {
+      barcode: String(barcode || '').trim(),
+      serialNumber: String(serialNumber || '').trim() || null,
+      receiptItemId: receiptItemId ?? null,
+    };
+    const code = command.barcode;
 
     if (!code) {
       set((state) => ({
@@ -37,14 +43,11 @@ export const createStockItemReceiveSlice = (set, get) => ({
       return;
     }
 
-    set({ loading: true, error: null });
+    if (get().mutationAction) throw busyError();
+    set({ loading: true, error: null, mutationAction: 'RECEIVE_SCAN' });
 
     try {
-      const result = await receiveScannedStockItem({
-        barcode: code,
-        serialNumber: normalizedSerialNumber || null,
-        receiptItemId,
-      });
+      const result = await receiveScannedStockItem(command);
       const data = result?.sourceResponse ?? result;
       const kind = data?.stockItem ? 'SN' : data?.lot ? 'LOT' : undefined;
       const extra =
@@ -78,15 +81,19 @@ export const createStockItemReceiveSlice = (set, get) => ({
       }));
       throw error;
     } finally {
-      set({ loading: false });
+      if (get().mutationAction === 'RECEIVE_SCAN') {
+        set({ loading: false, mutationAction: null });
+      }
     }
   },
 
   receiveAllPendingNoSNAction: async ({ receiptId } = {}) => {
-    set({ loading: true, error: null });
+    const command = { receiptId: receiptId ?? null };
+    if (get().mutationAction) throw busyError();
+    set({ loading: true, error: null, mutationAction: 'RECEIVE_ALL_PENDING' });
 
     try {
-      return await receiveAllPendingStockItems({ receiptId });
+      return await receiveAllPendingStockItems(command);
     } catch (error) {
       const message =
         error?.response?.data?.message ||
@@ -96,7 +103,9 @@ export const createStockItemReceiveSlice = (set, get) => ({
       console.error('❌ receiveAllPendingNoSNAction ล้มเหลว:', error);
       throw error;
     } finally {
-      set({ loading: false });
+      if (get().mutationAction === 'RECEIVE_ALL_PENDING') {
+        set({ loading: false, mutationAction: null });
+      }
     }
   },
 

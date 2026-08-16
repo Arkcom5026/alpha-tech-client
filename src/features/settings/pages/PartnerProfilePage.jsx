@@ -12,7 +12,16 @@ const PartnerProfilePage = () => {
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState('');
   const savingRef = useRef(false);
+  const shopSlugRef = useRef(shopSlug);
+  const saveRequestRef = useRef(0);
   const { register, handleSubmit, setValue, formState: { errors } } = useForm();
+
+  useEffect(() => {
+    shopSlugRef.current = shopSlug;
+    saveRequestRef.current += 1;
+    savingRef.current = false;
+    setSaving(false);
+  }, [shopSlug]);
 
   useEffect(() => {
     if (!shopSlug) return;
@@ -37,7 +46,7 @@ const PartnerProfilePage = () => {
         if (!active) return;
         const message = error?.response?.data?.error?.message || error?.response?.data?.message || error?.message || 'โหลดข้อมูลโปรไฟล์ร้านค้าไม่สำเร็จ';
         setLoadError(message);
-        feedback.actionError(error, 'โหลดข้อมูลโปรไฟล์ร้านค้าไม่สำเร็จ', 'partner-profile:load:error');
+        feedback.actionError(error, 'โหลดข้อมูลโปรไฟล์ร้านค้าไม่สำเร็จ', `partner-profile:${shopSlug}:load:error`);
       } finally {
         if (active) setLoading(false);
       }
@@ -51,6 +60,8 @@ const PartnerProfilePage = () => {
     if (saving || savingRef.current || !shopSlug) return;
 
     const shopSlugSnapshot = shopSlug;
+    const requestId = saveRequestRef.current + 1;
+    saveRequestRef.current = requestId;
     const payload = {
       name: data.shopName.trim(),
       slogan: data.slogan?.trim(),
@@ -64,12 +75,24 @@ const PartnerProfilePage = () => {
     setSaving(true);
     try {
       await apiClient.put(`/branch-prices/profile-by-slug/${shopSlugSnapshot}`, payload);
-      feedback.actionSuccess('บันทึกข้อมูลโปรไฟล์ร้านค้าเรียบร้อยแล้ว', 'partner-profile:save:success');
+      const isCurrentContext = shopSlugRef.current === shopSlugSnapshot && saveRequestRef.current === requestId;
+      feedback.actionSuccess(
+        isCurrentContext
+          ? 'บันทึกข้อมูลโปรไฟล์ร้านค้าเรียบร้อยแล้ว'
+          : `บันทึกข้อมูลโปรไฟล์ร้าน ${shopSlugSnapshot} เรียบร้อยแล้ว`,
+        `partner-profile:${shopSlugSnapshot}:save:success`,
+      );
     } catch (error) {
-      feedback.actionError(error, 'เกิดข้อผิดพลาดในการบันทึกข้อมูลโปรไฟล์ร้านค้า', 'partner-profile:save:error');
+      feedback.actionError(
+        error,
+        `เกิดข้อผิดพลาดในการบันทึกข้อมูลโปรไฟล์ร้าน ${shopSlugSnapshot}`,
+        `partner-profile:${shopSlugSnapshot}:save:error`,
+      );
     } finally {
-      savingRef.current = false;
-      setSaving(false);
+      if (shopSlugRef.current === shopSlugSnapshot && saveRequestRef.current === requestId) {
+        savingRef.current = false;
+        setSaving(false);
+      }
     }
   };
 

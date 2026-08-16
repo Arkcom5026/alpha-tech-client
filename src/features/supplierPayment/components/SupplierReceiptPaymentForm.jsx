@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 import { feedback } from '@/design-system/feedback';
 import useSupplierPaymentStore from '../store/supplierPaymentStore';
-import usePurchaseOrderReceiptStore from '../../purchaseOrderReceipt/store/purchaseOrderReceiptStore';
+import { getReceiptsReadyToPay } from '@/features/purchaseOrderReceipt/api/purchaseOrderReceiptApi';
 import ReceiptSelectionTable from './SupplierReceiptSelectionTable';
 
 dayjs.locale('th');
@@ -20,21 +20,74 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
   const navigate = useNavigate();
   const supplierId = overrideSupplierId || supplier?.id;
   const { createSupplierPaymentAction } = useSupplierPaymentStore();
-  const { loadReceiptsReadyToPayAction, receiptsReadyToPay, isLoading: isReceiptsLoading } = usePurchaseOrderReceiptStore();
+  const [receiptsReadyToPay, setReceiptsReadyToPay] = useState([]);
+  const [isReceiptsLoading, setIsReceiptsLoading] = useState(false);
   const [formData, setFormData] = useState({ paymentDate: dayjs().format('YYYY-MM-DD'), amount: '', method: 'CASH', paymentType: 'RECEIPT_BASED', note: '', receipts: [], chequeDetails: { number: '', bank: '', dueDate: '' } });
   const [error, setError] = useState(null);
   const [successPayload, setSuccessPayload] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
+  const supplierIdRef = useRef(supplierId);
+  const receiptSearchRequestRef = useRef(0);
 
-  const handleSearchReceipts = useCallback((startDate, endDate, limit) => {
-    if (submittingRef.current) return;
+  useEffect(() => {
+    supplierIdRef.current = supplierId;
+    receiptSearchRequestRef.current += 1;
+    setReceiptsReadyToPay([]);
+    setFormData((previous) => ({ ...previous, receipts: [], amount: '' }));
+    setIsReceiptsLoading(false);
+  }, [supplierId]);
+
+  const handleSearchReceipts = useCallback(async (startDate, endDate, limit) => {
+    if (submittingRef.current) return { ok: false, busy: true };
+
+    const supplierIdSnapshot = supplierId;
+    if (!supplierIdSnapshot) {
+      feedback.info('ไม่พบ Supplier สำหรับค้นหาใบรับสินค้าที่พร้อมชำระ');
+      return { ok: false, missingSupplier: true };
+    }
+
+    const requestId = receiptSearchRequestRef.current + 1;
+    receiptSearchRequestRef.current = requestId;
     const formattedStartDate = dayjs(startDate).format('YYYY-MM-DD');
     const formattedEndDate = dayjs(endDate).format('YYYY-MM-DD');
-    Promise.resolve(loadReceiptsReadyToPayAction({ supplierId, startDate: formattedStartDate, endDate: formattedEndDate, limit })).catch((requestError) => {
-      feedback.actionError(requestError, 'โหลดใบรับสินค้าที่พร้อมชำระไม่สำเร็จ', 'supplier-payment:receipt:search:error');
-    });
-  }, [supplierId, loadReceiptsReadyToPayAction]);
+    const limitSnapshot = Number(limit) || undefined;
+
+    setIsReceiptsLoading(true);
+    try {
+      const result = await getReceiptsReadyToPay({
+        supplierId: supplierIdSnapshot,
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        limit: limitSnapshot,
+      });
+      const stale = supplierIdRef.current !== supplierIdSnapshot || receiptSearchRequestRef.current !== requestId;
+      if (stale) return { ok: false, stale: true };
+
+      const normalized = Array.isArray(result)
+        ? result
+        : Array.isArray(result?.items)
+          ? result.items
+          : Array.isArray(result?.data)
+            ? result.data
+            : [];
+      setReceiptsReadyToPay(normalized);
+      return { ok: true, data: normalized };
+    } catch (requestError) {
+      const stale = supplierIdRef.current !== supplierIdSnapshot || receiptSearchRequestRef.current !== requestId;
+      if (stale) return { ok: false, stale: true, error: requestError };
+      feedback.actionError(
+        requestError,
+        'โหลดใบรับสินค้าที่พร้อมชำระไม่สำเร็จ',
+        `supplier-payment:receipt:${supplierIdSnapshot}:search:error`,
+      );
+      return { ok: false, error: requestError };
+    } finally {
+      if (supplierIdRef.current === supplierIdSnapshot && receiptSearchRequestRef.current === requestId) {
+        setIsReceiptsLoading(false);
+      }
+    }
+  }, [supplierId]);
 
   useEffect(() => {
     if (submittingRef.current || formData.paymentType !== 'RECEIPT_BASED') return;
@@ -142,11 +195,18 @@ const SupplierReceiptPaymentForm = ({ supplier, supplierId: overrideSupplierId }
     try {
       const response = await createSupplierPaymentAction(payload);
       setSuccessPayload(response);
-      feedback.actionSuccess('บันทึกการชำระใบรับสินค้า Supplier เรียบร้อยแล้ว', 'supplier-payment:receipt:create:success');
+      feedback.actionSuccess(
+        'บันทึกการชำระใบรับสินค้า Supplier เรียบร้อยแล้ว',
+        `supplier-payment:receipt:${supplierIdSnapshot}:create:success`,
+      );
     } catch (requestError) {
       const message = requestError?.response?.data?.error?.message || requestError?.response?.data?.message || requestError?.message || 'บันทึกการชำระเงินไม่สำเร็จ';
       setError(`เกิดข้อผิดพลาดในการบันทึกข้อมูล: ${message}`);
-      feedback.actionError(requestError, 'บันทึกการชำระใบรับสินค้า Supplier ไม่สำเร็จ', 'supplier-payment:receipt:create:error');
+      feedback.actionError(
+        requestError,
+        'บันทึกการชำระใบรับสินค้า Supplier ไม่สำเร็จ',
+        `supplier-payment:receipt:${supplierIdSnapshot}:create:error`,
+      );
     } finally {
       submittingRef.current = false;
       setSubmitting(false);

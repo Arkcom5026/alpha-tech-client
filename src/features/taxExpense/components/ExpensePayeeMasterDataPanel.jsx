@@ -27,10 +27,15 @@ const ExpensePayeeMasterDataPanel = ({ payees, loading, saving, onRefresh, onSea
 
   const activeCount = useMemo(() => payees.filter((payee) => payee.active !== false).length, [payees]);
 
-  const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const update = (key, value) => {
+    if (saving) return;
+    setForm((current) => ({ ...current, [key]: value }));
+  };
 
   const submit = async (event) => {
     event.preventDefault();
+    if (saving) return;
+
     setError('');
     if (!form.name.trim()) {
       setError('กรุณาระบุชื่อผู้รับเงิน');
@@ -44,18 +49,28 @@ const ExpensePayeeMasterDataPanel = ({ payees, loading, saving, onRefresh, onSea
       setError('รหัสสาขาภาษีต้องมี 5 หลัก');
       return;
     }
-    await onCreate({
-      ...form,
-      name: form.name.trim(),
-      taxId: form.taxId || undefined,
-      taxBranchCode: form.taxBranchCode || undefined,
-      address: form.address || undefined,
-      phone: form.phone || undefined,
-      email: form.email || undefined,
-      contactPerson: form.contactPerson || undefined,
-      notes: form.notes || undefined,
-    });
-    setForm(initialForm);
+
+    try {
+      const created = await onCreate({
+        ...form,
+        name: form.name.trim(),
+        taxId: form.taxId || undefined,
+        taxBranchCode: form.taxBranchCode || undefined,
+        address: form.address || undefined,
+        phone: form.phone || undefined,
+        email: form.email || undefined,
+        contactPerson: form.contactPerson || undefined,
+        notes: form.notes || undefined,
+      });
+      if (!created) return;
+      setForm(initialForm);
+    } catch (requestError) {
+      setError(
+        requestError?.response?.data?.message
+          || requestError?.message
+          || 'ไม่สามารถเพิ่มผู้รับเงินค่าใช้จ่ายได้',
+      );
+    }
   };
 
   const search = (event) => {
@@ -77,33 +92,33 @@ const ExpensePayeeMasterDataPanel = ({ payees, loading, saving, onRefresh, onSea
         <form onSubmit={submit} className="space-y-3 rounded-xl bg-slate-50 p-4">
           <div className="grid gap-3 md:grid-cols-2">
             <label className="text-xs font-bold text-slate-700">ประเภท
-              <select value={form.payeeType} onChange={(event) => update('payeeType', event.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2">
+              <select value={form.payeeType} onChange={(event) => update('payeeType', event.target.value)} disabled={saving} className="mt-1 h-9 w-full rounded-lg border border-slate-200 bg-white px-2 disabled:cursor-not-allowed disabled:bg-slate-100">
                 {Object.entries(typeLabel).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </label>
             <label className="text-xs font-bold text-slate-700">ชื่อผู้รับเงิน
-              <input value={form.name} onChange={(event) => update('name', event.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2" />
+              <input value={form.name} onChange={(event) => update('name', event.target.value)} disabled={saving} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700">เลขผู้เสียภาษี
-              <input inputMode="numeric" maxLength={13} value={form.taxId} onChange={(event) => update('taxId', event.target.value.replace(/\D/g, ''))} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2" />
+              <input inputMode="numeric" maxLength={13} value={form.taxId} onChange={(event) => update('taxId', event.target.value.replace(/\D/g, ''))} disabled={saving} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700">รหัสสาขาภาษี
-              <input inputMode="numeric" maxLength={5} value={form.taxBranchCode} onChange={(event) => update('taxBranchCode', event.target.value.replace(/\D/g, ''))} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2" />
+              <input inputMode="numeric" maxLength={5} value={form.taxBranchCode} onChange={(event) => update('taxBranchCode', event.target.value.replace(/\D/g, ''))} disabled={saving} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700">โทรศัพท์
-              <input value={form.phone} onChange={(event) => update('phone', event.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2" />
+              <input value={form.phone} onChange={(event) => update('phone', event.target.value)} disabled={saving} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700">อีเมล
-              <input type="email" value={form.email} onChange={(event) => update('email', event.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2" />
+              <input type="email" value={form.email} onChange={(event) => update('email', event.target.value)} disabled={saving} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700">ผู้ติดต่อ
-              <input value={form.contactPerson} onChange={(event) => update('contactPerson', event.target.value)} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2" />
+              <input value={form.contactPerson} onChange={(event) => update('contactPerson', event.target.value)} disabled={saving} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700 md:col-span-2">ที่อยู่ตามเอกสาร
-              <textarea rows={2} value={form.address} onChange={(event) => update('address', event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2" />
+              <textarea rows={2} value={form.address} onChange={(event) => update('address', event.target.value)} disabled={saving} className="mt-1 w-full rounded-lg border border-slate-200 p-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
             <label className="text-xs font-bold text-slate-700 md:col-span-2">หมายเหตุ
-              <textarea rows={2} value={form.notes} onChange={(event) => update('notes', event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 p-2" />
+              <textarea rows={2} value={form.notes} onChange={(event) => update('notes', event.target.value)} disabled={saving} className="mt-1 w-full rounded-lg border border-slate-200 p-2 disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
           </div>
           {error && <p className="text-xs font-semibold text-rose-700">{error}</p>}

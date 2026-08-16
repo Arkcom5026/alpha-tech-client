@@ -53,12 +53,12 @@ const ViewEmployeePage = () => {
   }, [employee]);
 
   const requestStatusChange = () => {
-    if (!employee || status === 'pending') return;
+    if (!employee || status === 'pending' || changingStatus) return;
     setPendingStatusChange(true);
   };
 
   const confirmStatusChange = async () => {
-    if (!employee || status === 'pending') return;
+    if (!employee || status === 'pending' || changingStatus) return;
 
     const nextActive = status !== 'active';
     const actionText = nextActive ? 'เปิดใช้งาน' : 'ระงับการใช้งาน';
@@ -162,7 +162,9 @@ const ViewEmployeePage = () => {
         intent={nextActive ? 'primary' : 'destructive'}
         loading={changingStatus}
         loadingLabel="กำลังบันทึก..."
-        onClose={() => setPendingStatusChange(false)}
+        onClose={() => {
+          if (!changingStatus) setPendingStatusChange(false);
+        }}
         onConfirm={confirmStatusChange}
       />
     </>

@@ -83,8 +83,9 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
   const selectedSupplier = suppliers.find((item) => String(item.id) === String(form.supplierId));
 
   const submit = async () => {
-    if (!form.reason.trim()) return;
-    await onOpenClaim({
+    if (submitting || !form.reason.trim()) return;
+    setError('');
+    const created = await onOpenClaim({
       reason: form.reason.trim(),
       supplierId: form.supplierId ? Number(form.supplierId) : null,
       serviceProvider: form.serviceProvider.trim() || null,
@@ -92,6 +93,9 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
       trackingNumber: form.trackingNumber.trim() || null,
       note: form.note.trim() || null,
     });
+    if (!created) {
+      setError('เปิดรายการเคลมไม่สำเร็จ กรุณาตรวจสอบข้อมูลแล้วลองอีกครั้ง');
+    }
   };
 
   if (!expanded) {
@@ -104,8 +108,9 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
         </p>
         <button
           type="button"
+          disabled={submitting}
           onClick={() => setExpanded(true)}
-          className="mt-4 rounded-xl border border-indigo-300 bg-indigo-50 px-5 py-3 font-black text-indigo-800"
+          className="mt-4 rounded-xl border border-indigo-300 bg-indigo-50 px-5 py-3 font-black text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           เปิดขั้นตอนส่งเคลม
         </button>
@@ -125,8 +130,9 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
         </div>
         <button
           type="button"
+          disabled={submitting}
           onClick={() => setExpanded(false)}
-          className="w-fit rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-700"
+          className="w-fit rounded-xl border border-indigo-200 bg-white px-3 py-2 text-xs font-black text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           ซ่อนขั้นตอนเคลม
         </button>
@@ -136,13 +142,15 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
       {error ? (
         <div className="mt-4 rounded-xl bg-red-50 p-3">
           <p className="text-sm font-bold text-red-700">{error}</p>
-          <button
-            type="button"
-            onClick={() => { setOptions(null); setExpanded(false); setTimeout(() => setExpanded(true), 0); }}
-            className="mt-2 text-xs font-black text-red-700 underline"
-          >
-            ลองโหลดใหม่
-          </button>
+          {!submitting ? (
+            <button
+              type="button"
+              onClick={() => { setOptions(null); setExpanded(false); setTimeout(() => setExpanded(true), 0); }}
+              className="mt-2 text-xs font-black text-red-700 underline"
+            >
+              ลองโหลดใหม่
+            </button>
+          ) : null}
         </div>
       ) : null}
 
@@ -158,8 +166,9 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
             ) : (
               <select
                 value={form.supplierId}
+                disabled={submitting}
                 onChange={(event) => setForm((current) => ({ ...current, supplierId: event.target.value }))}
-                className="mt-2 w-full rounded-xl border border-indigo-200 bg-white px-4 py-3"
+                className="mt-2 w-full rounded-xl border border-indigo-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
               >
                 <option value="">ไม่ระบุผู้จำหน่าย / ส่งศูนย์โดยตรง</option>
                 {suppliers.map((supplier) => (
@@ -172,34 +181,39 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
           <textarea
             rows={3}
             value={form.reason}
+            disabled={submitting}
             onChange={(event) => setForm((current) => ({ ...current, reason: event.target.value }))}
             placeholder="เหตุผลในการส่งเคลม *"
-            className="rounded-xl border border-indigo-200 bg-white px-4 py-3 md:col-span-2"
+            className="rounded-xl border border-indigo-200 bg-white px-4 py-3 md:col-span-2 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
           <input
             value={form.serviceProvider}
+            disabled={submitting}
             onChange={(event) => setForm((current) => ({ ...current, serviceProvider: event.target.value }))}
             placeholder="ศูนย์บริการ / ผู้ให้บริการ"
-            className="rounded-xl border border-indigo-200 bg-white px-4 py-3"
+            className="rounded-xl border border-indigo-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
           <input
             value={form.externalClaimRef}
+            disabled={submitting}
             onChange={(event) => setForm((current) => ({ ...current, externalClaimRef: event.target.value }))}
             placeholder="เลขอ้างอิงจากศูนย์ (ถ้ามี)"
-            className="rounded-xl border border-indigo-200 bg-white px-4 py-3"
+            className="rounded-xl border border-indigo-200 bg-white px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
           <input
             value={form.trackingNumber}
+            disabled={submitting}
             onChange={(event) => setForm((current) => ({ ...current, trackingNumber: event.target.value }))}
             placeholder="เลขติดตามขนส่ง (ถ้ามี)"
-            className="rounded-xl border border-indigo-200 bg-white px-4 py-3 md:col-span-2"
+            className="rounded-xl border border-indigo-200 bg-white px-4 py-3 md:col-span-2 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
           <textarea
             rows={2}
             value={form.note}
+            disabled={submitting}
             onChange={(event) => setForm((current) => ({ ...current, note: event.target.value }))}
             placeholder="หมายเหตุเพิ่มเติม"
-            className="rounded-xl border border-indigo-200 bg-white px-4 py-3 md:col-span-2"
+            className="rounded-xl border border-indigo-200 bg-white px-4 py-3 md:col-span-2 disabled:cursor-not-allowed disabled:bg-slate-100"
           />
           <button
             type="button"
@@ -207,7 +221,7 @@ const RepairClaimHandoffPanel = ({ job, submitting, onOpenClaim }) => {
             onClick={submit}
             className="rounded-xl bg-indigo-700 px-5 py-3 font-black text-white md:col-span-2 disabled:opacity-40"
           >
-            ยืนยันเปิดรายการเคลมและพักงานซ่อม
+            {submitting ? 'กำลังเปิดรายการเคลม...' : 'ยืนยันเปิดรายการเคลมและพักงานซ่อม'}
           </button>
         </div>
       ) : null}

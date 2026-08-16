@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system';
 import { ConfirmActionDialog } from '@/design-system/composites';
 import useProductTemplateStore from '../store/productTemplateStore';
 import TemplatePriceSnapshotPanel from '../components/TemplatePriceSnapshotPanel';
@@ -75,13 +76,23 @@ const ProductTemplateGovernanceDetailPage = () => {
 
   const confirmArchive = async () => {
     if (!id || isSaving) return;
-    await archiveTemplateAction(id);
-    setShowArchiveConfirm(false);
+    try {
+      await archiveTemplateAction(id);
+      feedback.actionSuccess('ปิดใช้งาน Product Template เรียบร้อยแล้ว', `product-template:${id}:archive:success`);
+      setShowArchiveConfirm(false);
+    } catch (archiveError) {
+      feedback.actionError(archiveError, 'ไม่สามารถปิดใช้งาน Product Template ได้', `product-template:${id}:archive:error`);
+    }
   };
 
   const handleRestore = async () => {
     if (!id || isSaving) return;
-    await restoreTemplateAction(id);
+    try {
+      await restoreTemplateAction(id);
+      feedback.actionSuccess('เปิดใช้งาน Product Template เรียบร้อยแล้ว', `product-template:${id}:restore:success`);
+    } catch (restoreError) {
+      feedback.actionError(restoreError, 'ไม่สามารถเปิดใช้งาน Product Template ได้', `product-template:${id}:restore:error`);
+    }
   };
 
   if (isLoading && !currentTemplate) {
@@ -180,7 +191,7 @@ const ProductTemplateGovernanceDetailPage = () => {
         intent="destructive"
         loading={isSaving}
         loadingLabel="กำลังปิดใช้งาน..."
-        onClose={() => setShowArchiveConfirm(false)}
+        onClose={() => !isSaving && setShowArchiveConfirm(false)}
         onConfirm={confirmArchive}
       />
     </>

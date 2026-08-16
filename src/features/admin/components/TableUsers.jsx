@@ -14,6 +14,8 @@ const TableCustomers = () => {
   const [pendingStatus, setPendingStatus] = useState(null);
   const [savingStatus, setSavingStatus] = useState(false);
   const [savingRoleUserId, setSavingRoleUserId] = useState(null);
+  const mutating = savingStatus || Boolean(savingRoleUserId);
+  const interactionLocked = mutating || Boolean(pendingStatus);
 
   const handleGetUsers = useCallback(() => {
     getListAllUsers(token)
@@ -21,7 +23,6 @@ const TableCustomers = () => {
         setCustomers(res.data);
       })
       .catch((err) => {
-        console.log('handleGetUsers err --> ', err);
         feedback.error(err?.response?.data?.message || 'โหลดรายการผู้ใช้ไม่สำเร็จ');
       });
   }, [token]);
@@ -31,12 +32,12 @@ const TableCustomers = () => {
   }, [handleGetUsers]);
 
   const requestChangeUserStatus = (userId, userStatus, email) => {
-    if (savingStatus) return;
+    if (interactionLocked) return;
     setPendingStatus({ userId, userStatus, email });
   };
 
   const confirmChangeUserStatus = async () => {
-    if (!pendingStatus?.userId || savingStatus) return;
+    if (!pendingStatus?.userId || mutating) return;
     const value = {
       id: pendingStatus.userId,
       enabled: !pendingStatus.userStatus,
@@ -52,7 +53,6 @@ const TableCustomers = () => {
       );
       setPendingStatus(null);
     } catch (err) {
-      console.log('changeUserStatus err --> ', err);
       feedback.actionError(
         err,
         'อัปเดตสถานะผู้ใช้ไม่สำเร็จ',
@@ -64,7 +64,7 @@ const TableCustomers = () => {
   };
 
   const handleChangUserRole = async (userId, userRole) => {
-    if (savingRoleUserId) return;
+    if (interactionLocked) return;
     const value = {
       id: userId,
       Role: userRole,
@@ -79,7 +79,6 @@ const TableCustomers = () => {
         `admin:user-role:${userId}:success`,
       );
     } catch (err) {
-      console.log('changeUserRole err --> ', err);
       feedback.actionError(
         err,
         'อัปเดตสิทธิ์ผู้ใช้ไม่สำเร็จ',
@@ -113,7 +112,7 @@ const TableCustomers = () => {
                     <select
                       onChange={(e) => handleChangUserRole(item.id, e.target.value)}
                       value={item.role}
-                      disabled={Boolean(savingRoleUserId) || savingStatus}
+                      disabled={interactionLocked}
                       className="rounded border border-slate-300 px-2 py-1 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-100 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       <option>user</option>
@@ -126,7 +125,7 @@ const TableCustomers = () => {
                       className={item.enabled
                         ? 'rounded-md bg-rose-600 p-1 text-white shadow-md hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60'
                         : 'rounded-md bg-emerald-600 p-1 text-white shadow-md hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60'}
-                      disabled={savingStatus || Boolean(savingRoleUserId)}
+                      disabled={interactionLocked}
                       onClick={() => requestChangeUserStatus(item.id, item.enabled, item.email)}
                     >
                       {item.enabled ? 'Disable' : 'Enable'}
@@ -147,7 +146,9 @@ const TableCustomers = () => {
         intent={pendingStatus?.userStatus ? 'destructive' : 'primary'}
         loading={savingStatus}
         loadingLabel="กำลังบันทึก..."
-        onClose={() => setPendingStatus(null)}
+        onClose={() => {
+          if (!mutating) setPendingStatus(null);
+        }}
         onConfirm={confirmChangeUserStatus}
       />
     </>

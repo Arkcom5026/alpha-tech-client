@@ -254,7 +254,7 @@ const useQuickStockRuntimeStore = create((set, get) => ({
         quickStockError: mapped,
       });
 
-      return false;
+      throw error;
     }
   },
 

@@ -121,7 +121,9 @@ const SalesTaxFilingPage = () => {
         intent="primary"
         loading={busy}
         loadingLabel="กำลังยืนยัน..."
-        onClose={() => setPendingSubmit(null)}
+        onClose={() => {
+          if (!busy) setPendingSubmit(null);
+        }}
         onConfirm={confirmSubmit}
       />
     </>

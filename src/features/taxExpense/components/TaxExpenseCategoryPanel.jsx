@@ -8,6 +8,8 @@ const TaxExpenseCategoryPanel = ({ categories, saving, onCreate }) => {
 
   const submit = async (event) => {
     event.preventDefault();
+    if (saving) return;
+
     setFormError('');
     const normalizedCode = code.trim().toUpperCase();
     const normalizedName = name.trim();
@@ -15,11 +17,19 @@ const TaxExpenseCategoryPanel = ({ categories, saving, onCreate }) => {
       setFormError('กรุณาระบุรหัสและชื่อหมวดค่าใช้จ่าย');
       return;
     }
+
     try {
-      await onCreate({ code: normalizedCode, name: normalizedName });
+      const created = await onCreate({ code: normalizedCode, name: normalizedName });
+      if (!created) return;
       setCode('');
       setName('');
-    } catch (_) {}
+    } catch (error) {
+      setFormError(
+        error?.response?.data?.message
+          || error?.message
+          || 'ไม่สามารถเพิ่มหมวดค่าใช้จ่ายได้',
+      );
+    }
   };
 
   return (
@@ -34,10 +44,10 @@ const TaxExpenseCategoryPanel = ({ categories, saving, onCreate }) => {
 
       <form onSubmit={submit} className="mt-4 grid gap-3 md:grid-cols-[.7fr_1.3fr_auto]">
         <label className="text-xs font-bold text-slate-700">รหัสหมวด
-          <input value={code} onChange={(event) => setCode(event.target.value)} placeholder="เช่น OFFICE" className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-3 uppercase" />
+          <input value={code} onChange={(event) => setCode(event.target.value)} disabled={saving} placeholder="เช่น OFFICE" className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-3 uppercase disabled:cursor-not-allowed disabled:bg-slate-100" />
         </label>
         <label className="text-xs font-bold text-slate-700">ชื่อหมวดค่าใช้จ่าย
-          <input value={name} onChange={(event) => setName(event.target.value)} placeholder="เช่น ค่าใช้จ่ายสำนักงาน" className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-3" />
+          <input value={name} onChange={(event) => setName(event.target.value)} disabled={saving} placeholder="เช่น ค่าใช้จ่ายสำนักงาน" className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-3 disabled:cursor-not-allowed disabled:bg-slate-100" />
         </label>
         <button type="submit" disabled={saving} className="mt-5 inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 text-xs font-bold text-white disabled:bg-slate-300">
           <Plus size={15} />{saving ? 'กำลังเพิ่ม...' : 'เพิ่มหมวด'}

@@ -124,7 +124,8 @@ const PosHeldCartPanel = ({
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-teal-200 bg-white text-teal-900 transition hover:bg-teal-100"
+            disabled={saving || Boolean(cancellingId)}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-teal-200 bg-white text-teal-900 transition hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="ปิดใบพักรายการขาย"
           >
             <X className="h-5 w-5" />

@@ -78,7 +78,7 @@ export const usePositionStore = create((set) => ({
       return created;
     } catch (e) {
       set({ loading: false, error: e?.response?.data?.error || e?.message || 'สร้างไม่สำเร็จ' });
-      return null;
+      throw e;
     }
   },
 
@@ -98,7 +98,7 @@ export const usePositionStore = create((set) => ({
       return normalized;
     } catch (e) {
       set({ loading: false, error: e?.response?.data?.error || e?.message || 'แก้ไขไม่สำเร็จ' });
-      return null;
+      throw e;
     }
   },
 
@@ -120,7 +120,7 @@ export const usePositionStore = create((set) => ({
       return normalized;
     } catch (e) {
       set({ loading: false, error: e?.response?.data?.error || e?.message || 'อัปเดต Role ไม่สำเร็จ' });
-      return null;
+      throw e;
     }
   },
 
@@ -139,7 +139,7 @@ export const usePositionStore = create((set) => ({
       return normalized;
     } catch (e) {
       set({ loading: false, error: e?.response?.data?.error || e?.message || 'อัปเดตสถานะไม่สำเร็จ' });
-      return null;
+      throw e;
     }
   },
 

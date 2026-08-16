@@ -149,7 +149,9 @@ const PrinterSettingsPanel = ({ branchId, workstationId, discoverySelectionServi
           <button type="button" className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50" onClick={() => setClearConfirmationOpen(true)} disabled={isBusy || !selectedRow?.preference}>ล้างการตั้งค่าระดับนี้</button>
         </div>
       </section>
-      <ConfirmActionDialog open={clearConfirmationOpen} title="ล้างการตั้งค่าเครื่องพิมพ์" description="ยืนยันล้างการตั้งค่าเครื่องพิมพ์ของระดับนี้หรือไม่? ระบบจะกลับไปใช้ค่า authority ลำดับถัดไปที่มีอยู่" confirmLabel="ล้างการตั้งค่า" intent="destructive" loading={status === 'SAVING'} loadingLabel="กำลังล้าง..." onClose={() => setClearConfirmationOpen(false)} onConfirm={clearSelection} />
+      <ConfirmActionDialog open={clearConfirmationOpen} title="ล้างการตั้งค่าเครื่องพิมพ์" description="ยืนยันล้างการตั้งค่าเครื่องพิมพ์ของระดับนี้หรือไม่? ระบบจะกลับไปใช้ค่า authority ลำดับถัดไปที่มีอยู่" confirmLabel="ล้างการตั้งค่า" intent="destructive" loading={status === 'SAVING'} loadingLabel="กำลังล้าง..." onClose={() => {
+        if (status !== 'SAVING') setClearConfirmationOpen(false)
+      }} onConfirm={clearSelection} />
     </>
   )
 }

@@ -48,10 +48,11 @@ const FormBranch = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [message, setMessage] = useState(null);
   const [pendingDeleteBranch, setPendingDeleteBranch] = useState(null);
+  const mutating = isSaving || Boolean(deletingId);
 
   const canSubmit = useMemo(() => {
-    return isSuperAdmin && form.name.trim().length > 0;
-  }, [isSuperAdmin, form.name]);
+    return isSuperAdmin && !mutating && form.name.trim().length > 0;
+  }, [isSuperAdmin, mutating, form.name]);
 
   useEffect(() => {
     if (typeof loadAllBranchesAction !== 'function') return;
@@ -59,6 +60,7 @@ const FormBranch = () => {
   }, [loadAllBranchesAction]);
 
   const handleChange = (e) => {
+    if (mutating) return;
     const { name, value } = e.target;
 
     setForm((prev) => ({
@@ -70,12 +72,13 @@ const FormBranch = () => {
   };
 
   const resetForm = () => {
+    if (mutating) return;
     setForm(initialState);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isSaving) return;
+    if (mutating) return;
 
     if (!isSuperAdmin) {
       setMessage({ type: 'error', text: 'ต้องเป็น Super Admin เท่านั้นจึงจะเพิ่มสาขาได้' });
@@ -109,13 +112,12 @@ const FormBranch = () => {
       });
       feedback.actionSuccess(successMessage, `admin-branch:create:${res?.data?.id || payload.name}:success`);
 
-      resetForm();
+      setForm(initialState);
 
       if (typeof loadAllBranchesAction === 'function') {
         await loadAllBranchesAction();
       }
     } catch (err) {
-      console.error('❌ createBranch failed:', err);
       const fallbackMessage = 'เพิ่มสาขาไม่สำเร็จ';
       setMessage({
         type: 'error',
@@ -128,12 +130,12 @@ const FormBranch = () => {
   };
 
   const requestRemove = (branch) => {
-    if (!isSuperAdmin || deletingId) return;
+    if (!isSuperAdmin || mutating) return;
     setPendingDeleteBranch(branch);
   };
 
   const handleRemove = async () => {
-    if (!pendingDeleteBranch || deletingId) return;
+    if (!pendingDeleteBranch || mutating) return;
     if (!isSuperAdmin) {
       setMessage({ type: 'error', text: 'ต้องเป็น Super Admin เท่านั้นจึงจะลบสาขาได้' });
       return;
@@ -160,7 +162,6 @@ const FormBranch = () => {
         await loadAllBranchesAction();
       }
     } catch (err) {
-      console.error('❌ removeBranch failed:', err);
       const fallbackMessage = 'ลบสาขาไม่สำเร็จ';
       setMessage({
         type: 'error',
@@ -173,6 +174,7 @@ const FormBranch = () => {
   };
 
   const goBack = () => {
+    if (mutating) return;
     navigate('..');
   };
 
@@ -190,7 +192,8 @@ const FormBranch = () => {
           <button
             type="button"
             onClick={goBack}
-            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            disabled={mutating}
+            className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             กลับ
           </button>
@@ -223,13 +226,13 @@ const FormBranch = () => {
                 </label>
                 <input
                   id="branch-name"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:opacity-60"
                   value={form.name}
                   onChange={handleChange}
                   placeholder="เช่น สาขาหลัก"
                   name="name"
                   type="text"
-                  disabled={!isSuperAdmin || isSaving}
+                  disabled={!isSuperAdmin || mutating}
                 />
               </div>
 
@@ -242,8 +245,8 @@ const FormBranch = () => {
                   name="businessType"
                   value={form.businessType}
                   onChange={handleChange}
-                  disabled={!isSuperAdmin || isSaving}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  disabled={!isSuperAdmin || mutating}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:opacity-60"
                 >
                   {businessTypeOptions.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -259,12 +262,12 @@ const FormBranch = () => {
                 </label>
                 <textarea
                   id="address"
-                  className="min-h-[80px] w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="min-h-[80px] w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:opacity-60"
                   value={form.address}
                   onChange={handleChange}
                   placeholder="ที่อยู่สาขา"
                   name="address"
-                  disabled={!isSuperAdmin || isSaving}
+                  disabled={!isSuperAdmin || mutating}
                 />
               </div>
 
@@ -274,13 +277,13 @@ const FormBranch = () => {
                 </label>
                 <input
                   id="phone"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:opacity-60"
                   value={form.phone}
                   onChange={handleChange}
                   placeholder="เช่น 02-000-0000"
                   name="phone"
                   type="text"
-                  disabled={!isSuperAdmin || isSaving}
+                  disabled={!isSuperAdmin || mutating}
                 />
               </div>
 
@@ -290,13 +293,13 @@ const FormBranch = () => {
                 </label>
                 <input
                   id="email"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:opacity-60"
                   value={form.email}
                   onChange={handleChange}
                   placeholder="branch@example.com"
                   name="email"
                   type="email"
-                  disabled={!isSuperAdmin || isSaving}
+                  disabled={!isSuperAdmin || mutating}
                 />
               </div>
 
@@ -306,13 +309,13 @@ const FormBranch = () => {
                 </label>
                 <input
                   id="taxId"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-gray-50 disabled:opacity-60"
                   value={form.taxId}
                   onChange={handleChange}
                   placeholder="เลขประจำตัวผู้เสียภาษี"
                   name="taxId"
                   type="text"
-                  disabled={!isSuperAdmin || isSaving}
+                  disabled={!isSuperAdmin || mutating}
                 />
               </div>
             </div>
@@ -321,7 +324,7 @@ const FormBranch = () => {
               <button
                 type="button"
                 onClick={resetForm}
-                disabled={!isSuperAdmin || isSaving}
+                disabled={!isSuperAdmin || mutating}
                 className="rounded border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 ล้างฟอร์ม
@@ -329,10 +332,10 @@ const FormBranch = () => {
 
               <button
                 type="submit"
-                disabled={!canSubmit || isSaving}
+                disabled={!canSubmit}
                 className="rounded bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isSaving ? 'กำลังบันทึก...' : '+ เพิ่มสาขา'}
+                {isSaving ? 'กำลังบันทึก...' : deletingId ? 'กำลังลบสาขา...' : '+ เพิ่มสาขา'}
               </button>
             </div>
           </form>
@@ -360,7 +363,7 @@ const FormBranch = () => {
                   <button
                     type="button"
                     className="rounded bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                    disabled={!isSuperAdmin || Boolean(deletingId)}
+                    disabled={!isSuperAdmin || mutating}
                     onClick={() => requestRemove(item)}
                   >
                     {deletingId === Number(item.id) ? 'กำลังลบ...' : 'Delete'}
@@ -380,7 +383,7 @@ const FormBranch = () => {
         intent="destructive"
         loading={Boolean(deletingId)}
         loadingLabel="กำลังลบ..."
-        onClose={() => !deletingId && setPendingDeleteBranch(null)}
+        onClose={() => !mutating && setPendingDeleteBranch(null)}
         onConfirm={handleRemove}
       />
     </>

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, WalletCards } from 'lucide-react';
+import { feedback } from '@/design-system';
 import { createCustomerMoneyReceive } from '../api/customerMoneyReceiveApi';
 import { useCustomerMoneyReceiveCustomerSearch } from '../customer/useCustomerMoneyReceiveCustomerSearch';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
@@ -29,7 +30,7 @@ const CustomerMoneyReceivePage = () => {
 
   const submit = async (event) => {
     event.preventDefault();
-    if (!canSubmit) return;
+    if (!canSubmit || saving) return;
     setSaving(true);
     setError('');
     try {
@@ -41,9 +42,19 @@ const CustomerMoneyReceivePage = () => {
         description: description.trim(),
         receivedAt: new Date(receivedAt).toISOString(),
       });
+      feedback.actionSuccess(
+        'บันทึกรับเงินจากลูกค้าเรียบร้อยแล้ว',
+        `customer-money-receive:${created?.id || search.selectedCustomer.id}:create:success`,
+      );
       navigate(`../${created.id}`);
     } catch (err) {
-      setError(err?.response?.data?.message || err?.message || 'บันทึกรับเงินไม่สำเร็จ');
+      const message = err?.response?.data?.message || err?.message || 'บันทึกรับเงินไม่สำเร็จ';
+      setError(message);
+      feedback.actionError(
+        err,
+        message,
+        `customer-money-receive:${search.selectedCustomer?.id || 'unknown'}:create:error`,
+      );
     } finally {
       setSaving(false);
     }

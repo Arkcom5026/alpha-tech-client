@@ -1,5 +1,6 @@
 // LoginForm.jsx
 import React, { useState } from "react";
+import { feedback } from '@/design-system/feedback';
 import { useCartStore } from "../../cart/store/cartStore";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { useBranchStore } from "@/features/branch/store/branchStore";
@@ -12,57 +13,42 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
   const [error, setError] = useState("");
 
   const loginAction = useAuthStore((state) => state.loginAction);
-
   const cartItems = useCartStore((state) => state.cartItems);
-  const clearCart = useCartStore((state) => state.clearCart);
   const fetchCartAction = useCartStore((state) => state.fetchCartAction);
   const mergeCartAction = useCartStore((state) => state.mergeCartAction);
-
   const setCurrentBranch = useBranchStore((state) => state.setCurrentBranch);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (loading) return;
+
     setError("");
     setLoading(true);
     try {
-      console.log("🟡 เริ่ม login...");
-      const { token, role, profile } = await loginAction({
+      const { role, profile } = await loginAction({
         emailOrPhone: credential,
         password,
       });
-
-      console.log("🟢 login สำเร็จ → token:", token);
-      console.log("👤 profile:", profile);
 
       if (role === "employee" && profile?.branch) {
         setCurrentBranch(profile.branch);
       }
 
-      await Promise.resolve();
-
-      try {
-        if (cartItems.length > 0) {
-          console.log("🛒 mergeCartAction เริ่มทำงาน...", cartItems);
-          await mergeCartAction();
-          console.log("✅ mergeCartAction สำเร็จ");
-        }
-      } catch (mergeErr) {
-        console.warn("⚠️ mergeCartAction ล้มเหลว (แต่ปล่อยผ่านได้):", mergeErr);
+      if (cartItems.length > 0) {
+        await mergeCartAction();
       }
 
-      console.log("📦 fetchCartAction เริ่มทำงาน...");
       await fetchCartAction();
-      console.log("✅ fetchCartAction สำเร็จ");
-
-      clearCart();
-      console.log("🧹 เคลียร์ cartItems ชั่วคราวเรียบร้อย");
-
-      if (onSuccess) onSuccess(role);
-
+      feedback.actionSuccess('เข้าสู่ระบบและซิงก์ตะกร้าเรียบร้อยแล้ว', 'online-checkout:login-cart-handoff:success');
+      onSuccess?.(role);
     } catch (err) {
-      console.error("🔴 Login Error:", err);
-      const message = err?.message || "เกิดข้อผิดพลาด";
+      const message = err?.message || "เข้าสู่ระบบหรือซิงก์ตะกร้าไม่สำเร็จ";
       setError(message);
+      feedback.actionError(
+        err,
+        'เข้าสู่ระบบหรือซิงก์ตะกร้าไม่สำเร็จ',
+        'online-checkout:login-cart-handoff:error',
+      );
     } finally {
       setLoading(false);
     }
@@ -74,10 +60,10 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
         กรุณาเข้าสู่ระบบก่อนสั่งซื้อสินค้า
       </h2>
 
-      <button className="w-full flex items-center justify-center border py-2 rounded hover:bg-gray-100">
+      <button disabled={loading} className="w-full flex items-center justify-center border py-2 rounded hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50">
         <FaGoogle className="mr-2" /> Sign in with Google
       </button>
-      <button className="w-full flex items-center justify-center bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+      <button disabled={loading} className="w-full flex items-center justify-center bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">
         <FaFacebookF className="mr-2" /> เข้าสู่ระบบด้วย Facebook
       </button>
 
@@ -90,7 +76,8 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
           value={credential}
           onChange={(e) => setCredential(e.target.value)}
           autoComplete="off"
-          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={loading}
+          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           required
         />
         <input
@@ -99,13 +86,14 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"
-          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          disabled={loading}
+          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
           required
         />
 
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center">
-            <input type="checkbox" className="mr-2" /> จำฉันไว้ในระบบ
+            <input type="checkbox" disabled={loading} className="mr-2" /> จำฉันไว้ในระบบ
           </label>
           <a href="#" className="text-blue-600 hover:underline">ลืมรหัสผ่าน?</a>
         </div>
@@ -114,10 +102,10 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
 
         <button
           type="submit"
-          className="w-full bg-blue-700 hover:bg-blue-800 text-white py-2 rounded shadow font-medium min-h-[44px]"
+          className="w-full bg-blue-700 hover:bg-blue-800 text-white py-2 rounded shadow font-medium min-h-[44px] disabled:cursor-not-allowed disabled:opacity-50"
           disabled={loading}
         >
-          {loading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบด้วยรหัสผ่าน"}
+          {loading ? "กำลังเข้าสู่ระบบและซิงก์ตะกร้า..." : "เข้าสู่ระบบด้วยรหัสผ่าน"}
         </button>
       </form>
 
@@ -125,8 +113,9 @@ const LoginForm = ({ onSuccess, setShowRegister }) => {
         ยังไม่มีบัญชี?
         <button
           type="button"
+          disabled={loading}
           onClick={() => setShowRegister(true)}
-          className="text-blue-600 hover:underline ml-1"
+          className="text-blue-600 hover:underline ml-1 disabled:cursor-not-allowed disabled:opacity-50"
         >
           สมัครสมาชิก
         </button>

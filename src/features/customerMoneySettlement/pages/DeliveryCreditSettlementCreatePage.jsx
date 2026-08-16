@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, WalletCards } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
@@ -16,6 +16,10 @@ const DeliveryCreditSettlementCreatePage = () => {
   const customerSearch = useCustomerMoneyReceiveCustomerSearch();
   const submitKeyRef = useRef(null);
   const savingRef = useRef(false);
+  const mountedRef = useRef(true);
+  const creditContextRef = useRef(null);
+  const creditRequestRef = useRef(0);
+  const createRequestRef = useRef(0);
   const [workspace, setWorkspace] = useState(null);
   const [loadingCredits, setLoadingCredits] = useState(false);
   const [creditError, setCreditError] = useState('');
@@ -23,30 +27,53 @@ const DeliveryCreditSettlementCreatePage = () => {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => () => {
+    mountedRef.current = false;
+    creditRequestRef.current += 1;
+    createRequestRef.current += 1;
+  }, []);
+
   const invalidateSubmitKey = () => {
     if (savingRef.current) return;
     submitKeyRef.current = null;
   };
 
   const loadCredits = async (customer) => {
-    if (savingRef.current) return;
+    if (savingRef.current) return { ok: false, stale: true };
+    const customerIdSnapshot = Number(customer?.id);
+    const requestId = ++creditRequestRef.current;
+    creditContextRef.current = customerIdSnapshot;
+    const ownsRequest = () => mountedRef.current
+      && creditRequestRef.current === requestId
+      && creditContextRef.current === customerIdSnapshot;
+
     setLoadingCredits(true);
     setCreditError('');
+    setWorkspace(null);
     setSelected({});
     setNote('');
     invalidateSubmitKey();
     try {
-      setWorkspace(await getEligibleDeliveryCredits({ customerId: customer.id, take: 200 }));
+      const nextWorkspace = await getEligibleDeliveryCredits({ customerId: customerIdSnapshot, take: 200 });
+      if (!ownsRequest()) return { ok: false, stale: true };
+      setWorkspace(nextWorkspace);
+      return { ok: true, stale: false, workspace: nextWorkspace };
     } catch (err) {
+      if (!ownsRequest()) return { ok: false, stale: true };
+      const message = err?.response?.data?.message || err?.message || 'โหลดใบส่งของเครดิตไม่สำเร็จ';
       setWorkspace(null);
-      setCreditError(err?.response?.data?.message || err?.message || 'โหลดใบส่งของเครดิตไม่สำเร็จ');
+      setCreditError(message);
+      feedback.actionError(err, 'โหลดใบส่งของเครดิตไม่สำเร็จ', `customer-money-settlement:create:${customerIdSnapshot}:credits-load:error`);
+      return { ok: false, stale: false, error: message };
     } finally {
-      setLoadingCredits(false);
+      if (ownsRequest()) setLoadingCredits(false);
     }
   };
 
   const chooseCustomer = async (customer) => {
     if (savingRef.current) return;
+    const customerIdSnapshot = Number(customer?.id);
+    creditContextRef.current = customerIdSnapshot;
     customerSearch.select(customer);
     await loadCredits(customer);
   };
@@ -132,6 +159,8 @@ const DeliveryCreditSettlementCreatePage = () => {
     const linesSnapshot = selectedLines.map((line) => ({ ...line }));
     const idempotencyKey = submitKeyRef.current || createCommandKey();
     submitKeyRef.current = idempotencyKey;
+    const requestId = ++createRequestRef.current;
+    const ownsRequest = () => mountedRef.current && createRequestRef.current === requestId;
 
     savingRef.current = true;
     setSaving(true);
@@ -143,14 +172,16 @@ const DeliveryCreditSettlementCreatePage = () => {
         lines: linesSnapshot,
       }, idempotencyKey);
       feedback.actionSuccess('ตัดยอดใบส่งของเครดิตเรียบร้อยแล้ว', `customer-money-settlement:create:${result.id}:success`);
-      navigate(`../${result.id}`);
+      if (ownsRequest()) navigate(`../${result.id}`);
     } catch (err) {
       const fallbackMessage = 'ตัดยอดใบส่งของไม่สำเร็จ';
-      setCreditError(err?.response?.data?.message || err?.message || fallbackMessage);
+      if (ownsRequest()) setCreditError(err?.response?.data?.message || err?.message || fallbackMessage);
       feedback.actionError(err, fallbackMessage, `customer-money-settlement:create:${idempotencyKey}:error`);
     } finally {
-      savingRef.current = false;
-      setSaving(false);
+      if (ownsRequest()) {
+        savingRef.current = false;
+        setSaving(false);
+      }
     }
   };
 

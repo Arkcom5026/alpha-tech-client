@@ -9,6 +9,7 @@ const nvmrc = readFileSync(new URL('../.nvmrc', import.meta.url), 'utf8').trim()
 
 assert.equal(nvmrc, '22', 'client Node authority must be Node 22')
 assert.equal(vercel.git?.deploymentEnabled, true, 'automatic Vercel Git deployments must remain enabled')
+assert.equal(vercel.ignoreCommand, 'exit 1', 'Git-triggered Vercel builds must never be skipped by Ignored Build Step')
 assert.match(ciWorkflow, /node-version:\s*22\b/, 'GitHub CI must use Node 22')
 assert.match(ciWorkflow, /branches:\s*\[\s*"main"\s*\]/, 'GitHub CI must protect canonical main authority')
 assert.doesNotMatch(ciWorkflow, /integration\/system-hardening-7-agendas/, 'retired integration branch must not remain CI authority')

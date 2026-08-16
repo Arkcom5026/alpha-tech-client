@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, WalletCards } from 'lucide-react';
 import { feedback } from '@/design-system';
@@ -24,6 +24,14 @@ const CustomerMoneyReceivePage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const savingRef = useRef(false);
+  const mountedRef = useRef(true);
+  const createRequestRef = useRef(0);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+    createRequestRef.current += 1;
+    savingRef.current = false;
+  }, []);
 
   const canSubmit = useMemo(() => (
     Boolean(search.selectedCustomer?.id) && Number(amount) > 0 && Boolean(description.trim()) && !saving
@@ -46,6 +54,8 @@ const CustomerMoneyReceivePage = () => {
       description: descriptionValue,
       receivedAt: new Date(receivedAt).toISOString(),
     };
+    const requestId = ++createRequestRef.current;
+    const ownsCreateRequest = () => mountedRef.current && createRequestRef.current === requestId;
 
     savingRef.current = true;
     setSaving(true);
@@ -56,16 +66,19 @@ const CustomerMoneyReceivePage = () => {
         'บันทึกรับเงินจากลูกค้าเรียบร้อยแล้ว',
         `customer-money-receive:${created?.id || customerId}:create:success`,
       );
+      if (!ownsCreateRequest()) return;
       navigate(`../${created.id}`);
     } catch (err) {
       const message = err?.response?.data?.message || err?.message || 'บันทึกรับเงินไม่สำเร็จ';
-      setError(message);
       feedback.actionError(
         err,
         message,
         `customer-money-receive:${customerId || 'unknown'}:create:error`,
       );
+      if (!ownsCreateRequest()) return;
+      setError(message);
     } finally {
+      if (!ownsCreateRequest()) return;
       savingRef.current = false;
       setSaving(false);
     }

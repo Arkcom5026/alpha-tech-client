@@ -19,7 +19,7 @@ const FormBank = () => {
   const mutating = saving || deleting;
 
   useEffect(() => {
-    fetchBanks(token);
+    Promise.resolve(fetchBanks(token)).catch(() => {});
   }, [fetchBanks, token]);
 
   const handleSubmit = async (e) => {
@@ -44,11 +44,10 @@ const FormBank = () => {
       );
       setName('');
 
-      try {
-        await fetchBanks(tokenSnapshot);
-      } catch (refreshError) {
+      const refresh = await fetchBanks(tokenSnapshot);
+      if (!refresh?.ok) {
         feedback.actionError(
-          refreshError,
+          refresh?.error,
           'เพิ่มธนาคารสำเร็จแล้ว แต่รีเฟรชรายการธนาคารไม่สำเร็จ',
           `admin-bank:create:${res.data.id || res.data.name}:refresh:error`,
         );
@@ -80,11 +79,10 @@ const FormBank = () => {
       );
       setPendingDelete(null);
 
-      try {
-        await fetchBanks(tokenSnapshot);
-      } catch (refreshError) {
+      const refresh = await fetchBanks(tokenSnapshot);
+      if (!refresh?.ok) {
         feedback.actionError(
-          refreshError,
+          refresh?.error,
           'ลบธนาคารสำเร็จแล้ว แต่รีเฟรชรายการธนาคารไม่สำเร็จ',
           `admin-bank:${target.id}:delete:refresh:error`,
         );

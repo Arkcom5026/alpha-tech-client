@@ -9,7 +9,7 @@ const CUSTOMER_TYPES = [
 ];
 
 const fieldClass =
-  'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100';
+  'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70';
 
 const SaleCustomerDetailsForm = ({
   editor,
@@ -17,6 +17,8 @@ const SaleCustomerDetailsForm = ({
   isModified,
   pendingCreate,
   provinceFilter,
+  disabled = false,
+  mutationAction = null,
   onPatch,
   onCreate,
   onUpdate,
@@ -44,11 +46,12 @@ const SaleCustomerDetailsForm = ({
               <button
                 key={type.value}
                 type="button"
+                disabled={disabled}
                 onClick={() => onPatch({
                   customerType: type.value,
                   ...(type.value === 'INDIVIDUAL' ? { departmentName: '' } : {}),
                 })}
-                className={`min-h-11 rounded-xl border px-3 text-sm font-semibold transition ${
+                className={`min-h-11 rounded-xl border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                   active
                     ? 'border-emerald-300 bg-emerald-100 text-emerald-950'
                     : 'border-teal-200 bg-teal-50 text-teal-900 hover:bg-teal-100'
@@ -69,6 +72,7 @@ const SaleCustomerDetailsForm = ({
               <input
                 type="text"
                 value={editor.companyName}
+                disabled={disabled}
                 onChange={(event) => onPatch({ companyName: event.target.value })}
                 placeholder="ชื่อบริษัทหรือหน่วยงาน"
                 className={fieldClass}
@@ -80,6 +84,7 @@ const SaleCustomerDetailsForm = ({
                 type="text"
                 aria-label="แผนก / กอง / สำนัก"
                 value={editor.departmentName}
+                disabled={disabled}
                 onChange={(event) => onPatch({ departmentName: event.target.value })}
                 placeholder="แผนก / กอง / สำนัก (ถ้ามี)"
                 className={fieldClass}
@@ -90,6 +95,7 @@ const SaleCustomerDetailsForm = ({
               <input
                 type="text"
                 value={editor.taxId}
+                disabled={disabled}
                 onChange={(event) => onPatch({ taxId: event.target.value })}
                 placeholder="เลขประจำตัวผู้เสียภาษี (ถ้ามี)"
                 className={`${fieldClass} font-mono`}
@@ -104,6 +110,7 @@ const SaleCustomerDetailsForm = ({
             type="text"
             id="customer-name-input"
             value={editor.name}
+            disabled={disabled}
             onChange={(event) => onPatch({ name: event.target.value })}
             placeholder="ชื่อ-นามสกุล"
             className={fieldClass}
@@ -116,6 +123,7 @@ const SaleCustomerDetailsForm = ({
             type="tel"
             inputMode="tel"
             value={editor.phone}
+            disabled={disabled}
             onChange={(event) => onPatch({ phone: event.target.value })}
             placeholder="เบอร์โทรลูกค้า"
             className={`${fieldClass} font-mono`}
@@ -127,6 +135,7 @@ const SaleCustomerDetailsForm = ({
           <input
             type="email"
             value={editor.email}
+            disabled={disabled}
             onChange={(event) => onPatch({ email: event.target.value })}
             placeholder="อีเมลสำหรับรับเอกสาร (ถ้ามี)"
             className={fieldClass}
@@ -142,15 +151,16 @@ const SaleCustomerDetailsForm = ({
         <div className="address-form-density-compact overflow-hidden rounded-xl border border-slate-200 bg-white p-2">
           <AddressForm
             value={addressValue}
-            onChange={(next) =>
+            onChange={(next) => {
+              if (disabled) return;
               onPatch({
                 addressDetail: next?.address || '',
                 provinceCode: next?.provinceCode || '',
                 districtCode: next?.districtCode || '',
                 subdistrictCode: next?.subdistrictCode || '',
                 postalCode: next?.postalCode || next?.postcode || '',
-              })
-            }
+              });
+            }}
             provinceFilter={provinceFilter}
             layout="subdistrict-with-postcode"
             required
@@ -169,26 +179,28 @@ const SaleCustomerDetailsForm = ({
           <button
             type="button"
             onClick={onUpdate}
-            disabled={!isModified}
+            disabled={!isModified || disabled}
             className="h-11 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
-            บันทึกการแก้ไข
+            {mutationAction === 'update' ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
           </button>
         ) : pendingCreate ? (
           <>
             <button
               type="button"
               onClick={onCancelCreate}
-              className="h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100"
+              disabled={disabled}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
               ยกเลิก
             </button>
             <button
               type="button"
               onClick={onCreate}
-              className="h-11 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800"
+              disabled={disabled}
+              className="h-11 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              เพิ่มลูกค้าใหม่
+              {mutationAction === 'create' ? 'กำลังเพิ่มลูกค้า...' : 'เพิ่มลูกค้าใหม่'}
             </button>
           </>
         ) : null}

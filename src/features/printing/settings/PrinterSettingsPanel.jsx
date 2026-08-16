@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ConfirmActionDialog } from '@/design-system/composites'
 import { feedback } from '@/design-system/feedback'
 import { createPrinterSettingsRows } from './printerSettingsViewModel.js'
@@ -23,8 +23,11 @@ const PrinterSettingsPanel = ({ branchId, workstationId, discoverySelectionServi
   const [status, setStatus] = useState('IDLE')
   const [message, setMessage] = useState('')
   const [clearConfirmationOpen, setClearConfirmationOpen] = useState(false)
+  const actionRef = useRef(false)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ allowDuringMutation = false, reportError = true } = {}) => {
+    if (actionRef.current && !allowDuringMutation) return { ok: false, busy: true }
+
     setStatus('LOADING')
     setMessage('')
     try {
@@ -44,10 +47,13 @@ const PrinterSettingsPanel = ({ branchId, workstationId, discoverySelectionServi
         setResolvedAuthority(resolution.preference ? 'WORKSTATION' : null)
       }
       setStatus('READY')
+      return { ok: true }
     } catch (error) {
+      const errorMessage = messageFrom(error, 'ไม่สามารถค้นหาเครื่องพิมพ์ได้')
       setStatus('ERROR')
-      setMessage(messageFrom(error, 'ไม่สามารถค้นหาเครื่องพิมพ์ได้'))
-      feedback.actionError(error, 'ไม่สามารถค้นหาเครื่องพิมพ์ได้', 'printer-settings:load:error')
+      setMessage(errorMessage)
+      if (reportError) feedback.actionError(error, 'ไม่สามารถค้นหาเครื่องพิมพ์ได้', 'printer-settings:load:error')
+      return { ok: false, error, message: errorMessage }
     }
   }, [branchId, discoverySelectionService, printerScopeManagementService, selectedPurpose, selectedScope, workstationId])
 
@@ -56,28 +62,52 @@ const PrinterSettingsPanel = ({ branchId, workstationId, discoverySelectionServi
   const rows = useMemo(() => createPrinterSettingsRows({ preferences, printers }), [preferences, printers])
   const selectedRow = rows.find((row) => row.documentPurpose === selectedPurpose)
   const availablePrinters = printers.filter((printer) => printer.isOnline !== false)
-  const isBusy = ['LOADING', 'SAVING', 'TESTING'].includes(status)
+  const isBusy = actionRef.current || ['LOADING', 'SAVING', 'TESTING'].includes(status)
 
   const saveSelection = async () => {
     if (!selectedPrinterId || isBusy) {
       if (!selectedPrinterId) setMessage('กรุณาเลือกเครื่องพิมพ์')
       return
     }
+
+    const request = {
+      scopeType: selectedScope,
+      branchId,
+      workstationId,
+      documentPurpose: selectedPurpose,
+      printerProfileId: selectedPrinterId,
+    }
+
+    actionRef.current = true
     setStatus('SAVING')
     setMessage('')
     try {
       if (printerScopeManagementService) {
-        await printerScopeManagementService.save({ scopeType: selectedScope, branchId, workstationId, documentPurpose: selectedPurpose, printerProfileId: selectedPrinterId })
+        await printerScopeManagementService.save(request)
       } else {
-        await discoverySelectionService.select({ branchId, workstationId, documentPurpose: selectedPurpose, printerProfileId: selectedPrinterId })
+        await discoverySelectionService.select({
+          branchId: request.branchId,
+          workstationId: request.workstationId,
+          documentPurpose: request.documentPurpose,
+          printerProfileId: request.printerProfileId,
+        })
       }
       feedback.actionSuccess('บันทึกเครื่องพิมพ์เรียบร้อยแล้ว', 'printer-settings:save:success')
-      await load()
+
+      const refresh = await load({ allowDuringMutation: true, reportError: false })
+      if (!refresh.ok) {
+        const refreshMessage = 'บันทึกเครื่องพิมพ์สำเร็จแล้ว แต่โหลดสถานะล่าสุดไม่สำเร็จ กรุณากดค้นหาใหม่'
+        setMessage(refreshMessage)
+        feedback.error(refreshMessage)
+        return
+      }
       setMessage('บันทึกเครื่องพิมพ์เรียบร้อยแล้ว')
     } catch (error) {
       setStatus('ERROR')
       setMessage(messageFrom(error, 'บันทึกเครื่องพิมพ์ไม่สำเร็จ'))
       feedback.actionError(error, 'บันทึกเครื่องพิมพ์ไม่สำเร็จ', 'printer-settings:save:error')
+    } finally {
+      actionRef.current = false
     }
   }
 
@@ -86,10 +116,19 @@ const PrinterSettingsPanel = ({ branchId, workstationId, discoverySelectionServi
       if (!selectedPrinterId) setMessage('กรุณาเลือกเครื่องพิมพ์ก่อนทดสอบ')
       return
     }
+
+    const request = {
+      branchId,
+      workstationId,
+      documentPurpose: selectedPurpose,
+      printerProfileId: selectedPrinterId,
+    }
+
+    actionRef.current = true
     setStatus('TESTING')
     setMessage('กำลังส่งงานทดสอบพิมพ์...')
     try {
-      const outcome = await printerTestService.test({ branchId, workstationId, documentPurpose: selectedPurpose, printerProfileId: selectedPrinterId })
+      const outcome = await printerTestService.test(request)
       const adapter = outcome.result.adapter ? ` ผ่าน ${outcome.result.adapter}` : ''
       setStatus('READY')
       setMessage(`ทดสอบพิมพ์สำเร็จ${adapter}`)
@@ -98,28 +137,52 @@ const PrinterSettingsPanel = ({ branchId, workstationId, discoverySelectionServi
       setStatus('ERROR')
       setMessage(messageFrom(error, 'ทดสอบพิมพ์ไม่สำเร็จ'))
       feedback.actionError(error, 'ทดสอบพิมพ์ไม่สำเร็จ', 'printer-settings:test:error')
+    } finally {
+      actionRef.current = false
     }
   }
 
   const clearSelection = async () => {
     if (isBusy) return
+
+    const request = {
+      scopeType: selectedScope,
+      branchId,
+      workstationId,
+      documentPurpose: selectedPurpose,
+    }
+
+    actionRef.current = true
     setStatus('SAVING')
     setMessage('')
     try {
       if (printerScopeManagementService) {
-        await Promise.resolve(printerScopeManagementService.clear({ scopeType: selectedScope, branchId, workstationId, documentPurpose: selectedPurpose }))
+        await Promise.resolve(printerScopeManagementService.clear(request))
       } else {
-        await Promise.resolve(discoverySelectionService.clear({ branchId, workstationId, documentPurpose: selectedPurpose }))
+        await Promise.resolve(discoverySelectionService.clear({
+          branchId: request.branchId,
+          workstationId: request.workstationId,
+          documentPurpose: request.documentPurpose,
+        }))
       }
       setSelectedPrinterId('')
       setClearConfirmationOpen(false)
       feedback.actionSuccess('ล้างการตั้งค่าเครื่องพิมพ์เรียบร้อยแล้ว', 'printer-settings:clear:success')
-      await load()
+
+      const refresh = await load({ allowDuringMutation: true, reportError: false })
+      if (!refresh.ok) {
+        const refreshMessage = 'ล้างการตั้งค่าสำเร็จแล้ว แต่โหลดสถานะล่าสุดไม่สำเร็จ กรุณากดค้นหาใหม่'
+        setMessage(refreshMessage)
+        feedback.error(refreshMessage)
+        return
+      }
       setMessage('ล้างการตั้งค่าแล้ว')
     } catch (error) {
       setStatus('ERROR')
       setMessage(messageFrom(error, 'ล้างการตั้งค่าเครื่องพิมพ์ไม่สำเร็จ'))
       feedback.actionError(error, 'ล้างการตั้งค่าเครื่องพิมพ์ไม่สำเร็จ', 'printer-settings:clear:error')
+    } finally {
+      actionRef.current = false
     }
   }
 
@@ -145,12 +208,12 @@ const PrinterSettingsPanel = ({ branchId, workstationId, discoverySelectionServi
         <div className="flex flex-wrap gap-2">
           <button type="button" className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-50" onClick={testSelection} disabled={isBusy || !selectedPrinterId}>{status === 'TESTING' ? 'กำลังทดสอบ...' : 'ทดสอบพิมพ์'}</button>
           <button type="button" className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50" onClick={saveSelection} disabled={isBusy}>{status === 'SAVING' ? 'กำลังบันทึก...' : 'บันทึกเครื่องพิมพ์'}</button>
-          <button type="button" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50" onClick={load} disabled={isBusy}>ค้นหาใหม่</button>
-          <button type="button" className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50" onClick={() => setClearConfirmationOpen(true)} disabled={isBusy || !selectedRow?.preference}>ล้างการตั้งค่าระดับนี้</button>
+          <button type="button" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50" onClick={() => load()} disabled={isBusy}>ค้นหาใหม่</button>
+          <button type="button" className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100 disabled:opacity-50" onClick={() => !isBusy && setClearConfirmationOpen(true)} disabled={isBusy || !selectedRow?.preference}>ล้างการตั้งค่าระดับนี้</button>
         </div>
       </section>
       <ConfirmActionDialog open={clearConfirmationOpen} title="ล้างการตั้งค่าเครื่องพิมพ์" description="ยืนยันล้างการตั้งค่าเครื่องพิมพ์ของระดับนี้หรือไม่? ระบบจะกลับไปใช้ค่า authority ลำดับถัดไปที่มีอยู่" confirmLabel="ล้างการตั้งค่า" intent="destructive" loading={status === 'SAVING'} loadingLabel="กำลังล้าง..." onClose={() => {
-        if (status !== 'SAVING') setClearConfirmationOpen(false)
+        if (!isBusy) setClearConfirmationOpen(false)
       }} onConfirm={clearSelection} />
     </>
   )

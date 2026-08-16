@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Building2 } from 'lucide-react';
 
@@ -14,6 +14,7 @@ import useSupplierFormRuntime from './useSupplierFormRuntime';
 
 const SupplierCreateWorkspace = () => {
   const [loading, setLoading] = useState(false);
+  const mutationRef = useRef(false);
   const navigate = useNavigate();
   const { shopSlug } = useParams();
   const { createSupplierAction } = useSupplierStore();
@@ -21,19 +22,30 @@ const SupplierCreateWorkspace = () => {
   const paths = useMemo(() => createSupplierPaths(shopSlug), [shopSlug]);
 
   const handleCreateSupplier = async (formData) => {
-    if (loading) return;
+    if (loading || mutationRef.current) return;
+    if (!branchId) {
+      feedback.actionError(new Error('ยังไม่ได้เลือกสาขา'), 'ยังไม่ได้เลือกสาขา', 'supplier:create:error');
+      return;
+    }
+
+    const payload = normalizeSupplierMutationPayload(formData);
+    const listPath = paths.list;
+
+    mutationRef.current = true;
+    setLoading(true);
     try {
-      if (!branchId) throw new Error('ยังไม่ได้เลือกสาขา');
-      setLoading(true);
-      await createSupplierAction(normalizeSupplierMutationPayload(formData));
+      await createSupplierAction(payload);
       feedback.actionSuccess('เพิ่มผู้ขายเรียบร้อยแล้ว', 'supplier:create:success');
-      navigate(paths.list);
+      navigate(listPath);
     } catch (error) {
       feedback.actionError(error, 'เพิ่มผู้ขายไม่สำเร็จ', 'supplier:create:error');
     } finally {
+      mutationRef.current = false;
       setLoading(false);
     }
   };
+
+  const mutationBusy = loading || mutationRef.current;
 
   if (!branchId) {
     return (
@@ -53,7 +65,7 @@ const SupplierCreateWorkspace = () => {
             <p className="text-[11px] text-slate-400 font-medium">บันทึกพิกัด ข้อมูลบัญชีธนาคาร และวงเงินอนุมัติทางการค้าเพื่อลดภาระความกังวล</p>
           </div>
         </div>
-        <button type="button" disabled={loading} onClick={() => navigate(paths.list)} className="flex items-center gap-1 h-7 px-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-lg text-[11px] font-black transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+        <button type="button" disabled={mutationBusy} onClick={() => navigate(paths.list)} className="flex items-center gap-1 h-7 px-2.5 bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200 rounded-lg text-[11px] font-black transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
           <ArrowLeft className="w-3 h-3" /><span>กลับหน้าทะเบียน</span>
         </button>
       </div>
@@ -62,7 +74,7 @@ const SupplierCreateWorkspace = () => {
         <SupplierForm
           onSubmit={handleCreateSupplier}
           defaultValues={{ ...SUPPLIER_CREATE_DEFAULT_VALUES }}
-          loading={loading}
+          loading={mutationBusy}
           isEdit={false}
           showCreditFields={true}
           banks={banks}

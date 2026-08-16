@@ -23,8 +23,8 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
   const [saving, setSaving] = useState(false);
   const savingRef = useRef(false);
 
-  const load = useCallback(async () => {
-    if (!expenseId) return;
+  const load = useCallback(async ({ reportError = true } = {}) => {
+    if (!expenseId) return { ok: false, skipped: true };
     setLoading(true);
     try {
       const response = await getTaxExpenseAssessmentSuggestion(expenseId);
@@ -38,8 +38,12 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
       });
       setDecisions(next);
       setNote(response?.latestAssessment?.assessmentNote || '');
+      return { ok: true, data: response };
     } catch (error) {
-      feedback.error(error?.response?.data?.message || 'ไม่สามารถโหลดคำแนะนำการประเมินภาษีได้');
+      if (reportError) {
+        feedback.error(error?.response?.data?.message || 'ไม่สามารถโหลดคำแนะนำการประเมินภาษีได้');
+      }
+      return { ok: false, error };
     } finally {
       setLoading(false);
     }
@@ -62,7 +66,7 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
   };
 
   const confirm = async () => {
-    if (!complete || saving || savingRef.current || loading || !expenseId) return;
+    if (!complete || saving || savingRef.current || loading || !expenseId) return false;
 
     const expenseIdSnapshot = expenseId;
     const payload = {
@@ -77,25 +81,44 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
     savingRef.current = true;
     setSaving(true);
     try {
-      await confirmTaxExpenseAssessment(expenseIdSnapshot, payload);
-    } catch (error) {
-      feedback.actionError(error, 'ไม่สามารถยืนยันผลการประเมินภาษีได้', `tax-expense:assessment:${expenseIdSnapshot}:error`);
-      return;
+      try {
+        await confirmTaxExpenseAssessment(expenseIdSnapshot, payload);
+      } catch (error) {
+        feedback.actionError(error, 'ไม่สามารถยืนยันผลการประเมินภาษีได้', `tax-expense:assessment:${expenseIdSnapshot}:error`);
+        return false;
+      }
+
+      feedback.actionSuccess('ยืนยันผลการประเมินภาษีแล้ว', `tax-expense:assessment:${expenseIdSnapshot}:success`);
+
+      const assessmentRefresh = await load({ reportError: false });
+      if (!assessmentRefresh.ok && !assessmentRefresh.skipped) {
+        feedback.actionError(
+          assessmentRefresh.error,
+          'ยืนยันผลการประเมินสำเร็จแล้ว แต่รีเฟรชผลการประเมินล่าสุดไม่สำเร็จ',
+          `tax-expense:assessment:${expenseIdSnapshot}:refresh:error`,
+        );
+      }
+
+      try {
+        const parentRefresh = await onConfirmed?.();
+        if (parentRefresh?.ok === false) {
+          feedback.actionError(
+            parentRefresh.error,
+            'ยืนยันผลการประเมินสำเร็จแล้ว แต่รีเฟรชข้อมูลส่วนที่เกี่ยวข้องไม่สำเร็จ',
+            `tax-expense:assessment:${expenseIdSnapshot}:post-confirm:error`,
+          );
+        }
+      } catch (error) {
+        feedback.actionError(
+          error,
+          'ยืนยันผลการประเมินสำเร็จแล้ว แต่รีเฟรชข้อมูลส่วนที่เกี่ยวข้องไม่สำเร็จ',
+          `tax-expense:assessment:${expenseIdSnapshot}:post-confirm:error`,
+        );
+      }
+      return true;
     } finally {
       savingRef.current = false;
       setSaving(false);
-    }
-
-    feedback.actionSuccess('ยืนยันผลการประเมินภาษีแล้ว', `tax-expense:assessment:${expenseIdSnapshot}:success`);
-    await load();
-    try {
-      await onConfirmed?.();
-    } catch (error) {
-      feedback.actionError(
-        error,
-        'ยืนยันผลการประเมินสำเร็จแล้ว แต่รีเฟรชข้อมูลส่วนที่เกี่ยวข้องไม่สำเร็จ',
-        `tax-expense:assessment:${expenseIdSnapshot}:post-confirm:error`,
-      );
     }
   };
 
@@ -114,8 +137,8 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
           <p className="mt-1 text-xs font-semibold text-amber-700">WHT ไม่ถูกแก้จากหน้านี้ และยังต้องยืนยันผ่าน WHT Workflow เพื่อรักษา audit trail</p>
         </div>
         <div className="flex gap-2">
-          <button type="button" onClick={load} disabled={loading || saving} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} />รีเฟรช</button>
-          <button type="button" onClick={closePanel} disabled={saving} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50">ปิด</button>
+          <button type="button" onClick={() => load()} disabled={loading || saving || savingRef.current} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"><RefreshCw size={14} className={loading ? 'animate-spin' : ''} />รีเฟรช</button>
+          <button type="button" onClick={closePanel} disabled={saving || savingRef.current} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50">ปิด</button>
         </div>
       </div>
 
@@ -129,14 +152,14 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
                 <div className="rounded-lg bg-slate-50 p-3">
                   <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-black">VAT suggestion</span><span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${confidenceClass(item.suggestions?.vat?.confidence)}`}>{item.suggestions?.vat?.confidence || '-'}</span></div>
                   <p className="mt-1 text-xs text-slate-600">{item.suggestions?.vat?.reason}</p>
-                  <select value={decisions[item.taxExpenseItemId]?.vatTreatment || ''} onChange={(event) => updateDecision(item.taxExpenseItemId, 'vatTreatment', event.target.value)} disabled={loading || saving} className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:bg-slate-100">
+                  <select value={decisions[item.taxExpenseItemId]?.vatTreatment || ''} onChange={(event) => updateDecision(item.taxExpenseItemId, 'vatTreatment', event.target.value)} disabled={loading || saving || savingRef.current} className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:bg-slate-100">
                     {VAT_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </div>
                 <div className="rounded-lg bg-slate-50 p-3">
                   <div className="flex flex-wrap items-center gap-2"><span className="text-xs font-black">CIT suggestion</span><span className={`rounded-full border px-2 py-0.5 text-[11px] font-bold ${confidenceClass(item.suggestions?.cit?.confidence)}`}>{item.suggestions?.cit?.confidence || '-'}</span></div>
                   <p className="mt-1 text-xs text-slate-600">{item.suggestions?.cit?.reason}</p>
-                  <select value={decisions[item.taxExpenseItemId]?.citTreatment || ''} onChange={(event) => updateDecision(item.taxExpenseItemId, 'citTreatment', event.target.value)} disabled={loading || saving} className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:bg-slate-100">
+                  <select value={decisions[item.taxExpenseItemId]?.citTreatment || ''} onChange={(event) => updateDecision(item.taxExpenseItemId, 'citTreatment', event.target.value)} disabled={loading || saving || savingRef.current} className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:bg-slate-100">
                     {CIT_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
                   </select>
                 </div>
@@ -145,8 +168,8 @@ const TaxExpenseAssessmentPanel = ({ expenseId, onClose, onConfirmed }) => {
             </div>
           ))}
           {!items.length && <div className="py-8 text-center text-sm text-slate-400">ไม่พบรายการสำหรับประเมิน</div>}
-          <textarea value={note} onChange={(event) => setNote(event.target.value)} disabled={loading || saving} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100" placeholder="หมายเหตุการประเมิน (ถ้ามี)" />
-          <button type="button" disabled={!complete || saving || loading} onClick={confirm} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-40"><CheckCircle2 size={16} />{saving ? 'กำลังยืนยัน...' : 'ยืนยันผลการประเมิน'}</button>
+          <textarea value={note} onChange={(event) => setNote(event.target.value)} disabled={loading || saving || savingRef.current} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:cursor-not-allowed disabled:bg-slate-100" placeholder="หมายเหตุการประเมิน (ถ้ามี)" />
+          <button type="button" disabled={!complete || saving || savingRef.current || loading} onClick={confirm} className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-40"><CheckCircle2 size={16} />{saving ? 'กำลังยืนยัน...' : 'ยืนยันผลการประเมิน'}</button>
           {data?.latestAssessment && <p className="text-xs font-semibold text-emerald-700">ยืนยันล่าสุด v{data.latestAssessment.version} · {data.latestAssessment.status}</p>}
         </div>
       )}

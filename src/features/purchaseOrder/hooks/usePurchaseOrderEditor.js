@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { materializePurchaseOrderTemplateProduct } from '../api/purchaseOrderApi';
@@ -30,6 +30,7 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
   const [shouldPrint, setShouldPrint] = useState(true);
   const [submitError, setSubmitError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submitRef = useRef(false);
 
   const purchaseOrder = usePurchaseOrderStore((state) => state.purchaseOrder);
   const poLoading = usePurchaseOrderStore((state) => state.isLoading);
@@ -77,6 +78,8 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
   );
 
   const addProductToOrder = useCallback(async (product) => {
+    if (submitRef.current) return null;
+
     let operationalProduct = product;
 
     if (mode === 'create' && (product?.discoverySource === 'TEMPLATE' || product?.isTemplateProduct === true)) {
@@ -86,6 +89,8 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
       }
 
       const materialized = await materializePurchaseOrderTemplateProduct(templateProductId);
+      if (submitRef.current) return null;
+
       const localProduct = unwrapMaterializedProduct(materialized);
       const localProductId = toPositiveInt(localProduct?.productId || localProduct?.id);
       if (!localProductId) {
@@ -118,27 +123,33 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
   }, [mode]);
 
   const handleCancel = useCallback(() => {
+    if (submitRef.current) return;
     navigate(`/${shopSlug}/pos/purchases`);
   }, [navigate, shopSlug]);
 
   const handleSubmit = useCallback(async () => {
     setSubmitError('');
-    if (isSubmitting) return;
+    if (isSubmitting || submitRef.current) return;
 
+    const submitSnapshot = {
+      mode,
+      id,
+      currentBranchId,
+      supplier,
+      products: products.map((item) => ({ ...item })),
+      note,
+      shouldPrint,
+      purchaseOrder,
+      shopSlug,
+    };
+
+    submitRef.current = true;
     setIsSubmitting(true);
     try {
       const result = await executePurchaseOrderSubmit({
-        mode,
-        id,
-        currentBranchId,
-        supplier,
-        products,
-        note,
-        shouldPrint,
-        purchaseOrder,
+        ...submitSnapshot,
         createPurchaseOrder,
         updatePurchaseOrder,
-        shopSlug,
       });
 
       if (!result.ok) {
@@ -148,6 +159,7 @@ export const usePurchaseOrderEditor = ({ mode, currentBranchId, suppliers }) => 
 
       navigate(result.destination);
     } finally {
+      submitRef.current = false;
       setIsSubmitting(false);
     }
   }, [

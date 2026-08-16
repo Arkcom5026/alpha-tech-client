@@ -11,10 +11,15 @@ describe('supplier list cross-branch read authority contract', () => {
     expect(source).toContain('branchId: requestedBranchId');
   });
 
-  it('discards stale success and stale error outcomes', () => {
+  it('binds explicit list reads to current selected-branch authority', () => {
+    expect(source).toContain('const usesSelectedBranchAuthority = explicitBranchId != null');
+    expect(source).toContain('useBranchStore.getState().selectedBranchId');
     expect(source).toContain('const ownsRequest = () =>');
     expect(source).toContain('supplierListRequestSequence === requestId');
-    expect(source).toContain('resolveSupplierBranchId() === requestedBranchId');
+    expect(source).toContain('currentBranchId() === requestedBranchId');
+  });
+
+  it('discards stale success and stale error outcomes', () => {
     expect(source).toMatch(/if \(!ownsRequest\(\)\) return null;/);
   });
 

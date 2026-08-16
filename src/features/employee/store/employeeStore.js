@@ -20,8 +20,6 @@ import {
 } from '../api/employeeApi';
 
 const initialEmployeeSessionCompat = {
-  // ⚠️ Deprecated compatibility fields:
-  // ห้ามใช้เป็น Source of Truth สำหรับ session ปัจจุบัน
   employee: null,
   branch: null,
   position: null,
@@ -40,11 +38,12 @@ const normalizeEmployee = (employee = {}) => ({
 
 const useEmployeeStore = create(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...initialEmployeeSessionCompat,
 
       employees: [],
       employeesLoading: false,
+      employeeMutating: false,
       employeesMeta: { page: 1, limit: 20, total: 0, pages: 1 },
       employeeError: null,
 
@@ -69,12 +68,17 @@ const useEmployeeStore = create(
       },
 
       approveEmployeeAction: async (payload) => {
+        if (get().employeeMutating) {
+          throw new Error('กำลังบันทึกข้อมูลพนักงานอยู่ กรุณารอสักครู่');
+        }
+        set({ employeeMutating: true, employeeError: null });
         try {
-          const result = await approveEmployee(payload);
-          return result;
+          return await approveEmployee(payload);
         } catch (err) {
           console.error('❌ approveEmployeeAction error:', err);
           throw err;
+        } finally {
+          set({ employeeMutating: false });
         }
       },
 
@@ -87,7 +91,6 @@ const useEmployeeStore = create(
         }
       },
 
-      // ⚠️ Deprecated compatibility only. Auth store remains session authority.
       setSession: ({ position, employee } = {}) => {
         set({
           employee: employee || null,
@@ -101,7 +104,6 @@ const useEmployeeStore = create(
       clearSession: () => set({ ...initialEmployeeSessionCompat }),
       setEmployee: (employee) => set({ employee }),
 
-      // params: { page, limit, search, status, role, branchId }
       getEmployees: async (params = {}) => {
         try {
           set({ employeesLoading: true, employeeError: null });
@@ -130,6 +132,8 @@ const useEmployeeStore = create(
       },
 
       addEmployee: async (form) => {
+        if (get().employeeMutating) return null;
+        set({ employeeMutating: true, employeeError: null });
         try {
           const res = normalizeEmployee(await createEmployee(form));
           set((state) => ({ employees: [...state.employees, res], employeeError: null }));
@@ -137,10 +141,14 @@ const useEmployeeStore = create(
         } catch (err) {
           set({ employeeError: err?.response?.data?.message || err?.message || 'สร้างพนักงานไม่สำเร็จ' });
           return null;
+        } finally {
+          set({ employeeMutating: false });
         }
       },
 
       updateEmployee: async (id, form) => {
+        if (get().employeeMutating) return null;
+        set({ employeeMutating: true, employeeError: null });
         try {
           const updated = normalizeEmployee(await apiUpdateEmployee(id, form));
           set((state) => ({
@@ -151,10 +159,16 @@ const useEmployeeStore = create(
         } catch (err) {
           set({ employeeError: err?.response?.data?.message || err?.message || 'แก้ไขพนักงานไม่สำเร็จ' });
           return null;
+        } finally {
+          set({ employeeMutating: false });
         }
       },
 
       setEmployeeActiveAction: async (id, active) => {
+        if (get().employeeMutating) {
+          throw new Error('กำลังบันทึกข้อมูลพนักงานอยู่ กรุณารอสักครู่');
+        }
+        set({ employeeMutating: true, employeeError: null });
         try {
           const result = await setEmployeeActive(id, active);
           const updated = normalizeEmployee(result?.employee || {});
@@ -173,34 +187,43 @@ const useEmployeeStore = create(
               err?.response?.data?.message || err?.message || (active ? 'เปิดใช้งานพนักงานไม่สำเร็จ' : 'ระงับพนักงานไม่สำเร็จ'),
           });
           throw err;
+        } finally {
+          set({ employeeMutating: false });
         }
       },
 
-      // Compatibility guard for old components. Never delete employee history.
       removeEmployee: async () => {
         set({ employeeError: 'ระบบไม่อนุญาตให้ลบประวัติพนักงาน กรุณาใช้การระงับการใช้งาน' });
         return false;
       },
 
       updateUserRoleAction: async (userId, nextRole) => {
+        if (get().employeeMutating) {
+          throw new Error('กำลังบันทึกข้อมูลพนักงานอยู่ กรุณารอสักครู่');
+        }
         const roleLower = String(nextRole || '').toLowerCase();
         if (!['admin', 'employee'].includes(roleLower)) {
           throw new Error('Allowed role: admin หรือ employee เท่านั้น');
         }
 
-        await apiUpdateUserRole(Number(userId), roleLower);
-        set((state) => ({
-          employees: state.employees.map((employee) => {
-            if (employee.userId !== Number(userId)) return employee;
-            return {
-              ...employee,
-              role: roleLower,
-              user: employee.user ? { ...employee.user, role: roleLower } : employee.user,
-            };
-          }),
-          employeeError: null,
-        }));
-        return true;
+        set({ employeeMutating: true, employeeError: null });
+        try {
+          await apiUpdateUserRole(Number(userId), roleLower);
+          set((state) => ({
+            employees: state.employees.map((employee) => {
+              if (employee.userId !== Number(userId)) return employee;
+              return {
+                ...employee,
+                role: roleLower,
+                user: employee.user ? { ...employee.user, role: roleLower } : employee.user,
+              };
+            }),
+            employeeError: null,
+          }));
+          return true;
+        } finally {
+          set({ employeeMutating: false });
+        }
       },
     }),
     {

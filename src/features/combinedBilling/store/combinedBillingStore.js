@@ -10,7 +10,7 @@ import {
   getConsolidatedDelivery,
 } from '../api/combinedBillingApi';
 
-const useCombinedBillingStore = create((set) => ({
+const useCombinedBillingStore = create((set, get) => ({
   combinableSales: [],
   combinedBilling: null,
   customersWithPendingSales: [],
@@ -71,27 +71,66 @@ const useCombinedBillingStore = create((set) => ({
       return customers;
     } catch (error) {
       set({ error });
+      throw error;
     } finally {
       set({ loading: false });
     }
   },
 
   // ✅ ตั้งค่าลูกค้าที่ถูกเลือก
-  setCustomer: (customer) => set({ customer, workspace: [] }),
+  setCustomer: (customer) => set({ customer, workspace: [], error: null }),
+
   loadDocumentWorkspaceAction: async (customerId) => {
+    const requestedCustomerId = Number(customerId);
     set({ loading: true, error: null });
-    try { const workspace = await getDocumentWorkspace(customerId); set({ workspace }); return workspace; }
-    catch (error) { set({ error }); throw error; }
-    finally { set({ loading: false }); }
+    try {
+      const workspace = await getDocumentWorkspace(customerId);
+      const activeCustomerId = Number(get().customer?.id || 0);
+      if (activeCustomerId !== requestedCustomerId) {
+        return null;
+      }
+      set({ workspace });
+      return workspace;
+    } catch (error) {
+      const activeCustomerId = Number(get().customer?.id || 0);
+      if (activeCustomerId === requestedCustomerId) {
+        set({ error });
+      }
+      throw error;
+    } finally {
+      const activeCustomerId = Number(get().customer?.id || 0);
+      if (activeCustomerId === requestedCustomerId) {
+        set({ loading: false });
+      }
+    }
   },
+
   confirmDocumentWorkspaceAction: async (payload) => {
+    if (get().loading) return null;
     set({ loading: true, error: null });
-    try { const document = await confirmDocumentWorkspace(payload); set({ combinedBilling: document }); return document; }
-    catch (error) { set({ error }); throw error; }
-    finally { set({ loading: false }); }
+    try {
+      const document = await confirmDocumentWorkspace(payload);
+      set({ combinedBilling: document });
+      return document;
+    } catch (error) {
+      set({ error });
+      throw error;
+    } finally {
+      set({ loading: false });
+    }
   },
-  loadHistoryAction: async () => { const history = await listConsolidatedDeliveries(); set({ history }); return history; },
-  loadDocumentDetailAction: async (id) => { const selectedDocument = await getConsolidatedDelivery(id); set({ selectedDocument }); return selectedDocument; },
+
+  loadHistoryAction: async () => {
+    const history = await listConsolidatedDeliveries();
+    set({ history });
+    return history;
+  },
+
+  loadDocumentDetailAction: async (id) => {
+    const selectedDocument = await getConsolidatedDelivery(id);
+    set({ selectedDocument });
+    return selectedDocument;
+  },
 }));
 
 export default useCombinedBillingStore;

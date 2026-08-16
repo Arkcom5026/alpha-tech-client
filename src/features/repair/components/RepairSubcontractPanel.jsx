@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { feedback } from '@/design-system';
 import repairApi from '../api/repairApi';
 import { listExpensePayees } from '@/features/taxExpense/api/taxExpenseApi';
 import ExpensePayeeQuickCreateDialog from './ExpensePayeeQuickCreateDialog';
@@ -33,6 +34,8 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
   const [expanded, setExpanded] = useState(false);
   const [quickCreateOpen, setQuickCreateOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [mutationBusy, setMutationBusy] = useState(false);
+  const [mutationAction, setMutationAction] = useState('');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [sendForm, setSendForm] = useState(() => emptySendForm(job));
@@ -46,11 +49,13 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
   });
   const [returnNote, setReturnNote] = useState('');
   const [receiveForm, setReceiveForm] = useState({ actualExternalCost: '', transportCost: '', materialCost: '', otherOperationalCost: '', resultNote: '' });
+  const mutationRef = useRef(false);
 
   const activeFromJob = job?.workflow?.subcontractContext || null;
   const workflowStatus = job?.workflow?.status || context?.workflowStatus || 'RECEIVED';
   const canOpen = ['APPROVED', 'REPAIRING'].includes(workflowStatus);
   const shouldLoadContext = Boolean(activeFromJob || expanded);
+  const interactionLocked = loading || mutationBusy;
 
   const load = useCallback(async () => {
     if (!job?.id || !shouldLoadContext) return;
@@ -90,7 +95,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
   const outsourceConsent = Boolean(context?.outsourceConsent);
 
   const handlePayeeCreated = async (created) => {
-    if (!created?.id) return;
+    if (!created?.id || mutationRef.current) return;
     setPayees((current) => [created, ...current.filter((item) => Number(item.id) !== Number(created.id))]);
     setSendForm((current) => ({
       ...current,
@@ -100,80 +105,127 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
     setNotice(`เพิ่มผู้รับซ่อม “${created.name}” และเลือกให้ใบงานนี้แล้ว`);
   };
 
-  const runMutation = async (work, successMessage) => {
-    setLoading(true);
+  const runMutation = async ({ key, action, work, successMessage, failureMessage }) => {
+    if (mutationRef.current || mutationBusy) return false;
+
+    mutationRef.current = true;
+    setMutationBusy(true);
+    setMutationAction(action);
     setError('');
     setNotice('');
     try {
-      await work();
+      const result = await work();
       setNotice(successMessage);
+      feedback.actionSuccess(
+        successMessage,
+        `repair:subcontract:${job.id}:${key}:success`,
+      );
       await load();
-      await onChanged?.();
-      return true;
+      try {
+        await onChanged?.();
+      } catch (refreshError) {
+        feedback.actionError(
+          refreshError,
+          'บันทึกข้อมูลส่งซ่อมภายนอกสำเร็จแล้ว แต่รีเฟรชใบงานหลักไม่สำเร็จ',
+          `repair:subcontract:${job.id}:${key}:refresh:error`,
+        );
+      }
+      return result ?? true;
     } catch (mutationError) {
-      setError(mutationError.message);
+      const message = mutationError?.response?.data?.message || mutationError?.message || failureMessage;
+      setError(message);
+      feedback.actionError(
+        mutationError,
+        failureMessage,
+        `repair:subcontract:${job.id}:${key}:error`,
+      );
       return false;
     } finally {
-      setLoading(false);
+      mutationRef.current = false;
+      setMutationBusy(false);
+      setMutationAction('');
     }
   };
 
   const send = async () => {
-    if (!sendForm.expensePayeeId || !sendForm.workScope.trim()) return;
-    const ok = await runMutation(
-      () => repairApi.sendSubcontract(job.id, {
-        ...sendForm,
-        expensePayeeId: Number(sendForm.expensePayeeId),
-        customerEstimateAmount: sendForm.customerEstimateAmount === ''
+    if (mutationRef.current || mutationBusy || !sendForm.expensePayeeId || !sendForm.workScope.trim()) return;
+    const jobIdSnapshot = job.id;
+    const sendFormSnapshot = { ...sendForm };
+    const ok = await runMutation({
+      key: 'send',
+      action: 'send',
+      work: () => repairApi.sendSubcontract(jobIdSnapshot, {
+        ...sendFormSnapshot,
+        expensePayeeId: Number(sendFormSnapshot.expensePayeeId),
+        customerEstimateAmount: sendFormSnapshot.customerEstimateAmount === ''
           ? null
-          : Number(sendForm.customerEstimateAmount),
-        expectedReturnAt: toIsoOrNull(sendForm.expectedReturnAt),
+          : Number(sendFormSnapshot.customerEstimateAmount),
+        expectedReturnAt: toIsoOrNull(sendFormSnapshot.expectedReturnAt),
       }),
-      'บันทึกการส่งซ่อมภายนอกแล้ว ใบงานภายในร้านถูกพักจนกว่าจะรับเครื่องกลับ'
-    );
+      successMessage: 'บันทึกการส่งซ่อมภายนอกแล้ว ใบงานภายในร้านถูกพักจนกว่าจะรับเครื่องกลับ',
+      failureMessage: 'บันทึกการส่งซ่อมภายนอกไม่สำเร็จ',
+    });
     if (ok) setExpanded(false);
   };
 
   const update = async () => {
-    if (!active?.subcontractId && !active?.id) return;
-    await runMutation(
-      () => repairApi.updateSubcontract(job.id, active.subcontractId || active.id, {
-        ...updateForm,
-        providerQuotedAmount: updateForm.providerQuotedAmount === ''
+    const subcontractIdSnapshot = active?.subcontractId || active?.id;
+    if (mutationRef.current || mutationBusy || !subcontractIdSnapshot) return;
+    const jobIdSnapshot = job.id;
+    const updateFormSnapshot = { ...updateForm };
+    await runMutation({
+      key: `subcontract:${subcontractIdSnapshot}:update`,
+      action: 'update',
+      work: () => repairApi.updateSubcontract(jobIdSnapshot, subcontractIdSnapshot, {
+        ...updateFormSnapshot,
+        providerQuotedAmount: updateFormSnapshot.providerQuotedAmount === ''
           ? null
-          : Number(updateForm.providerQuotedAmount),
-        expectedReturnAt: toIsoOrNull(updateForm.expectedReturnAt),
+          : Number(updateFormSnapshot.providerQuotedAmount),
+        expectedReturnAt: toIsoOrNull(updateFormSnapshot.expectedReturnAt),
       }),
-      'อัปเดตข้อมูลจากผู้รับซ่อมภายนอกแล้ว'
-    );
+      successMessage: 'อัปเดตข้อมูลจากผู้รับซ่อมภายนอกแล้ว',
+      failureMessage: 'อัปเดตข้อมูลจากผู้รับซ่อมภายนอกไม่สำเร็จ',
+    });
   };
 
   const requestReturn = async () => {
-    if (!active?.subcontractId && !active?.id) return;
-    await runMutation(
-      () => repairApi.commandSubcontract(job.id, active.subcontractId || active.id, {
+    const subcontractIdSnapshot = active?.subcontractId || active?.id;
+    if (mutationRef.current || mutationBusy || !subcontractIdSnapshot) return;
+    const jobIdSnapshot = job.id;
+    const returnNoteSnapshot = returnNote.trim();
+    await runMutation({
+      key: `subcontract:${subcontractIdSnapshot}:request-return`,
+      action: 'request-return',
+      work: () => repairApi.commandSubcontract(jobIdSnapshot, subcontractIdSnapshot, {
         action: 'REQUEST_RETURN',
-        note: returnNote.trim() || null,
+        note: returnNoteSnapshot || null,
       }),
-      'บันทึกการขอรับเครื่องกลับแล้ว'
-    );
+      successMessage: 'บันทึกการขอรับเครื่องกลับแล้ว',
+      failureMessage: 'บันทึกการขอรับเครื่องกลับไม่สำเร็จ',
+    });
   };
 
   const receiveReturn = async () => {
-    if ((!active?.subcontractId && !active?.id) || !receiveForm.resultNote.trim()) return;
-    const ok = await runMutation(
-      () => repairApi.commandSubcontract(job.id, active.subcontractId || active.id, {
+    const subcontractIdSnapshot = active?.subcontractId || active?.id;
+    if (mutationRef.current || mutationBusy || !subcontractIdSnapshot || !receiveForm.resultNote.trim()) return;
+    const jobIdSnapshot = job.id;
+    const receiveFormSnapshot = { ...receiveForm };
+    const ok = await runMutation({
+      key: `subcontract:${subcontractIdSnapshot}:receive-return`,
+      action: 'receive-return',
+      work: () => repairApi.commandSubcontract(jobIdSnapshot, subcontractIdSnapshot, {
         action: 'RECEIVE_RETURN',
-        resultNote: receiveForm.resultNote.trim(),
-        actualExternalCost: receiveForm.actualExternalCost === ''
+        resultNote: receiveFormSnapshot.resultNote.trim(),
+        actualExternalCost: receiveFormSnapshot.actualExternalCost === ''
           ? null
-          : Number(receiveForm.actualExternalCost),
-        transportCost: receiveForm.transportCost === '' ? null : Number(receiveForm.transportCost),
-        materialCost: receiveForm.materialCost === '' ? null : Number(receiveForm.materialCost),
-        otherOperationalCost: receiveForm.otherOperationalCost === '' ? null : Number(receiveForm.otherOperationalCost),
+          : Number(receiveFormSnapshot.actualExternalCost),
+        transportCost: receiveFormSnapshot.transportCost === '' ? null : Number(receiveFormSnapshot.transportCost),
+        materialCost: receiveFormSnapshot.materialCost === '' ? null : Number(receiveFormSnapshot.materialCost),
+        otherOperationalCost: receiveFormSnapshot.otherOperationalCost === '' ? null : Number(receiveFormSnapshot.otherOperationalCost),
       }),
-      'รับเครื่องกลับเข้าร้านแล้ว ระบบปลดการพักใบงานและสามารถดำเนิน Repair Workflow ต่อได้'
-    );
+      successMessage: 'รับเครื่องกลับเข้าร้านแล้ว ระบบปลดการพักใบงานและสามารถดำเนิน Repair Workflow ต่อได้',
+      failureMessage: 'ยืนยันรับเครื่องกลับเข้าร้านไม่สำเร็จ',
+    });
     if (ok) {
       setReturnNote('');
       setReceiveForm({ actualExternalCost: '', transportCost: '', materialCost: '', otherOperationalCost: '', resultNote: '' });
@@ -198,8 +250,9 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
         {!active && canOpen ? (
           <button
             type="button"
+            disabled={interactionLocked}
             onClick={() => setExpanded((value) => !value)}
-            className="w-fit rounded-xl border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-black text-violet-800"
+            className="w-fit rounded-xl border border-violet-300 bg-violet-50 px-4 py-2 text-sm font-black text-violet-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {expanded ? 'ซ่อนแบบฟอร์ม' : 'เปิดขั้นตอนส่งซับนอก'}
           </button>
@@ -236,22 +289,26 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <h4 className="font-black text-slate-950">อัปเดตราคาและข้อมูลจากซับนอก</h4>
             <p className="mt-1 text-xs text-slate-500">ระบบเก็บข้อมูลไว้เป็นหลักฐาน แต่ไม่บังคับว่าราคาต้องเป็นเพดานหรือตายตัว</p>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <fieldset disabled={interactionLocked} className="mt-3 grid gap-3 md:grid-cols-2 disabled:opacity-60">
               <input type="number" min="0" value={updateForm.providerQuotedAmount} onChange={(e) => setUpdateForm((v) => ({ ...v, providerQuotedAmount: e.target.value }))} placeholder="ราคาที่ซับนอกเสนอ" className="rounded-xl border border-slate-300 bg-white px-4 py-3" />
               <input value={updateForm.externalReference} onChange={(e) => setUpdateForm((v) => ({ ...v, externalReference: e.target.value }))} placeholder="เลขอ้างอิงจากผู้รับซ่อม" className="rounded-xl border border-slate-300 bg-white px-4 py-3" />
               <input value={updateForm.trackingNumber} onChange={(e) => setUpdateForm((v) => ({ ...v, trackingNumber: e.target.value }))} placeholder="เลขติดตามขนส่ง" className="rounded-xl border border-slate-300 bg-white px-4 py-3" />
               <input type="datetime-local" value={updateForm.expectedReturnAt} onChange={(e) => setUpdateForm((v) => ({ ...v, expectedReturnAt: e.target.value }))} className="rounded-xl border border-slate-300 bg-white px-4 py-3" />
               <textarea rows={2} value={updateForm.providerQuoteNote} onChange={(e) => setUpdateForm((v) => ({ ...v, providerQuoteNote: e.target.value }))} placeholder="รายละเอียดราคาหรือเงื่อนไขจากซับนอก" className="rounded-xl border border-slate-300 bg-white px-4 py-3 md:col-span-2" />
               <textarea rows={2} value={updateForm.customerDecisionNote} onChange={(e) => setUpdateForm((v) => ({ ...v, customerDecisionNote: e.target.value }))} placeholder="เช่น ลูกค้าตกลงให้ทำต่อ / ขอคิดก่อน / ไม่ซ่อม ขอเครื่องกลับ" className="rounded-xl border border-slate-300 bg-white px-4 py-3 md:col-span-2" />
-            </div>
-            <button type="button" disabled={loading} onClick={update} className="mt-3 rounded-xl bg-slate-900 px-5 py-3 font-black text-white disabled:opacity-40">บันทึกข้อมูลล่าสุด</button>
+            </fieldset>
+            <button type="button" disabled={interactionLocked} onClick={update} className="mt-3 rounded-xl bg-slate-900 px-5 py-3 font-black text-white disabled:opacity-40">
+              {mutationAction === 'update' ? 'กำลังบันทึก...' : 'บันทึกข้อมูลล่าสุด'}
+            </button>
           </div>
 
           {active.status === 'SENT' ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
               <h4 className="font-black text-amber-950">ไม่ดำเนินการต่อ / ต้องการเครื่องกลับ?</h4>
-              <textarea rows={2} value={returnNote} onChange={(e) => setReturnNote(e.target.value)} placeholder="เหตุผลหรือหมายเหตุ เช่น ราคาเกินที่คุยไว้ ลูกค้าไม่อนุมัติ" className="mt-3 w-full rounded-xl border border-amber-200 bg-white px-4 py-3" />
-              <button type="button" disabled={loading} onClick={requestReturn} className="mt-3 rounded-xl bg-amber-600 px-5 py-3 font-black text-white disabled:opacity-40">ขอรับเครื่องกลับ</button>
+              <textarea disabled={interactionLocked} rows={2} value={returnNote} onChange={(e) => setReturnNote(e.target.value)} placeholder="เหตุผลหรือหมายเหตุ เช่น ราคาเกินที่คุยไว้ ลูกค้าไม่อนุมัติ" className="mt-3 w-full rounded-xl border border-amber-200 bg-white px-4 py-3 disabled:opacity-60" />
+              <button type="button" disabled={interactionLocked} onClick={requestReturn} className="mt-3 rounded-xl bg-amber-600 px-5 py-3 font-black text-white disabled:opacity-40">
+                {mutationAction === 'request-return' ? 'กำลังบันทึกคำขอ...' : 'ขอรับเครื่องกลับ'}
+              </button>
             </div>
           ) : null}
 
@@ -262,14 +319,16 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
               <p className="font-black">ยอด Expense ที่บัญชีบันทึกสำหรับงานนี้: {money(relatedExpenseTotal)}</p>
               <p className="mt-1 text-xs">ใช้เป็นข้อมูลตั้งต้นสำหรับต้นทุนงานซ่อมเท่านั้น การยืนยันหรือเพิ่มต้นทุนเสริมจะไม่สร้างรายการบัญชีหรือภาษี</p>
             </div>
-            <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <fieldset disabled={interactionLocked} className="mt-3 grid gap-3 md:grid-cols-2 disabled:opacity-60">
               <input type="number" min="0" value={receiveForm.actualExternalCost} onChange={(e) => setReceiveForm((v) => ({ ...v, actualExternalCost: e.target.value }))} placeholder="ต้นทุนซับนอกจริง (ถ้าทราบ)" className="rounded-xl border border-emerald-200 bg-white px-4 py-3" />
               <input type="number" min="0" value={receiveForm.transportCost} onChange={(e) => setReceiveForm((v) => ({ ...v, transportCost: e.target.value }))} placeholder="ค่าขนส่ง (ต้นทุนงาน)" className="rounded-xl border border-emerald-200 bg-white px-4 py-3" />
               <input type="number" min="0" value={receiveForm.materialCost} onChange={(e) => setReceiveForm((v) => ({ ...v, materialCost: e.target.value }))} placeholder="ค่าวัสดุ/อุปกรณ์เสริม" className="rounded-xl border border-emerald-200 bg-white px-4 py-3" />
               <input type="number" min="0" value={receiveForm.otherOperationalCost} onChange={(e) => setReceiveForm((v) => ({ ...v, otherOperationalCost: e.target.value }))} placeholder="ต้นทุนเชิงงานอื่น" className="rounded-xl border border-emerald-200 bg-white px-4 py-3" />
               <textarea rows={3} value={receiveForm.resultNote} onChange={(e) => setReceiveForm((v) => ({ ...v, resultNote: e.target.value }))} placeholder="ผลเมื่อรับเครื่องกลับ * เช่น ซ่อมแล้ว / ไม่ได้ซ่อม / ส่งกลับสภาพเดิม" className="rounded-xl border border-emerald-200 bg-white px-4 py-3 md:col-span-2" />
-            </div>
-            <button type="button" disabled={loading || !receiveForm.resultNote.trim()} onClick={receiveReturn} className="mt-3 rounded-xl bg-emerald-700 px-5 py-3 font-black text-white disabled:opacity-40">ยืนยันรับเครื่องกลับ</button>
+            </fieldset>
+            <button type="button" disabled={interactionLocked || !receiveForm.resultNote.trim()} onClick={receiveReturn} className="mt-3 rounded-xl bg-emerald-700 px-5 py-3 font-black text-white disabled:opacity-40">
+              {mutationAction === 'receive-return' ? 'กำลังยืนยันรับเครื่อง...' : 'ยืนยันรับเครื่องกลับ'}
+            </button>
           </div>
         </div>
       ) : expanded ? (
@@ -279,7 +338,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
               ลูกค้ายังไม่ได้อนุญาตให้ส่งซ่อมภายนอก กรุณาแก้ไขหลักฐานการรับเครื่องและให้ลูกค้ายืนยันสิทธิ์นี้ก่อน
             </p>
           ) : null}
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <fieldset disabled={interactionLocked} className="mt-3 grid gap-3 md:grid-cols-2 disabled:opacity-60">
             <div className="flex gap-2">
               <select value={sendForm.expensePayeeId} onChange={(e) => setSendForm((v) => ({ ...v, expensePayeeId: e.target.value }))} className="min-w-0 flex-1 rounded-xl border border-violet-200 bg-white px-4 py-3">
                 <option value="">เลือก ExpensePayee ผู้รับซ่อม *</option>
@@ -294,9 +353,11 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
             <textarea rows={2} value={sendForm.customerApprovalNote} onChange={(e) => setSendForm((v) => ({ ...v, customerApprovalNote: e.target.value }))} placeholder="ข้อตกลง/หมายเหตุที่คุยกับลูกค้า เช่น ประมาณไม่เกิน 3,000 ถ้าเกินโทรถามก่อน" className="rounded-xl border border-violet-200 bg-white px-4 py-3 md:col-span-2" />
             <input value={sendForm.externalReference} onChange={(e) => setSendForm((v) => ({ ...v, externalReference: e.target.value }))} placeholder="เลขอ้างอิงจากผู้รับซ่อม" className="rounded-xl border border-violet-200 bg-white px-4 py-3" />
             <input value={sendForm.trackingNumber} onChange={(e) => setSendForm((v) => ({ ...v, trackingNumber: e.target.value }))} placeholder="เลขติดตามขนส่ง" className="rounded-xl border border-violet-200 bg-white px-4 py-3" />
-          </div>
+          </fieldset>
           {!payees.length ? <p className="mt-3 text-sm font-bold text-amber-700">ยังไม่มี ExpensePayee ผู้รับซ่อม กด “+ เพิ่มผู้รับซ่อม” เพื่อสร้างได้โดยไม่ออกจากใบงาน</p> : null}
-          <button type="button" disabled={loading || !outsourceConsent || !sendForm.expensePayeeId || !sendForm.workScope.trim()} onClick={send} className="mt-4 rounded-xl bg-violet-700 px-5 py-3 font-black text-white disabled:opacity-40">ยืนยันส่งซ่อมภายนอกและพักงานในร้าน</button>
+          <button type="button" disabled={interactionLocked || !outsourceConsent || !sendForm.expensePayeeId || !sendForm.workScope.trim()} onClick={send} className="mt-4 rounded-xl bg-violet-700 px-5 py-3 font-black text-white disabled:opacity-40">
+            {mutationAction === 'send' ? 'กำลังบันทึกการส่งซ่อม...' : 'ยืนยันส่งซ่อมภายนอกและพักงานในร้าน'}
+          </button>
         </div>
       ) : !canOpen ? (
         <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-600">ขั้นตอนส่งซับนอกจะเปิดหลังลูกค้าตัดสินใจแนวทางซ่อมแล้ว หรือเมื่องานอยู่ในขั้นกำลังซ่อม</p>
@@ -318,7 +379,7 @@ const RepairSubcontractPanel = ({ job, onChanged, refreshKey = 0 }) => {
 
       <ExpensePayeeQuickCreateDialog
         open={quickCreateOpen}
-        onClose={() => setQuickCreateOpen(false)}
+        onClose={() => !mutationRef.current && setQuickCreateOpen(false)}
         onCreated={handlePayeeCreated}
       />
     </section>

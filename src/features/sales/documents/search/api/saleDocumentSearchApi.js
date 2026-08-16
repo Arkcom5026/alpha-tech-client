@@ -1,4 +1,4 @@
-import { searchPrintableSales } from '@/features/sales/api/saleApi';
+import { searchPrintableSales } from '@/features/sales/history/api/saleHistoryApi';
 
 export const searchSaleDocuments = async (query) => {
   return searchPrintableSales(query);

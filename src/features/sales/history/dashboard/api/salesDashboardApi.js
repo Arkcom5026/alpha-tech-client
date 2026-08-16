@@ -1,4 +1,4 @@
-import { searchPrintableSales } from '../../../api/saleApi';
+import { searchPrintableSales } from '../../api/saleHistoryApi';
 
 export const fetchSalesDashboardRows = async ({
   fromDate,

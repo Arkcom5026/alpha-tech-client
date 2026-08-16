@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
+import { feedback } from '@/design-system/feedback';
 import {
   certifyPartnerStoreOperationalReadiness,
   getPartnerStoreOperationalReadiness,
@@ -60,6 +61,7 @@ export default function PartnerStoreOperationalReadinessPage() {
 
     const readinessConfirmed = Boolean(assessment.allReady);
     const destinationSlug = canonicalSlug;
+    const applicationCode = application.applicationCode || destinationSlug;
     if (!readinessConfirmed) {
       setError('ร้านยังมีรายการที่ต้องแก้ไขก่อนรับรองความพร้อม');
       return;
@@ -70,10 +72,20 @@ export default function PartnerStoreOperationalReadinessPage() {
     setError('');
     try {
       await certifyPartnerStoreOperationalReadiness();
+      feedback.actionSuccess(
+        'รับรองความพร้อมร้านเรียบร้อยแล้ว',
+        `partner-store:readiness:${applicationCode}:certify:success`,
+      );
       navigate(`/${destinationSlug}/pos/dashboard`, { replace: true });
     } catch (requestError) {
-      setError(messageFrom(requestError));
+      const message = messageFrom(requestError);
       await load();
+      setError(message);
+      feedback.actionError(
+        requestError,
+        message,
+        `partner-store:readiness:${applicationCode}:certify:error`,
+      );
     } finally {
       submittingRef.current = false;
       setSubmitting(false);
@@ -115,7 +127,7 @@ export default function PartnerStoreOperationalReadinessPage() {
         <button
           type="button"
           onClick={certify}
-          disabled={submitting || !assessment.allReady}
+          disabled={submitting || submittingRef.current || !assessment.allReady}
           className="mt-6 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-300"
         >
           {submitting ? 'กำลังรับรอง…' : 'รับรองความพร้อมและเข้าสู่ POS'}

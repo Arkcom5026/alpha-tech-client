@@ -20,4 +20,14 @@ describe('supplier payment detail read authority', () => {
     expect(page).not.toContain("console.log('selectedSupplier");
     expect(page).not.toContain("console.log('supplierPayments");
   });
+
+  it('allows advance history callers to opt into propagated load failures', () => {
+    const store = read('src/features/supplierPayment/store/supplierPaymentStore.js');
+    const form = read('src/features/supplierPayment/components/SupplierAdvancePaymentForm.jsx');
+    expect(store).toContain('fetchAdvancePaymentsBySupplierAction: async (supplierId, options = {}) =>');
+    expect(store).toContain('const throwOnError = options?.throwOnError === true;');
+    expect(store).toContain('if (throwOnError) throw err;');
+    expect(form).toContain('fetchAdvancePaymentsBySupplierAction(supplier.id, { throwOnError: true })');
+    expect(form).toContain('feedback.actionError(requestError');
+  });
 });

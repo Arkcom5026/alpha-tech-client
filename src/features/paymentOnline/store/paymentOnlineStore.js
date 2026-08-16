@@ -98,8 +98,47 @@ export const usePaymentOnlineStore = create((set, get) => ({
     }
   },
 
-  submitPaymentSlipAction: async (orderId, payload) => {
-    return usePaymentOnlineStore.getState().submitSlipInfoAction(orderId, payload);
+  submitPaymentSlipAction: async (orderId, formData, payload) => {
+    if (get().isSubmitting) {
+      throw new Error('กำลังดำเนินการชำระเงินอยู่ กรุณารอสักครู่');
+    }
+
+    const orderIdSnapshot = orderId;
+    const payloadSnapshot = { ...payload };
+    let uploadedSlipUrl = null;
+
+    set({ isSubmitting: true });
+    try {
+      uploadedSlipUrl = await uploadPaymentSlip(orderIdSnapshot, formData);
+    } catch (uploadError) {
+      feedback.actionError(
+        uploadError,
+        'อัปโหลดสลิปไม่สำเร็จ',
+        `payment-online:${orderIdSnapshot}:upload:error`,
+      );
+      throw uploadError;
+    }
+
+    try {
+      const result = await submitOrderOnlinePaymentSlip(orderIdSnapshot, {
+        ...payloadSnapshot,
+        slipUrl: uploadedSlipUrl,
+      });
+      feedback.actionSuccess(
+        'ส่งข้อมูลการชำระเงินเรียบร้อยแล้ว',
+        `payment-online:${orderIdSnapshot}:submit:success`,
+      );
+      return result;
+    } catch (submitError) {
+      feedback.actionError(
+        submitError,
+        'อัปโหลดสลิปสำเร็จแล้ว แต่ส่งข้อมูลการชำระเงินไม่สำเร็จ กรุณาลองส่งข้อมูลอีกครั้ง',
+        `payment-online:${orderIdSnapshot}:submit-after-upload:error`,
+      );
+      throw submitError;
+    } finally {
+      set({ isSubmitting: false });
+    }
   },
 
   approveSlipAction: async (orderId) => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { feedback } from '@/design-system';
 import PositionForm from '../components/PositionForm.jsx';
@@ -14,6 +14,7 @@ const EditPositionPage = () => {
 
   const { fetchByIdAction, updateAction, current, loading, error, message, resetCurrentAction } = usePositionStore();
   const [notFound, setNotFound] = useState(false);
+  const submittingRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,17 +42,28 @@ const EditPositionPage = () => {
   }, [idNum]);
 
   const handleSubmit = async (payload) => {
-    if (loading) return;
+    if (loading || submittingRef.current || !Number.isFinite(idNum)) return;
+
+    const positionIdSnapshot = idNum;
+    const payloadSnapshot = {
+      name: String(payload?.name || '').trim(),
+      description: String(payload?.description || '').trim() || null,
+    };
+    if (!payloadSnapshot.name) return;
+
+    submittingRef.current = true;
     try {
-      const ok = await updateAction(idNum, payload);
+      const ok = await updateAction(positionIdSnapshot, payloadSnapshot);
       if (ok) {
-        feedback.actionSuccess('บันทึกการแก้ไขตำแหน่งเรียบร้อยแล้ว', 'position:update:success');
+        feedback.actionSuccess('บันทึกการแก้ไขตำแหน่งเรียบร้อยแล้ว', `position:${positionIdSnapshot}:update:success`);
         navigate(-1);
       } else {
-        feedback.error(error || 'บันทึกการแก้ไขตำแหน่งไม่สำเร็จ', { eventKey: 'position:update:error' });
+        feedback.error(error || 'บันทึกการแก้ไขตำแหน่งไม่สำเร็จ', { eventKey: `position:${positionIdSnapshot}:update:error` });
       }
     } catch (updateError) {
-      feedback.actionError(updateError, 'บันทึกการแก้ไขตำแหน่งไม่สำเร็จ', 'position:update:error');
+      feedback.actionError(updateError, 'บันทึกการแก้ไขตำแหน่งไม่สำเร็จ', `position:${positionIdSnapshot}:update:error`);
+    } finally {
+      submittingRef.current = false;
     }
   };
 
@@ -79,8 +91,9 @@ const EditPositionPage = () => {
             key={current.id}
             initialValues={{ name: current?.name || '', description: current?.description || '' }}
             onSubmit={handleSubmit}
-            onCancel={() => !loading && navigate(-1)}
+            onCancel={() => !loading && !submittingRef.current && navigate(-1)}
             submitting={loading}
+            mutationOwnedRef={submittingRef}
             error={error}
           />
         )}

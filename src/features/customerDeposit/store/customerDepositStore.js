@@ -14,11 +14,18 @@ import {
 } from '../api/customerDepositApi';
 
 let customerDepositContextRequestSequence = 0;
+let customerDepositListRequestSequence = 0;
 
 const beginCustomerDepositContextRequest = () => ++customerDepositContextRequestSequence;
 const ownsCustomerDepositContextRequest = (requestId) => customerDepositContextRequestSequence === requestId;
 const invalidateCustomerDepositContextRequests = () => {
   customerDepositContextRequestSequence += 1;
+};
+
+const beginCustomerDepositListRequest = () => ++customerDepositListRequestSequence;
+const ownsCustomerDepositListRequest = (requestId) => customerDepositListRequestSequence === requestId;
+const invalidateCustomerDepositListRequests = () => {
+  customerDepositListRequestSequence += 1;
 };
 
 const useCustomerDepositStore = create((set, get) => ({
@@ -46,7 +53,10 @@ const useCustomerDepositStore = create((set, get) => ({
     invalidateCustomerDepositContextRequests();
     set({ selectedCustomer: customer });
   },
-  setDeposits: (list) => set({ deposits: list }),
+  setDeposits: (list) => {
+    invalidateCustomerDepositListRequests();
+    set({ deposits: list });
+  },
   clearSelectedDeposit: () => {
     invalidateCustomerDepositContextRequests();
     set({ selectedDeposit: null });
@@ -82,6 +92,7 @@ const useCustomerDepositStore = create((set, get) => ({
       throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
     }
     invalidateCustomerDepositContextRequests();
+    invalidateCustomerDepositListRequests();
     set({ isSubmitting: true, error: null });
     try {
       return await createCustomerDeposit(data);
@@ -95,16 +106,21 @@ const useCustomerDepositStore = create((set, get) => ({
   },
 
   fetchCustomerDepositsAction: async () => {
-    set({ isLoading: true });
+    const requestId = beginCustomerDepositListRequest();
+    set({ isLoading: true, error: null });
     try {
       const data = await getCustomerDeposits();
+      if (!ownsCustomerDepositListRequest(requestId)) return null;
       console.log('fetchCustomerDepositsAction data :', data);
       set({ deposits: data });
+      return data;
     } catch (err) {
+      if (!ownsCustomerDepositListRequest(requestId)) return null;
       console.error('❌ fetchCustomerDepositsAction error:', err);
       set({ error: err });
+      return null;
     } finally {
-      set({ isLoading: false });
+      if (ownsCustomerDepositListRequest(requestId)) set({ isLoading: false });
     }
   },
 
@@ -132,6 +148,7 @@ const useCustomerDepositStore = create((set, get) => ({
       throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
     }
     invalidateCustomerDepositContextRequests();
+    invalidateCustomerDepositListRequests();
     set({ isSubmitting: true, error: null });
     try {
       return await updateCustomerDeposit(id, data);
@@ -149,6 +166,7 @@ const useCustomerDepositStore = create((set, get) => ({
       throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
     }
     invalidateCustomerDepositContextRequests();
+    invalidateCustomerDepositListRequests();
     set({ isSubmitting: true, error: null });
     try {
       return await updateCustomerDeposit(id, { status: 'CANCELLED' });
@@ -286,6 +304,7 @@ const useCustomerDepositStore = create((set, get) => ({
       throw new Error('กำลังบันทึกเงินมัดจำอยู่ กรุณารอสักครู่');
     }
     invalidateCustomerDepositContextRequests();
+    invalidateCustomerDepositListRequests();
     set({ isSubmitting: true, error: null });
     try {
       const res = await applyDepositUsage({ depositId, saleId, amountUsed });
@@ -368,6 +387,7 @@ const useCustomerDepositStore = create((set, get) => ({
 
   resetAllDepositState: () => {
     invalidateCustomerDepositContextRequests();
+    invalidateCustomerDepositListRequests();
     set({
       isSubmitting: false,
       isLoading: false,

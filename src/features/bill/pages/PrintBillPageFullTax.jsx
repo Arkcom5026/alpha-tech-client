@@ -122,6 +122,14 @@ const PrintBillPageFullTax = () => {
     return Math.max(20 - printableGridRows, 0)
   }, [saleItems])
 
+  // Short invoices get a deterministic A4 frame: normal-flow header/table in the
+  // upper zone, and totals/signatures pinned into a reserved lower footer zone.
+  // Longer invoices keep natural pagination so a pinned footer cannot overlap lines.
+  const pinPrintFooter = useMemo(
+    () => Array.isArray(saleItems) && saleItems.length > 0 && saleItems.length <= 12,
+    [saleItems]
+  )
+
   if (loading) {
     return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
   }
@@ -171,11 +179,44 @@ const PrintBillPageFullTax = () => {
           .bill-print-root .print-a4 tbody tr:nth-last-child(-n+${printFillerRowsToHide}) {
             display: none !important;
           }
+
+          /*
+           * Deterministic single-sheet frame for short invoices.
+           * Do not use position:fixed: browsers repeat fixed print elements on
+           * every sheet. Instead pin only this document's footer inside its own
+           * A4 content box and reserve the lower 54mm for totals/signatures.
+           */
+          .bill-print-short-document .print-a4 {
+            position: relative !important;
+            height: calc(297mm - 20mm) !important;
+            min-height: calc(297mm - 20mm) !important;
+            padding-bottom: 54mm !important;
+            overflow: hidden !important;
+          }
+
+          .bill-print-short-document .print-a4 > table + div {
+            position: absolute !important;
+            left: 20px !important;
+            right: 20px !important;
+            bottom: 25mm !important;
+            margin: 0 !important;
+            padding-top: 0 !important;
+            min-height: 28mm !important;
+          }
+
+          .bill-print-short-document .print-a4 > table + div + div {
+            position: absolute !important;
+            left: 20px !important;
+            right: 20px !important;
+            bottom: 0 !important;
+            margin: 0 !important;
+            min-height: 24mm !important;
+          }
         }
       `}</style>
 
       <div className="bill-print-page-shell w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
-        <div className="bill-print-root mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
+        <div className={`bill-print-root ${pinPrintFooter ? 'bill-print-short-document' : ''} mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none`}>
           <StoreDocumentHeaderScope config={documentConfig}>
             <BillLayoutFullTax
               sale={sale}

@@ -12,6 +12,8 @@ import {
 } from "@/features/product/api/productApi";
 import { commitQuickStockExistingIntakeApi } from "./quickStockIntakeApi";
 
+const dropdownTransportInFlight = new Map();
+
 const stripEmptyParams = (obj = {}) => Object.fromEntries(
   Object.entries(obj).filter(([, value]) => value !== "" && value !== undefined && value !== null)
 );
@@ -83,14 +85,32 @@ export const normalizeQuickStockError = (err, fallbackMessage = "เกิดข
   raw: err,
 });
 
-export const getQuickStockDropdowns = async ({ productTypeId } = {}) => {
-  try {
-    const params = stripEmptyParams({ productTypeId, _ts: Date.now() });
-    const { data } = await apiClient.get('quick-stock/dropdowns', { params });
-    return data;
-  } catch (err) {
-    throw parseApiError(err);
-  }
+const toDropdownTransportKey = ({ productTypeId } = {}) => {
+  const numericProductTypeId = Number(productTypeId);
+  return `productType:${Number.isFinite(numericProductTypeId) && numericProductTypeId > 0 ? numericProductTypeId : "all"}`;
+};
+
+export const getQuickStockDropdowns = ({ productTypeId } = {}) => {
+  const requestKey = toDropdownTransportKey({ productTypeId });
+  const existingRequest = dropdownTransportInFlight.get(requestKey);
+  if (existingRequest) return existingRequest;
+
+  const requestPromise = (async () => {
+    try {
+      const params = stripEmptyParams({ productTypeId, _ts: Date.now() });
+      const { data } = await apiClient.get('quick-stock/dropdowns', { params });
+      return data;
+    } catch (err) {
+      throw parseApiError(err);
+    } finally {
+      if (dropdownTransportInFlight.get(requestKey) === requestPromise) {
+        dropdownTransportInFlight.delete(requestKey);
+      }
+    }
+  })();
+
+  dropdownTransportInFlight.set(requestKey, requestPromise);
+  return requestPromise;
 };
 
 export const searchQuickStockProducts = async (filters = {}) => {
@@ -155,6 +175,8 @@ export const deleteQuickStockOperationalProduct = async (id) => {
 export const commitQuickStockExistingIntake = async (payload) => {
   return commitQuickStockExistingIntakeApi(payload);
 };
+
+export const __resetQuickStockDropdownTransportForTest = () => dropdownTransportInFlight.clear();
 
 export default {
   getQuickStockDropdowns,

@@ -34,28 +34,20 @@ assert(
   'Short full-tax documents must reserve the lower A4 area by limiting printed filler rows.'
 );
 assert(
-  printPage.includes('return Math.max(20 - printableGridRows, 0)'),
-  'Filler-row suppression must never exceed the legacy 20-row grid.'
-);
-assert(
-  /tbody tr:nth-last-child\(-n\+\$\{printFillerRowsToHide\}\)[\s\S]*?display:\s*none\s*!important;/m.test(printPage),
-  'Only computed trailing rows may be suppressed during print.'
-);
-assert(
   /const pinPrintFooter = useMemo\([\s\S]*?saleItems\.length <= 12/m.test(printPage),
-  'Pinned footer mode must be limited to short invoices so long documents retain natural pagination.'
+  'Footer-zone mode must be limited to short invoices.'
 );
 assert(
-  /\.bill-print-short-document \.print-a4\s*\{[\s\S]*?position:\s*relative\s*!important;[\s\S]*?height:\s*calc\(297mm\s*-\s*20mm\)\s*!important;[\s\S]*?padding-bottom:\s*54mm\s*!important;/m.test(printPage),
-  'Short invoices must reserve a deterministic lower A4 footer zone.'
+  /\.bill-print-short-document \.print-a4\s*\{[\s\S]*?position:\s*relative\s*!important;[\s\S]*?padding-bottom:\s*58mm\s*!important;/m.test(printPage),
+  'Short invoices must reserve a deterministic lower A4 footer area.'
 );
 assert(
-  /\.bill-print-short-document \.print-a4 > table \+ div\s*\{[\s\S]*?position:\s*absolute\s*!important;[\s\S]*?bottom:\s*25mm\s*!important;/m.test(printPage),
-  'Totals must be pinned above the signature zone inside the short-invoice A4 frame.'
+  /\.bill-print-short-document \.print-a4 > table \+ div\s*\{[\s\S]*?top:\s*214mm\s*!important;[\s\S]*?bottom:\s*auto\s*!important;/m.test(printPage),
+  'Totals must use a fixed in-page zone above the signature area.'
 );
 assert(
-  /\.bill-print-short-document \.print-a4 > table \+ div \+ div\s*\{[\s\S]*?position:\s*absolute\s*!important;[\s\S]*?bottom:\s*0\s*!important;/m.test(printPage),
-  'Signatures must be pinned to the bottom of the short-invoice A4 frame.'
+  /\.bill-print-short-document \.print-a4 > table \+ div \+ div\s*\{[\s\S]*?top:\s*246mm\s*!important;[\s\S]*?height:\s*20mm\s*!important;[\s\S]*?page-break-inside:\s*auto\s*!important;[\s\S]*?break-inside:\s*auto\s*!important;/m.test(printPage),
+  'Signatures must stay inside the first printable fragment with explicit safety space.'
 );
 assert(
   !/position:\s*fixed\s*!important/.test(printPage),

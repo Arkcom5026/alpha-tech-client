@@ -8,6 +8,7 @@ const clampLogoSize = (value) => {
 
 const getHeaderScopeClassName = (style = {}) => [
   'store-document-header-scope',
+  style.showLogo !== false && style.logoUrl ? 'store-document-header-has-logo' : '',
   `store-document-header-logo-${style.logoPosition || 'left'}`,
   `store-document-header-text-${style.textAlign || 'left'}`,
   `store-document-header-name-${style.storeNameSize || 'md'}`,
@@ -21,6 +22,9 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
   const headerNote = String(headerStyle?.headerNote || '').trim()
   const headerNoteCss = JSON.stringify(headerNote)
   const logoSize = clampLogoSize(headerStyle?.logoSize)
+  const logoImage = headerStyle?.showLogo !== false && headerStyle?.logoUrl
+    ? `url(${JSON.stringify(String(headerStyle.logoUrl))})`
+    : 'none'
 
   return (
     <div
@@ -28,6 +32,7 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
       style={{
         '--store-document-header-note': headerNoteCss,
         '--store-document-header-logo-size': `${logoSize}px`,
+        '--store-document-header-logo-image': logoImage,
       }}
     >
       <style>{`
@@ -62,6 +67,61 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
         .store-document-header-hide-phone .print-a4 > div:first-child > div:first-child > div > p:nth-of-type(2) { display: none; }
         .store-document-header-hide-tax-id .print-a4 > div:first-child > div:first-child > div > p:nth-of-type(3) { display: none; }
         .store-document-header-scope .print-a4 > div:first-child > div:first-child > div::after {
+          content: var(--store-document-header-note);
+          display: ${headerNote ? 'block' : 'none'};
+          margin-top: 2px;
+          white-space: pre-wrap;
+        }
+
+        /* Delivery Note A4 adapter: keep its proven pagination/layout intact while
+           applying the same store-scoped document header authority. */
+        .store-document-header-scope .dn-print-page > div:first-child > div:first-child {
+          box-sizing: border-box;
+          position: relative;
+          text-align: left;
+        }
+        .store-document-header-has-logo .dn-print-page > div:first-child > div:first-child::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          width: var(--store-document-header-logo-size);
+          height: var(--store-document-header-logo-size);
+          background-image: var(--store-document-header-logo-image);
+          background-position: center;
+          background-repeat: no-repeat;
+          background-size: contain;
+        }
+        .store-document-header-has-logo.store-document-header-logo-left .dn-print-page > div:first-child > div:first-child {
+          min-height: var(--store-document-header-logo-size);
+          padding-left: calc(var(--store-document-header-logo-size) + 10px);
+        }
+        .store-document-header-has-logo.store-document-header-logo-left .dn-print-page > div:first-child > div:first-child::before {
+          left: 0;
+        }
+        .store-document-header-has-logo.store-document-header-logo-right .dn-print-page > div:first-child > div:first-child {
+          min-height: var(--store-document-header-logo-size);
+          padding-right: calc(var(--store-document-header-logo-size) + 10px);
+        }
+        .store-document-header-has-logo.store-document-header-logo-right .dn-print-page > div:first-child > div:first-child::before {
+          right: 0;
+        }
+        .store-document-header-has-logo.store-document-header-logo-center .dn-print-page > div:first-child > div:first-child {
+          padding-top: calc(var(--store-document-header-logo-size) + 6px);
+        }
+        .store-document-header-has-logo.store-document-header-logo-center .dn-print-page > div:first-child > div:first-child::before {
+          left: 50%;
+          transform: translateX(-50%);
+        }
+        .store-document-header-text-center .dn-print-page > div:first-child > div:first-child { text-align: center; }
+        .store-document-header-text-right .dn-print-page > div:first-child > div:first-child { text-align: right; }
+        .store-document-header-name-sm .dn-print-page > div:first-child h2 { font-size: 13px !important; }
+        .store-document-header-name-md .dn-print-page > div:first-child h2 { font-size: 16px !important; }
+        .store-document-header-name-lg .dn-print-page > div:first-child h2 { font-size: 20px !important; }
+        .store-document-header-name-xl .dn-print-page > div:first-child h2 { font-size: 24px !important; }
+        .store-document-header-hide-address .dn-print-page > div:first-child > div:first-child > p:nth-of-type(1) { display: none; }
+        .store-document-header-hide-phone .dn-print-page > div:first-child > div:first-child > p:nth-of-type(2) { display: none; }
+        .store-document-header-hide-tax-id .dn-print-page > div:first-child > div:first-child > p:nth-of-type(3) { display: none; }
+        .store-document-header-scope .dn-print-page > div:first-child > div:first-child::after {
           content: var(--store-document-header-note);
           display: ${headerNote ? 'block' : 'none'};
           margin-top: 2px;

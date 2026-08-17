@@ -1,3 +1,5 @@
+import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig';
+
 export const normalizeDeliveryNoteDocumentText = (value) => {
   if (typeof value !== 'string') return '';
   return value.trim();
@@ -174,11 +176,17 @@ export const buildDeliveryNoteBranchAddress = (branch = {}) => {
 
 export const buildDeliveryNoteBranchConfig = (sale) => {
   const branch = sale?.branch || {};
-
-  return {
+  const fullAddress = buildDeliveryNoteBranchAddress(branch);
+  const legacyConfig = {
     branchName: branch.companyName || branch.name || '-',
-    address: buildDeliveryNoteBranchAddress(branch),
+    address: fullAddress,
     phone: branch.phone || '-',
     taxId: branch.taxId || sale?.branchTaxId || '-',
   };
+
+  return buildStoreDocumentHeader({
+    branch: { ...branch, fullAddress },
+    documentType: 'DELIVERY_NOTE',
+    legacyConfig,
+  });
 };

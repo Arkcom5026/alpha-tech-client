@@ -113,6 +113,17 @@ const PrintBillPageFullTax = () => {
 
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
+  // Keep the main-branch 20-row preview unchanged. On paper only, trim the
+  // trailing visual filler rows down to a 16-row grid so totals/signatures fit
+  // inside the 190 x 277 mm printable box created by @page margin: 10mm.
+  // The suppression count is capped by the raw item count, so real sale rows
+  // are never hidden even when receipt grouping produces fewer display rows.
+  const printFillerRowsToHide = useMemo(() => {
+    const itemCount = Array.isArray(saleItems) ? saleItems.length : 0
+    const printableGridRows = Math.max(16, itemCount)
+    return Math.max(20 - printableGridRows, 0)
+  }, [saleItems])
+
   if (loading) {
     return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
   }
@@ -129,6 +140,26 @@ const PrintBillPageFullTax = () => {
     <>
       <style>{`
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
+
+        @media print {
+          /*
+           * BillLayoutFullTax owns @page { size:A4; margin:10mm }. Override only
+           * the legacy physical-sheet shell so it fits that printable box. The
+           * screen preview and all document/tax logic remain main-branch baseline.
+           */
+          .bill-print-root .print-a4 {
+            width: 190mm !important;
+            max-width: 190mm !important;
+            min-height: 277mm !important;
+            height: auto !important;
+            box-sizing: border-box !important;
+          }
+
+          /* These are trailing visual fillers from the legacy 20-row grid. */
+          .bill-print-root .print-a4 tbody tr:nth-last-child(-n+${printFillerRowsToHide}) {
+            display: none !important;
+          }
+        }
       `}</style>
 
       <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">

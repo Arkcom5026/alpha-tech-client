@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FileText, Image, Info, LayoutTemplate, Save, Type } from 'lucide-react';
+import { FileText, Image, Info, LayoutTemplate, RotateCcw, Save, Type } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 
 import { feedback } from '@/design-system/feedback';
 import { useAuthStore } from '@/features/auth/store/authStore';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import {
+  DOCUMENT_LOGO_SIZE_DEFAULT,
+  DOCUMENT_LOGO_SIZE_MAX,
+  DOCUMENT_LOGO_SIZE_MIN,
   buildDocumentHeaderConfigFromForm,
+  normalizeLogoSize,
   projectDocumentHeaderFormDefaults,
 } from '@/features/branch/documentHeader/documentHeaderConfig';
 import StorefrontMediaUploadField from '@/features/storeExperience/components/StorefrontMediaUploadField';
@@ -30,13 +34,6 @@ const nameSizeClass = {
   md: 'text-lg',
   lg: 'text-xl',
   xl: 'text-2xl',
-};
-
-const logoSizeClass = {
-  sm: 'h-10 w-10',
-  md: 'h-14 w-14',
-  lg: 'h-[72px] w-[72px]',
-  xl: 'h-[88px] w-[88px]',
 };
 
 const DocumentFormatSettingsPage = () => {
@@ -99,12 +96,16 @@ const DocumentFormatSettingsPage = () => {
   const previewLogo = form.headerLogoUrl?.trim();
   const previewAlign = ['left', 'center', 'right'].includes(form.headerTextAlign) ? form.headerTextAlign : 'left';
   const previewLogoPosition = ['left', 'center', 'right'].includes(form.headerLogoPosition) ? form.headerLogoPosition : 'left';
-  const previewLogoSize = ['sm', 'md', 'lg', 'xl'].includes(form.headerLogoSize) ? form.headerLogoSize : 'md';
+  const previewLogoSize = normalizeLogoSize(form.headerLogoSize);
 
   const handleLogoUploaded = (url) => {
     setValue('headerLogoUrl', url, { shouldDirty: true, shouldValidate: true });
     setValue('headerShowLogo', true, { shouldDirty: true });
     feedback.actionSuccess('เลือกโลโก้สำหรับเอกสารเรียบร้อยแล้ว', 'document-format-logo-selected');
+  };
+
+  const resetLogoSize = () => {
+    setValue('headerLogoSize', DOCUMENT_LOGO_SIZE_DEFAULT, { shouldDirty: true, shouldValidate: true });
   };
 
   const onSubmit = async (data) => {
@@ -174,7 +175,22 @@ const DocumentFormatSettingsPage = () => {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2"><label className={labelClassName}>URL โลโก้ (ทางเลือก)</label><input type="url" {...register('headerLogoUrl')} className={inputClassName} placeholder="https://..." /></div>
               <div><label className={labelClassName}>ตำแหน่งโลโก้</label><select {...register('headerLogoPosition')} className={inputClassName}><option value="left">ซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ขวา</option></select></div>
-              <div><label className={labelClassName}>ขนาดโลโก้</label><select {...register('headerLogoSize')} className={inputClassName}><option value="sm">เล็ก · 40 px</option><option value="md">มาตรฐาน · 56 px</option><option value="lg">ใหญ่ · 72 px</option><option value="xl">ใหญ่มาก · 88 px</option></select></div>
+              <div>
+                <label className={labelClassName}>ขนาดโลโก้ (px)</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min={DOCUMENT_LOGO_SIZE_MIN}
+                    max={DOCUMENT_LOGO_SIZE_MAX}
+                    step="1"
+                    {...register('headerLogoSize', { valueAsNumber: true })}
+                    className={inputClassName}
+                    aria-label="ขนาดโลโก้เป็นพิกเซล"
+                  />
+                  <button type="button" onClick={resetLogoSize} className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700" title="คืนค่ามาตรฐาน 56 px"><RotateCcw className="h-3.5 w-3.5" />56</button>
+                </div>
+                <p className="mt-1 text-[10px] font-medium text-slate-400">กำหนดได้ {DOCUMENT_LOGO_SIZE_MIN}–{DOCUMENT_LOGO_SIZE_MAX} px · มาตรฐาน {DOCUMENT_LOGO_SIZE_DEFAULT} px</p>
+              </div>
               <div className="md:col-span-2"><label className={labelClassName}>แนวข้อความหัวเอกสาร</label><select {...register('headerTextAlign')} className={inputClassName}><option value="left">ชิดซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ชิดขวา</option></select></div>
             </div>
           </section>
@@ -213,7 +229,10 @@ const DocumentFormatSettingsPage = () => {
             <div className="aspect-[1/1.414] min-h-[480px] overflow-hidden rounded-xl border border-slate-200 bg-white p-7 shadow-inner">
               <div className={previewLogoPosition === 'center' ? 'flex flex-col items-center gap-3' : previewLogoPosition === 'right' ? 'flex flex-row-reverse items-start justify-between gap-4' : 'flex items-start gap-4'}>
                 {form.headerShowLogo && (
-                  <div className={`flex ${logoSizeClass[previewLogoSize] || logoSizeClass.md} shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400`}>
+                  <div
+                    className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400"
+                    style={{ width: previewLogoSize, height: previewLogoSize }}
+                  >
                     {previewLogo ? <img src={previewLogo} alt="ตัวอย่างโลโก้" className="h-full w-full object-contain" /> : 'LOGO'}
                   </div>
                 )}

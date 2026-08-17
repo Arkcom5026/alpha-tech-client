@@ -1,9 +1,14 @@
 import React from 'react'
 
+const clampLogoSize = (value) => {
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return 56
+  return Math.min(120, Math.max(24, Math.round(parsed)))
+}
+
 const getHeaderScopeClassName = (style = {}) => [
   'store-document-header-scope',
   `store-document-header-logo-${style.logoPosition || 'left'}`,
-  `store-document-header-logo-size-${style.logoSize || 'md'}`,
   `store-document-header-text-${style.textAlign || 'left'}`,
   `store-document-header-name-${style.storeNameSize || 'md'}`,
   style.showAddress === false ? 'store-document-header-hide-address' : '',
@@ -15,11 +20,15 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
   const headerStyle = config?.headerStyle || {}
   const headerNote = String(headerStyle?.headerNote || '').trim()
   const headerNoteCss = JSON.stringify(headerNote)
+  const logoSize = clampLogoSize(headerStyle?.logoSize)
 
   return (
     <div
       className={getHeaderScopeClassName(headerStyle)}
-      style={{ '--store-document-header-note': headerNoteCss }}
+      style={{
+        '--store-document-header-note': headerNoteCss,
+        '--store-document-header-logo-size': `${logoSize}px`,
+      }}
     >
       <style>{`
         .store-document-header-scope .print-a4 > div:first-child > div:first-child > div {
@@ -38,32 +47,11 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
         .store-document-header-logo-right .print-a4 > div:first-child > div:first-child {
           flex-direction: row-reverse;
         }
-        .store-document-header-logo-size-sm .print-a4 > div:first-child > div:first-child > img {
-          width: 40px !important;
-          height: 40px !important;
-          max-width: 40px !important;
-          max-height: 40px !important;
-          object-fit: contain;
-        }
-        .store-document-header-logo-size-md .print-a4 > div:first-child > div:first-child > img {
-          width: 56px !important;
-          height: 56px !important;
-          max-width: 56px !important;
-          max-height: 56px !important;
-          object-fit: contain;
-        }
-        .store-document-header-logo-size-lg .print-a4 > div:first-child > div:first-child > img {
-          width: 72px !important;
-          height: 72px !important;
-          max-width: 72px !important;
-          max-height: 72px !important;
-          object-fit: contain;
-        }
-        .store-document-header-logo-size-xl .print-a4 > div:first-child > div:first-child > img {
-          width: 88px !important;
-          height: 88px !important;
-          max-width: 88px !important;
-          max-height: 88px !important;
+        .store-document-header-scope .print-a4 > div:first-child > div:first-child > img {
+          width: var(--store-document-header-logo-size) !important;
+          height: var(--store-document-header-logo-size) !important;
+          max-width: var(--store-document-header-logo-size) !important;
+          max-height: var(--store-document-header-logo-size) !important;
           object-fit: contain;
         }
         .store-document-header-name-sm .print-a4 > div:first-child h2 { font-size: 13px !important; }

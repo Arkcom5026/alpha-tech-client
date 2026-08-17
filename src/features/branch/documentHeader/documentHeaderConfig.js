@@ -1,12 +1,15 @@
 const HEADER_ALIGNMENTS = new Set(['left', 'center', 'right']);
-const HEADER_LOGO_SIZES = new Set(['sm', 'md', 'lg', 'xl']);
 const HEADER_NAME_SIZES = new Set(['sm', 'md', 'lg', 'xl']);
+const DOCUMENT_LOGO_SIZE_MIN = 24;
+const DOCUMENT_LOGO_SIZE_MAX = 120;
+const DOCUMENT_LOGO_SIZE_DEFAULT = 56;
+const LEGACY_LOGO_SIZE_PIXELS = Object.freeze({ sm: 40, md: 56, lg: 72, xl: 88 });
 
 const DEFAULT_DOCUMENT_HEADER_PROFILE = Object.freeze({
   showLogo: true,
   logoUrl: '',
   logoPosition: 'left',
-  logoSize: 'md',
+  logoSize: DOCUMENT_LOGO_SIZE_DEFAULT,
   textAlign: 'left',
   showStoreName: true,
   storeName: '',
@@ -24,10 +27,24 @@ const DEFAULT_DOCUMENT_HEADER_PROFILE = Object.freeze({
 const cleanString = (value) => (value == null ? '' : String(value).trim());
 const cleanBoolean = (value, fallback) => (typeof value === 'boolean' ? value : fallback);
 
+const normalizeLogoSize = (value, fallback = DOCUMENT_LOGO_SIZE_DEFAULT) => {
+  const legacy = LEGACY_LOGO_SIZE_PIXELS[cleanString(value).toLowerCase()];
+  const raw = legacy ?? Number(value);
+  if (Number.isFinite(raw)) {
+    return Math.min(DOCUMENT_LOGO_SIZE_MAX, Math.max(DOCUMENT_LOGO_SIZE_MIN, Math.round(raw)));
+  }
+
+  const fallbackLegacy = LEGACY_LOGO_SIZE_PIXELS[cleanString(fallback).toLowerCase()];
+  const fallbackNumber = fallbackLegacy ?? Number(fallback);
+  if (Number.isFinite(fallbackNumber)) {
+    return Math.min(DOCUMENT_LOGO_SIZE_MAX, Math.max(DOCUMENT_LOGO_SIZE_MIN, Math.round(fallbackNumber)));
+  }
+  return DOCUMENT_LOGO_SIZE_DEFAULT;
+};
+
 const normalizeHeaderProfile = (source = {}, fallback = DEFAULT_DOCUMENT_HEADER_PROFILE) => {
   const safe = source && typeof source === 'object' && !Array.isArray(source) ? source : {};
   const logoPosition = cleanString(safe.logoPosition).toLowerCase();
-  const logoSize = cleanString(safe.logoSize).toLowerCase();
   const textAlign = cleanString(safe.textAlign).toLowerCase();
   const storeNameSize = cleanString(safe.storeNameSize).toLowerCase();
 
@@ -35,7 +52,7 @@ const normalizeHeaderProfile = (source = {}, fallback = DEFAULT_DOCUMENT_HEADER_
     showLogo: cleanBoolean(safe.showLogo, fallback.showLogo),
     logoUrl: cleanString(safe.logoUrl) || fallback.logoUrl,
     logoPosition: HEADER_ALIGNMENTS.has(logoPosition) ? logoPosition : fallback.logoPosition,
-    logoSize: HEADER_LOGO_SIZES.has(logoSize) ? logoSize : fallback.logoSize,
+    logoSize: normalizeLogoSize(safe.logoSize, fallback.logoSize),
     textAlign: HEADER_ALIGNMENTS.has(textAlign) ? textAlign : fallback.textAlign,
     showStoreName: cleanBoolean(safe.showStoreName, fallback.showStoreName),
     storeName: cleanString(safe.storeName) || fallback.storeName,
@@ -103,7 +120,7 @@ const projectDocumentHeaderFormDefaults = (branch) => {
     headerShowLogo: profile.showLogo,
     headerLogoUrl: profile.logoUrl,
     headerLogoPosition: profile.logoPosition,
-    headerLogoSize: profile.logoSize,
+    headerLogoSize: normalizeLogoSize(profile.logoSize),
     headerTextAlign: profile.textAlign,
     headerShowStoreName: profile.showStoreName,
     headerStoreName: profile.storeName,
@@ -129,9 +146,7 @@ const buildDocumentHeaderConfigFromForm = (data = {}, currentConfig = null) => {
       logoPosition: HEADER_ALIGNMENTS.has(cleanString(data.headerLogoPosition).toLowerCase())
         ? cleanString(data.headerLogoPosition).toLowerCase()
         : 'left',
-      logoSize: HEADER_LOGO_SIZES.has(cleanString(data.headerLogoSize).toLowerCase())
-        ? cleanString(data.headerLogoSize).toLowerCase()
-        : 'md',
+      logoSize: normalizeLogoSize(data.headerLogoSize),
       textAlign: HEADER_ALIGNMENTS.has(cleanString(data.headerTextAlign).toLowerCase())
         ? cleanString(data.headerTextAlign).toLowerCase()
         : 'left',
@@ -158,12 +173,16 @@ const buildDocumentHeaderConfigFromForm = (data = {}, currentConfig = null) => {
 
 export {
   DEFAULT_DOCUMENT_HEADER_PROFILE,
+  DOCUMENT_LOGO_SIZE_DEFAULT,
+  DOCUMENT_LOGO_SIZE_MAX,
+  DOCUMENT_LOGO_SIZE_MIN,
   HEADER_ALIGNMENTS,
-  HEADER_LOGO_SIZES,
   HEADER_NAME_SIZES,
+  LEGACY_LOGO_SIZE_PIXELS,
   buildDocumentHeaderConfigFromForm,
   buildStoreDocumentHeader,
   normalizeHeaderProfile,
+  normalizeLogoSize,
   projectDocumentHeaderFormDefaults,
   resolveDocumentHeaderProfile,
 };

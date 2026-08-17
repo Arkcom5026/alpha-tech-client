@@ -113,6 +113,15 @@ const PrintBillPageFullTax = () => {
 
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
+  // BillLayoutFullTax keeps a legacy 20-row visual grid by adding filler rows.
+  // On paper, reserve the lower A4 area for totals/signatures while never hiding
+  // actual document lines. For short documents this removes only trailing fillers.
+  const printFillerRowsToHide = useMemo(() => {
+    const itemCount = Array.isArray(saleItems) ? saleItems.length : 0
+    const printableGridRows = Math.max(12, itemCount)
+    return Math.max(20 - printableGridRows, 0)
+  }, [saleItems])
+
   if (loading) {
     return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
   }
@@ -152,6 +161,15 @@ const PrintBillPageFullTax = () => {
             min-height: calc(297mm - 20mm) !important;
             height: auto !important;
             box-sizing: border-box !important;
+          }
+
+          /*
+           * The layout's trailing rows are visual fillers, not sale lines.
+           * Hide only the computed number of trailing fillers on paper so the
+           * totals and signature no-break blocks stay on the first A4 sheet.
+           */
+          .bill-print-root .print-a4 tbody tr:nth-last-child(-n+${printFillerRowsToHide}) {
+            display: none !important;
           }
         }
       `}</style>

@@ -6,6 +6,10 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 import { useAuthStore } from '@/features/auth/store/authStore.js';
 import BranchListWorkspace from '@/features/branch/workspace/BranchListWorkspace';
 import {
+  buildDocumentHeaderConfigFromForm,
+  projectDocumentHeaderFormDefaults,
+} from '@/features/branch/documentHeader/documentHeaderConfig';
+import {
   filterBranchesForShop,
   isBranchSuperAdmin,
   projectBranchEditDefaults,
@@ -42,10 +46,12 @@ const ListBranchPage = () => {
   const openEditModal = (shopData) => {
     if (saving || savingRef.current) return;
     setSelectedShop(shopData);
-    const defaults = projectBranchEditDefaults(shopData);
-    setValue('name', defaults.name);
-    setValue('phone', defaults.phone);
-    setValue('address', defaults.address);
+
+    const defaults = {
+      ...projectBranchEditDefaults(shopData),
+      ...projectDocumentHeaderFormDefaults(shopData),
+    };
+    Object.entries(defaults).forEach(([key, value]) => setValue(key, value));
     setIsModalOpen(true);
   };
 
@@ -57,17 +63,18 @@ const ListBranchPage = () => {
       name: data.name,
       phone: data.phone,
       address: data.address,
+      documentHeaderConfig: buildDocumentHeaderConfigFromForm(data, selectedShop?.documentHeaderConfig),
     };
 
     savingRef.current = true;
     setSaving(true);
     try {
       await updateBranch(branchId, payload);
-      feedback.actionSuccess('แก้ไขข้อมูลร้าน/บริษัทเรียบร้อยแล้ว', 'branch-settings-update-success');
+      feedback.actionSuccess('บันทึกข้อมูลร้านและรูปแบบหัวเอกสารเรียบร้อยแล้ว', 'branch-settings-update-success');
       setIsModalOpen(false);
       setSelectedShop(null);
     } catch (error) {
-      feedback.actionError(error, 'เกิดข้อผิดพลาดในการบันทึกข้อมูล', 'branch-settings-update-error');
+      feedback.actionError(error, 'เกิดข้อผิดพลาดในการบันทึกข้อมูลร้านหรือรูปแบบหัวเอกสาร', 'branch-settings-update-error');
     } finally {
       savingRef.current = false;
       setSaving(false);

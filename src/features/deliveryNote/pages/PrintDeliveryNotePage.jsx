@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope';
 import {
   loadSaleDocument,
   useSaleDocumentLineEditor,
@@ -99,19 +100,21 @@ const PrintDeliveryNotePage = () => {
   }
 
   return (
-    <DeliveryNotePrintShell
-      sale={currentSale}
-      hideDate={hideDate}
-      setHideDate={setHideDate}
-      saleItems={preparedSaleItems}
-      config={preparedConfig}
-      editingLineKey={editingLineKey}
-      lineDrafts={lineDrafts}
-      savingLineKey={savingLineKey}
-      onToggleDocumentLineEdit={documentLineActions.toggle}
-      onChangeDocumentLineDraft={documentLineActions.change}
-      onSaveDocumentLine={documentLineActions.save}
-    />
+    <StoreDocumentHeaderScope config={preparedConfig}>
+      <DeliveryNotePrintShell
+        sale={currentSale}
+        hideDate={hideDate}
+        setHideDate={setHideDate}
+        saleItems={preparedSaleItems}
+        config={preparedConfig}
+        editingLineKey={editingLineKey}
+        lineDrafts={lineDrafts}
+        savingLineKey={savingLineKey}
+        onToggleDocumentLineEdit={documentLineActions.toggle}
+        onChangeDocumentLineDraft={documentLineActions.change}
+        onSaveDocumentLine={documentLineActions.save}
+      />
+    </StoreDocumentHeaderScope>
   );
 };
 

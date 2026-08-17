@@ -148,8 +148,9 @@ const DeliveryCreditSettlementCreatePage = () => {
     return map;
   }, new Map()), [selectedLines]);
   const balance = Number(workspace?.balance?.availableAmount || 0);
+  const balanceReady = Boolean(workspace) && !loadingCredits;
   const overBalance = selectedTotal > balance + 0.001;
-  const canSubmit = selectedLines.length > 0 && selectedTotal > 0 && !overBalance && !saving;
+  const canSubmit = balanceReady && selectedLines.length > 0 && selectedTotal > 0 && !overBalance && !saving;
 
   const submit = async () => {
     if (!canSubmit || !customerSearch.selectedCustomer || savingRef.current) return;
@@ -211,7 +212,14 @@ const DeliveryCreditSettlementCreatePage = () => {
       {customerSearch.selectedCustomer && (
         <section className="grid gap-3 md:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-white p-4"><div className="text-xs text-slate-500">ลูกค้า</div><div className="mt-1 font-bold text-slate-900">{customerLabel(customerSearch.selectedCustomer)}</div></div>
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><div className="flex items-center gap-2 text-sm font-semibold text-emerald-800"><WalletCards className="h-4 w-4" /> Customer Money พร้อมใช้</div><div className="mt-1 text-3xl font-bold text-emerald-950">฿{money(balance)}</div></div>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800"><WalletCards className="h-4 w-4" /> Customer Money พร้อมใช้</div>
+            {loadingCredits
+              ? <div className="mt-1 text-sm font-semibold text-emerald-800">กำลังตรวจสอบยอดพร้อมใช้...</div>
+              : workspace
+                ? <div className="mt-1 text-3xl font-bold text-emerald-950">฿{money(balance)}</div>
+                : <div className="mt-1 text-sm font-semibold text-slate-500">ยังไม่มีข้อมูลยอดพร้อมใช้</div>}
+          </div>
         </section>
       )}
 

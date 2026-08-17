@@ -9,12 +9,12 @@ import BillShortTaxPrintState from '@/features/bill/shortTax/print/workspace/com
 import BillShortTaxPrintToolbar from '@/features/bill/shortTax/print/workspace/components/BillShortTaxPrintToolbar'
 import { useBillShortTaxPrintRuntime } from '@/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime'
 import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
+import { isConsolidatedDocumentSource } from '@/features/combinedBilling/adapters/consolidatedDocumentAdapter'
 
 const PrintBillPageShortTax = () => {
   const params = useParams()
   const navigate = useNavigate()
   const saleId = params.id || params.saleId
-  const saleRoute = `/${params.shopSlug || 'advancetech'}/pos/sales/sale`
 
   const [searchParams] = useSearchParams()
 
@@ -31,6 +31,11 @@ const PrintBillPageShortTax = () => {
     () => searchParams.get('sourceId') || saleId,
     [saleId, searchParams]
   )
+  const returnRoute = useMemo(() => (
+    isConsolidatedDocumentSource(sourceType)
+      ? `/${params.shopSlug || 'advancetech'}/pos/sales/bill`
+      : `/${params.shopSlug || 'advancetech'}/pos/sales/sale`
+  ), [params.shopSlug, sourceType])
 
   const autoPrint = useMemo(() => {
     const value = String(searchParams.get('autoPrint') || '').toLowerCase()
@@ -75,9 +80,9 @@ const PrintBillPageShortTax = () => {
     }
   }, [reloadForPrint, reset])
 
-  const returnToSale = useCallback(() => {
-    navigate(saleRoute, { replace: true })
-  }, [navigate, saleRoute])
+  const returnFromPrint = useCallback(() => {
+    navigate(returnRoute, { replace: true })
+  }, [navigate, returnRoute])
 
   const printRuntime = useBillShortTaxPrintRuntime({
     autoPrint,
@@ -85,7 +90,7 @@ const PrintBillPageShortTax = () => {
     saleItemsCount: saleItems?.length || 0,
     paymentId: payment?.id || null,
     config,
-    returnToSale,
+    returnToSale: returnFromPrint,
   })
 
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
@@ -111,7 +116,7 @@ const PrintBillPageShortTax = () => {
     <>
       <BillShortTaxPrintToolbar
         autoPrint={autoPrint}
-        onBack={returnToSale}
+        onBack={returnFromPrint}
         onPrint={printRuntime.printAndReturnToSale}
       />
       <BillShortTaxPrintShell

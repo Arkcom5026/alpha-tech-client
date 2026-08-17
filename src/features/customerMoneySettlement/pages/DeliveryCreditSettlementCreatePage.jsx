@@ -16,7 +16,7 @@ const DeliveryCreditSettlementCreatePage = () => {
   const customerSearch = useCustomerMoneyReceiveCustomerSearch();
   const submitKeyRef = useRef(null);
   const savingRef = useRef(false);
-  const mountedRef = useRef(true);
+  const mountedRef = useRef(false);
   const creditContextRef = useRef(null);
   const creditRequestRef = useRef(0);
   const createRequestRef = useRef(0);
@@ -27,10 +27,18 @@ const DeliveryCreditSettlementCreatePage = () => {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
-    creditRequestRef.current += 1;
-    createRequestRef.current += 1;
+  useEffect(() => {
+    // React StrictMode intentionally runs effect setup/cleanup/setup again in
+    // development. Reset the mounted authority on every setup so async results
+    // from the active setup can settle the workspace instead of being treated
+    // as permanently stale after the first StrictMode cleanup.
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+      creditRequestRef.current += 1;
+      createRequestRef.current += 1;
+    };
   }, []);
 
   const invalidateSubmitKey = () => {
@@ -243,25 +251,25 @@ const DeliveryCreditSettlementCreatePage = () => {
                     </button>
                   </div>
                 </header>
-                <div className="divide-y divide-slate-100">
-                  {sale.lines.map((line) => {
-                    const key = lineKey(sale.id, line);
-                    const remaining = Number(line.remainingAmount ?? line.lineAmount);
-                    return <div key={key} className="grid gap-3 px-4 py-3 md:grid-cols-[1fr_150px_160px] md:items-center"><div><div className="font-medium text-slate-900">{line.description}</div><div className="text-xs text-slate-500">{line.lineType} · จำนวน {line.quantity} · มูลค่า ฿{money(line.lineAmount)} · เคยตัด ฿{money(line.appliedAmount)}</div></div><div className="text-right text-sm font-semibold text-rose-700">คงเหลือ ฿{money(remaining)}</div><input disabled={saving} type="number" min="0" max={Math.min(remaining, sale.outstandingAmount)} step="0.01" value={selected[key]?.amount ?? ''} onChange={(e) => setLineAmount(sale, line, e.target.value)} placeholder="ยอดที่จะตัด" className="h-10 rounded-lg border border-slate-300 px-3 text-right disabled:bg-slate-100" /></div>;
-                  })}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead><tr className="border-b bg-white text-left text-xs text-slate-500"><th className="px-4 py-2">รายการ</th><th className="px-4 py-2 text-right">ยอดรายการ</th><th className="px-4 py-2 text-right">ตัดแล้ว</th><th className="px-4 py-2 text-right">คงเหลือ</th><th className="px-4 py-2 text-right">ตัดครั้งนี้</th></tr></thead>
+                    <tbody>{sale.lines.map((line) => {
+                      const key = lineKey(sale.id, line);
+                      return <tr key={key} className="border-b last:border-0"><td className="px-4 py-3"><div className="font-medium text-slate-900">{line.description}</div><div className="text-xs text-slate-500">{line.lineType} · จำนวน {line.quantity}</div></td><td className="px-4 py-3 text-right">฿{money(line.lineAmount)}</td><td className="px-4 py-3 text-right">฿{money(line.appliedAmount)}</td><td className="px-4 py-3 text-right font-semibold text-rose-700">฿{money(line.remainingAmount)}</td><td className="px-4 py-3 text-right"><input type="number" min="0" max={line.remainingAmount} step="0.01" disabled={saving || balance <= 0} value={selected[key]?.amount || ''} onChange={(e) => setLineAmount(sale, line, e.target.value)} className="w-32 rounded-lg border border-slate-300 px-2 py-1 text-right disabled:bg-slate-100" /></td></tr>;
+                    })}</tbody>
+                  </table>
                 </div>
               </article>
             );
           })}
-          <textarea disabled={saving} value={note} onChange={(e) => { invalidateSubmitKey(); setNote(e.target.value); }} maxLength={500} rows={3} placeholder="หมายเหตุการตัดยอด (ถ้ามี)" className="w-full rounded-xl border border-slate-300 p-3 disabled:bg-slate-100" />
-        </section>
-      )}
 
-      {workspace && (
-        <section className="sticky bottom-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div><div className="text-xs text-slate-500">ยอดที่เลือกตัดทั้งหมด</div><div className={`text-2xl font-bold ${overBalance ? 'text-rose-700' : 'text-indigo-800'}`}>฿{money(selectedTotal)}</div>{overBalance && <div className="text-xs text-rose-700">ยอดที่เลือกมากกว่า Customer Money ที่พร้อมใช้</div>}</div>
-            <button type="button" onClick={submit} disabled={!canSubmit} className="h-12 rounded-xl bg-indigo-700 px-6 font-semibold text-white disabled:bg-slate-300">{saving ? 'กำลังตัดยอด...' : 'ยืนยันตัดยอดใบส่งของ'}</button>
+          <div className="sticky bottom-3 rounded-2xl border border-slate-300 bg-white p-4 shadow-lg">
+            <div className="flex flex-wrap items-end gap-4">
+              <label className="min-w-[260px] flex-1 text-sm font-medium text-slate-700">หมายเหตุ<input value={note} disabled={saving} onChange={(e) => { invalidateSubmitKey(); setNote(e.target.value); }} className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 disabled:bg-slate-100" /></label>
+              <div className="text-right"><div className="text-xs text-slate-500">ยอดตัดครั้งนี้</div><div className="text-2xl font-bold text-slate-950">฿{money(selectedTotal)}</div><div className="text-xs text-slate-500">คงเหลือหลังตัด ฿{money(Math.max(0, balance - selectedTotal))}</div></div>
+              <button type="button" disabled={!canSubmit} onClick={submit} className="h-11 rounded-xl bg-indigo-700 px-5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">{saving ? 'กำลังบันทึก...' : 'บันทึกการตัดยอด'}</button>
+            </div>
           </div>
         </section>
       )}

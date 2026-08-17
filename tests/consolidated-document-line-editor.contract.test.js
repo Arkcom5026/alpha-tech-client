@@ -21,27 +21,28 @@ const assert = (condition, message) => {
 
 assert(
   api.includes('/combined-billing/consolidated-deliveries/${documentId}/document-lines/${lineId}')
-    && api.includes('{ description }'),
-  'Consolidated document lines must persist description through the dedicated line endpoint.'
+    && api.includes('{ documentPrefix, documentDescription, documentSuffix }'),
+  'Consolidated document lines must persist before/description/after presentation through the dedicated line endpoint.'
 );
 assert(
-  controller.includes('description = normalizeDocumentText(draft?.documentDescriptionRaw)')
-    && controller.includes('description,'),
-  'Consolidated mutation must derive its payload only from the document description draft.'
+  controller.includes('documentPrefix: normalizeDocumentText(draft?.documentPrefix)')
+    && controller.includes('documentDescription: normalizeDocumentText(draft?.documentDescriptionRaw)')
+    && controller.includes('documentSuffix: normalizeDocumentText(draft?.documentSuffix)'),
+  'Consolidated mutation must preserve the same before/description/after draft contract as SALE.'
 );
 assert(
-  !controller.includes('documentPrefix')
-    && !controller.includes('documentSuffix')
-    && !controller.includes('documentUnitPrice')
+  !controller.includes('documentUnitPrice')
     && !controller.includes('priceAdjustment')
     && !controller.includes('lineAmount'),
-  'Consolidated editing must not expose prefix/suffix or financial mutation fields.'
+  'Consolidated editing must not expose financial mutation fields.'
 );
 assert(
   adapter.includes('documentSourceLineId: Number(line.id)')
-    && adapter.includes("documentLineEditorMode: 'description'")
-    && adapter.includes("const rawDescription = line.description || ''"),
-  'Projected consolidated rows must retain persisted line identity and description-only editor mode.'
+    && adapter.includes("documentPrefix: line.documentPrefix || ''")
+    && adapter.includes('documentDescriptionRaw: rawDescription')
+    && adapter.includes("documentSuffix: line.documentSuffix || ''")
+    && !adapter.includes("documentLineEditorMode: 'description'"),
+  'Projected consolidated rows must use the same sale-style before/description/after editor shape.'
 );
 assert(
   source.includes('canEditDocumentLines: Number.isInteger(documentSourceId) && documentSourceId > 0'),
@@ -52,11 +53,11 @@ assert(
   'Bill line editor state must delegate persistence to a source-aware mutation strategy.'
 );
 assert(
-  layout.includes("item?.documentLineEditorMode === 'description'")
-    && layout.includes("onChangeDocumentLineDraft?.(item, 'documentDescriptionRaw'")
+  layout.includes('placeholder="ข้อความก่อนสินค้า"')
+    && layout.includes('placeholder="ข้อความท้ายสินค้า"')
     && layout.includes('renderDocumentLineButton(item)')
     && layout.includes('editableDocumentLines ? ('),
-  'Consolidated documents must reuse the same inline tail-column edit button while editing description only.'
+  'Consolidated documents must reuse the same inline tail-column before/after editor as SALE.'
 );
 assert(
   page.includes('executeSaleDocumentLineUpdate')

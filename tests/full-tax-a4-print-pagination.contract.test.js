@@ -18,6 +18,10 @@ assert(
   'Legacy full-tax layout may retain its 10mm page rule as a fallback.'
 );
 assert(
+  /\.bill-print-root \.print-a4\s*\{[\s\S]*?width:\s*100%\s*!important;[\s\S]*?max-width:\s*100%\s*!important;[\s\S]*?box-sizing:\s*border-box\s*!important;[\s\S]*?\}\s*\n\s*@media print/m.test(printPage),
+  'Screen paper preview must contain the full-tax frame, including padding and border, inside its parent paper area.'
+);
+assert(
   /@page\s*\{[\s\S]*?size:\s*A4;[\s\S]*?margin:\s*0\s*!important;/m.test(printPage),
   'Full-tax print page must own the physical A4 sheet and neutralize external page margins.'
 );

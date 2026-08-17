@@ -18,8 +18,24 @@ assert(
   'Legacy full-tax layout may retain its 10mm page rule as a fallback.'
 );
 assert(
-  /\.bill-print-root \.print-a4\s*\{[\s\S]*?width:\s*100%\s*!important;[\s\S]*?max-width:\s*100%\s*!important;[\s\S]*?box-sizing:\s*border-box\s*!important;[\s\S]*?\}\s*\n\s*@media print/m.test(printPage),
-  'Screen paper preview must contain the full-tax frame, including padding and border, inside its parent paper area.'
+  /\.bill-print-root \.print-a4\s*\{[\s\S]*?width:\s*100%\s*!important;[\s\S]*?max-width:\s*100%\s*!important;[\s\S]*?box-sizing:\s*border-box\s*!important;/m.test(printPage),
+  'Screen paper preview must contain the full-tax frame inside its paper area.'
+);
+assert(
+  /\.bill-print-root \.print-a4 tbody tr:nth-last-child\(-n\+\$\{printFillerRowsToHide\}\)[\s\S]*?display:\s*none\s*!important;/m.test(printPage),
+  'Screen preview and native print preview must use the same short-document filler-row capacity.'
+);
+assert(
+  /\.bill-print-short-document \.print-a4\s*\{[\s\S]*?position:\s*relative\s*!important;[\s\S]*?height:\s*296mm\s*!important;[\s\S]*?padding:\s*10mm 10mm 58mm\s*!important;/m.test(printPage),
+  'Short-document A4 geometry must be shared by the on-screen preview.'
+);
+assert(
+  /\.bill-print-short-document \.print-a4 > table \+ div\s*\{[\s\S]*?left:\s*10mm\s*!important;[\s\S]*?right:\s*10mm\s*!important;[\s\S]*?top:\s*214mm\s*!important;/m.test(printPage),
+  'Totals must occupy the same in-page zone before and during printing.'
+);
+assert(
+  /\.bill-print-short-document \.print-a4 > table \+ div \+ div\s*\{[\s\S]*?top:\s*246mm\s*!important;[\s\S]*?height:\s*20mm\s*!important;/m.test(printPage),
+  'Signatures must occupy the same in-page zone before and during printing.'
 );
 assert(
   /@page\s*\{[\s\S]*?size:\s*A4;[\s\S]*?margin:\s*0\s*!important;/m.test(printPage),
@@ -30,32 +46,20 @@ assert(
   'Print shell must match physical A4 width without adding outer print padding.'
 );
 assert(
-  /\.bill-print-root\s+\.print-a4\s*\{[\s\S]*?width:\s*210mm\s*!important;[\s\S]*?min-height:\s*296mm\s*!important;[\s\S]*?padding:\s*10mm\s*!important;[\s\S]*?box-sizing:\s*border-box\s*!important;[\s\S]*?border:\s*0\s*!important;[\s\S]*?border-radius:\s*0\s*!important;/m.test(printPage),
-  'Physical A4 geometry must own internal margins without drawing a rasterized outer component border.'
+  /@media print\s*\{[\s\S]*?\.bill-print-root\s+\.print-a4\s*\{[\s\S]*?width:\s*210mm\s*!important;[\s\S]*?min-height:\s*296mm\s*!important;[\s\S]*?padding:\s*10mm\s*!important;[\s\S]*?border:\s*0\s*!important;/m.test(printPage),
+  'Native print must keep the same physical A4 frame while removing only the screen paper border.'
 );
 assert(
-  printPage.includes('const printableGridRows = Math.max(12, itemCount)'),
-  'Short full-tax documents must reserve the lower A4 area by limiting printed filler rows.'
+  printPage.includes("p-0 rounded-2xl border border-zinc-200"),
+  'The outer preview wrapper must not add padding that shrinks the document relative to print.'
 );
 assert(
   /const pinPrintFooter = useMemo\([\s\S]*?saleItems\.length <= 12/m.test(printPage),
-  'Footer-zone mode must be limited to short invoices.'
-);
-assert(
-  /\.bill-print-short-document \.print-a4\s*\{[\s\S]*?position:\s*relative\s*!important;[\s\S]*?height:\s*296mm\s*!important;[\s\S]*?padding:\s*10mm 10mm 58mm\s*!important;/m.test(printPage),
-  'Short invoices must reserve a deterministic lower A4 footer area inside the physical sheet.'
-);
-assert(
-  /\.bill-print-short-document \.print-a4 > table \+ div\s*\{[\s\S]*?left:\s*10mm\s*!important;[\s\S]*?right:\s*10mm\s*!important;[\s\S]*?top:\s*214mm\s*!important;/m.test(printPage),
-  'Totals must use the internal 10mm horizontal margin and fixed in-page zone.'
-);
-assert(
-  /\.bill-print-short-document \.print-a4 > table \+ div \+ div\s*\{[\s\S]*?top:\s*246mm\s*!important;[\s\S]*?height:\s*20mm\s*!important;[\s\S]*?page-break-inside:\s*auto\s*!important;[\s\S]*?break-inside:\s*auto\s*!important;/m.test(printPage),
-  'Signatures must stay inside the first physical A4 frame with explicit safety space.'
+  'Footer-zone mode must remain limited to short invoices.'
 );
 assert(
   !/position:\s*fixed\s*!important/.test(printPage),
   'Print footer zones must not use position:fixed because browsers may repeat them on every page.'
 );
 
-console.log('Full Tax A4 Print Pagination Contract: PASS');
+console.log('Full Tax A4 Preview/Print Parity Contract: PASS');

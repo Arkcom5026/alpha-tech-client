@@ -10,6 +10,7 @@ import { useBillDocumentSource } from '@/features/bill/hooks/useBillDocumentSour
 import { useBillDocumentLineEditor } from '@/features/bill/hooks/useBillDocumentLineEditor'
 import { executeSaleDocumentLineUpdate } from '@/features/sales/documents/workspace'
 import { executeConsolidatedDocumentLineUpdate } from '@/features/combinedBilling/controllers/consolidatedDocumentLineUpdateController'
+import ConsolidatedDocumentLineEditorPanel from '@/features/combinedBilling/components/ConsolidatedDocumentLineEditorPanel'
 
 const PrintBillPageFullTax = () => {
   const params = useParams()
@@ -148,6 +149,8 @@ const PrintBillPageFullTax = () => {
     return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">ไม่พบข้อมูลใบเสร็จตามรหัสอ้างอิง</div>
   }
 
+  const useInlineSaleEditor = canEditDocumentLines && !isConsolidated
+
   return (
     <>
       <style>{`
@@ -156,6 +159,11 @@ const PrintBillPageFullTax = () => {
 
       <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
         <div className="bill-print-root mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
+          <ConsolidatedDocumentLineEditorPanel
+            items={saleItems}
+            editor={documentLineEditor}
+            enabled={canEditDocumentLines && isConsolidated}
+          />
           <StoreDocumentHeaderScope config={documentConfig}>
             <BillLayoutFullTax
               sale={sale}
@@ -164,13 +172,13 @@ const PrintBillPageFullTax = () => {
               config={documentConfig}
               mode="full"
               taxMode="full"
-              editableDocumentLines={canEditDocumentLines}
-              editingLineKey={canEditDocumentLines ? documentLineEditor.editingLineKey : null}
-              lineDrafts={canEditDocumentLines ? documentLineEditor.lineDrafts : {}}
-              savingLineKey={canEditDocumentLines ? documentLineEditor.savingLineKey : null}
-              onToggleDocumentLineEdit={canEditDocumentLines ? documentLineEditor.actions.toggle : undefined}
-              onChangeDocumentLineDraft={canEditDocumentLines ? documentLineEditor.actions.change : undefined}
-              onSaveDocumentLine={canEditDocumentLines ? documentLineEditor.actions.save : undefined}
+              editableDocumentLines={useInlineSaleEditor}
+              editingLineKey={useInlineSaleEditor ? documentLineEditor.editingLineKey : null}
+              lineDrafts={useInlineSaleEditor ? documentLineEditor.lineDrafts : {}}
+              savingLineKey={useInlineSaleEditor ? documentLineEditor.savingLineKey : null}
+              onToggleDocumentLineEdit={useInlineSaleEditor ? documentLineEditor.actions.toggle : undefined}
+              onChangeDocumentLineDraft={useInlineSaleEditor ? documentLineEditor.actions.change : undefined}
+              onSaveDocumentLine={useInlineSaleEditor ? documentLineEditor.actions.save : undefined}
             />
           </StoreDocumentHeaderScope>
         </div>

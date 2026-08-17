@@ -26,8 +26,8 @@ assert(
   'Print shell must match physical A4 width without adding outer print padding.'
 );
 assert(
-  /\.bill-print-root\s+\.print-a4\s*\{[\s\S]*?width:\s*210mm\s*!important;[\s\S]*?min-height:\s*296mm\s*!important;[\s\S]*?padding:\s*10mm\s*!important;[\s\S]*?box-sizing:\s*border-box\s*!important;/m.test(printPage),
-  'Full-tax A4 frame must own its 10mm visual margins inside a sub-297mm physical frame.'
+  /\.bill-print-root\s+\.print-a4\s*\{[\s\S]*?width:\s*210mm\s*!important;[\s\S]*?min-height:\s*296mm\s*!important;[\s\S]*?padding:\s*10mm\s*!important;[\s\S]*?box-sizing:\s*border-box\s*!important;[\s\S]*?border:\s*0\s*!important;[\s\S]*?border-radius:\s*0\s*!important;/m.test(printPage),
+  'Physical A4 geometry must own internal margins without drawing a rasterized outer component border.'
 );
 assert(
   printPage.includes('const printableGridRows = Math.max(12, itemCount)'),

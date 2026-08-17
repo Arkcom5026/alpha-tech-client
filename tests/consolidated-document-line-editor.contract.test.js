@@ -12,7 +12,7 @@ const adapter = read('src/features/combinedBilling/adapters/consolidatedDocument
 const controller = read('src/features/combinedBilling/controllers/consolidatedDocumentLineUpdateController.js');
 const source = read('src/features/bill/hooks/useBillDocumentSource.js');
 const editor = read('src/features/bill/hooks/useBillDocumentLineEditor.js');
-const panel = read('src/features/combinedBilling/components/ConsolidatedDocumentLineEditorPanel.jsx');
+const layout = read('src/features/bill/components/BillLayoutFullTax.jsx');
 const page = read('src/features/bill/pages/PrintBillPageFullTax.jsx');
 
 const assert = (condition, message) => {
@@ -52,23 +52,28 @@ assert(
   'Bill line editor state must delegate persistence to a source-aware mutation strategy.'
 );
 assert(
-  panel.includes("'documentDescriptionRaw'")
-    && panel.includes('แก้ไขคำอธิบายรายการเอกสาร')
-    && panel.includes('ไม่เปลี่ยนจำนวน ราคา VAT หรือยอดรวม')
-    && panel.includes('print:hidden'),
-  'Consolidated workspace must provide an explicit description-only, non-printing editor panel.'
+  layout.includes("item?.documentLineEditorMode === 'description'")
+    && layout.includes("onChangeDocumentLineDraft?.(item, 'documentDescriptionRaw'")
+    && layout.includes('renderDocumentLineButton(item)')
+    && layout.includes('editableDocumentLines ? ('),
+  'Consolidated documents must reuse the same inline tail-column edit button while editing description only.'
 );
 assert(
   page.includes('executeSaleDocumentLineUpdate')
     && page.includes('executeConsolidatedDocumentLineUpdate')
-    && page.includes('if (isConsolidated)')
-    && page.includes('ConsolidatedDocumentLineEditorPanel'),
+    && page.includes('if (isConsolidated)'),
   'Full-tax page must route SALE and CONSOLIDATED_DELIVERY updates to separate authorities.'
 );
 assert(
   page.includes('lineId: item?.documentSourceLineId')
-    && page.includes('const useInlineSaleEditor = canEditDocumentLines && !isConsolidated'),
-  'Consolidated saves must target persisted consolidated line ids without changing the SALE inline editor.'
+    && page.includes('editableDocumentLines={canEditDocumentLines}')
+    && !page.includes('ConsolidatedDocumentLineEditorPanel'),
+  'Consolidated saves must target persisted line ids while sharing the SALE inline edit column.'
+);
+assert(
+  page.includes('width: 190mm !important;')
+    && page.includes('Math.max(16, itemCount)'),
+  'Consolidated editor integration must retain the accepted A4 print-baseline geometry.'
 );
 
 console.log('Consolidated Document Line Editor Contract: PASS');

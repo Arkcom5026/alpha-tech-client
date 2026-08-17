@@ -13,6 +13,7 @@ const billPolicy = read('src/features/sales/documents/search/policies/billDocume
 const deliveryPolicy = read('src/features/sales/documents/search/policies/deliveryNoteSearchPolicy.js');
 const billList = read('src/features/bill/pages/PrintBillListPage.jsx');
 const deliveryList = read('src/features/deliveryNote/pages/DeliveryNoteListPage.jsx');
+const deliveryMetrics = read('src/features/deliveryNote/components/workspace/DeliveryNoteMetricGrid.jsx');
 const billFull = read('src/features/bill/pages/PrintBillPageFullTax.jsx');
 const billShort = read('src/features/bill/pages/PrintBillPageShortTax.jsx');
 const deliveryPrint = read('src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx');
@@ -39,6 +40,10 @@ assert.match(billList, /CONSOLIDATED_DOCUMENT_SOURCE_TYPE/, 'standard Bill histo
 assert.match(billList, /\.\.\/bill\/print-full\//, 'consolidated full Bill must use the existing Bill print route');
 assert.match(billList, /\.\.\/bill\/print-short\//, 'consolidated short Bill must use the existing Bill print route');
 assert.match(deliveryList, /print\/\$\{sourceId\}\?sourceType=/, 'consolidated Delivery Note must use the existing Delivery Note print route');
+assert.match(deliveryList, /outstandingCount/, 'Delivery Note summary must distinguish outstanding documents from all unified rows');
+assert.match(deliveryMetrics, /เอกสารทั้งหมด/, 'unified Delivery Note metrics must label total document count honestly');
+assert.match(deliveryMetrics, /ยอดค้างชำระ \(.*outstandingCount/s, 'outstanding amount metric must expose its outstanding document count');
+assert.doesNotMatch(deliveryMetrics, /label:\s*'เอกสารค้างชำระ'.*summary\.count/s, 'total unified rows must never be mislabeled as all outstanding documents');
 
 assert.doesNotMatch(workspace, /loadHistoryAction/, 'Combined Billing workspace must not own a second document-history lifecycle');
 assert.doesNotMatch(workspace, /ประวัติใบส่งของรวม/, 'Combined Billing workspace must not expose a separate consolidated history silo');

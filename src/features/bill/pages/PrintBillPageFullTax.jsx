@@ -6,7 +6,7 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope'
 import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig'
-import { useBillStore } from '@/features/bill/store/billStore'
+import { useBillDocumentSource } from '@/features/bill/hooks/useBillDocumentSource'
 import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
 
 const PrintBillPageFullTax = () => {
@@ -20,6 +20,15 @@ const PrintBillPageFullTax = () => {
     const value = searchParams.get('paymentId')
     return value ? String(value) : null
   }, [searchParams])
+
+  const sourceType = useMemo(
+    () => String(searchParams.get('sourceType') || 'SALE').toUpperCase(),
+    [searchParams]
+  )
+  const sourceId = useMemo(
+    () => searchParams.get('sourceId') || saleId,
+    [saleId, searchParams]
+  )
 
   // Document Workspace baseline:
   // - default: do not auto print, allowing document-line review first
@@ -36,9 +45,10 @@ const PrintBillPageFullTax = () => {
     config,
     loading,
     error,
-    loadSaleByIdAction,
-    resetAction,
-  } = useBillStore()
+    reload,
+    reset,
+    canEditDocumentLines,
+  } = useBillDocumentSource({ saleId, sourceType, sourceId, paymentId })
 
   const documentConfig = useMemo(() => (
     config
@@ -50,48 +60,33 @@ const PrintBillPageFullTax = () => {
       : null
   ), [config, sale?.branch])
 
-  const reloadSaleForPrint = useCallback(async () => {
-    if (!saleId) return null
-
-    // Clear the same-sale cache so a successful document-line mutation is
-    // always followed by authoritative server hydration.
-    resetAction()
-    return loadSaleByIdAction(
-      saleId,
-      paymentId
-        ? {
-            paymentId,
-            params: { paymentId },
-          }
-        : undefined
-    )
-  }, [loadSaleByIdAction, paymentId, resetAction, saleId])
+  const reloadForPrint = useCallback(async () => reload(), [reload])
 
   const documentLineEditor = useSaleDocumentLineEditor({
-    saleId,
-    reload: reloadSaleForPrint,
+    saleId: canEditDocumentLines ? saleId : null,
+    reload: reloadForPrint,
   })
 
   useEffect(() => {
     const run = async () => {
       try {
         documentLineEditor.actions.clearError()
-        await reloadSaleForPrint()
+        await reloadForPrint()
       } catch {
-        // billStore owns load errors
+        // source runtime owns load errors
       }
     }
 
     run()
 
     return () => {
-      resetAction()
+      reset()
     }
-  }, [reloadSaleForPrint, resetAction])
+  }, [reloadForPrint, reset])
 
   useEffect(() => {
     printedRef.current = false
-  }, [saleId, autoPrint])
+  }, [sourceType, sourceId, autoPrint])
 
   // Auto-print remains opt-in only via ?autoPrint=1.
   useEffect(() => {
@@ -116,7 +111,7 @@ const PrintBillPageFullTax = () => {
     return () => clearTimeout(timerId)
   }, [autoPrint, sale?.id, documentConfig, saleItems, payment?.id])
 
-  const workspaceError = error || documentLineEditor.error
+  const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
   if (loading) {
     return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
@@ -146,13 +141,13 @@ const PrintBillPageFullTax = () => {
               config={documentConfig}
               mode="full"
               taxMode="full"
-              editableDocumentLines
-              editingLineKey={documentLineEditor.editingLineKey}
-              lineDrafts={documentLineEditor.lineDrafts}
-              savingLineKey={documentLineEditor.savingLineKey}
-              onToggleDocumentLineEdit={documentLineEditor.actions.toggle}
-              onChangeDocumentLineDraft={documentLineEditor.actions.change}
-              onSaveDocumentLine={documentLineEditor.actions.save}
+              editableDocumentLines={canEditDocumentLines}
+              editingLineKey={canEditDocumentLines ? documentLineEditor.editingLineKey : null}
+              lineDrafts={canEditDocumentLines ? documentLineEditor.lineDrafts : {}}
+              savingLineKey={canEditDocumentLines ? documentLineEditor.savingLineKey : null}
+              onToggleDocumentLineEdit={canEditDocumentLines ? documentLineEditor.actions.toggle : undefined}
+              onChangeDocumentLineDraft={canEditDocumentLines ? documentLineEditor.actions.change : undefined}
+              onSaveDocumentLine={canEditDocumentLines ? documentLineEditor.actions.save : undefined}
             />
           </StoreDocumentHeaderScope>
         </div>

@@ -3,18 +3,18 @@
 
 import { useCallback, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useBillStore } from '@/features/bill/store/billStore'
+import { useBillDocumentSource } from '@/features/bill/hooks/useBillDocumentSource'
 import BillShortTaxPrintShell from '@/features/bill/shortTax/print/workspace/components/BillShortTaxPrintShell'
 import BillShortTaxPrintState from '@/features/bill/shortTax/print/workspace/components/BillShortTaxPrintState'
 import BillShortTaxPrintToolbar from '@/features/bill/shortTax/print/workspace/components/BillShortTaxPrintToolbar'
 import { useBillShortTaxPrintRuntime } from '@/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime'
 import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
+import { isConsolidatedDocumentSource } from '@/features/combinedBilling/adapters/consolidatedDocumentAdapter'
 
 const PrintBillPageShortTax = () => {
   const params = useParams()
   const navigate = useNavigate()
   const saleId = params.id || params.saleId
-  const saleRoute = `/${params.shopSlug || 'advancetech'}/pos/sales/sale`
 
   const [searchParams] = useSearchParams()
 
@@ -22,6 +22,20 @@ const PrintBillPageShortTax = () => {
     const value = searchParams.get('paymentId')
     return value ? String(value) : null
   }, [searchParams])
+
+  const sourceType = useMemo(
+    () => String(searchParams.get('sourceType') || 'SALE').toUpperCase(),
+    [searchParams]
+  )
+  const sourceId = useMemo(
+    () => searchParams.get('sourceId') || saleId,
+    [saleId, searchParams]
+  )
+  const returnRoute = useMemo(() => (
+    isConsolidatedDocumentSource(sourceType)
+      ? `/${params.shopSlug || 'advancetech'}/pos/sales/bill`
+      : `/${params.shopSlug || 'advancetech'}/pos/sales/sale`
+  ), [params.shopSlug, sourceType])
 
   const autoPrint = useMemo(() => {
     const value = String(searchParams.get('autoPrint') || '').toLowerCase()
@@ -37,50 +51,38 @@ const PrintBillPageShortTax = () => {
     config,
     loading,
     error,
-    loadSaleByIdAction,
-    resetAction,
-  } = useBillStore()
+    reload,
+    reset,
+    canEditDocumentLines,
+  } = useBillDocumentSource({ saleId, sourceType, sourceId, paymentId })
 
-  const reloadSaleForPrint = useCallback(async () => {
-    if (!saleId) return null
-
-    resetAction()
-    return loadSaleByIdAction(
-      saleId,
-      paymentId
-        ? {
-            paymentId,
-            params: { paymentId },
-          }
-        : undefined
-    )
-  }, [loadSaleByIdAction, paymentId, resetAction, saleId])
+  const reloadForPrint = useCallback(async () => reload(), [reload])
 
   const documentLineEditor = useSaleDocumentLineEditor({
-    saleId,
-    reload: reloadSaleForPrint,
+    saleId: canEditDocumentLines ? saleId : null,
+    reload: reloadForPrint,
   })
 
   useEffect(() => {
     const run = async () => {
       try {
         documentLineEditor.actions.clearError()
-        await reloadSaleForPrint()
+        await reloadForPrint()
       } catch {
-        // billStore owns load errors
+        // source runtime owns load errors
       }
     }
 
     run()
 
     return () => {
-      resetAction()
+      reset()
     }
-  }, [reloadSaleForPrint, resetAction])
+  }, [reloadForPrint, reset])
 
-  const returnToSale = useCallback(() => {
-    navigate(saleRoute, { replace: true })
-  }, [navigate, saleRoute])
+  const returnFromPrint = useCallback(() => {
+    navigate(returnRoute, { replace: true })
+  }, [navigate, returnRoute])
 
   const printRuntime = useBillShortTaxPrintRuntime({
     autoPrint,
@@ -88,10 +90,10 @@ const PrintBillPageShortTax = () => {
     saleItemsCount: saleItems?.length || 0,
     paymentId: payment?.id || null,
     config,
-    returnToSale,
+    returnToSale: returnFromPrint,
   })
 
-  const workspaceError = error || documentLineEditor.error
+  const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
   const state = (
     <BillShortTaxPrintState
       loading={loading}
@@ -114,7 +116,7 @@ const PrintBillPageShortTax = () => {
     <>
       <BillShortTaxPrintToolbar
         autoPrint={autoPrint}
-        onBack={returnToSale}
+        onBack={returnFromPrint}
         onPrint={printRuntime.printAndReturnToSale}
       />
       <BillShortTaxPrintShell
@@ -126,6 +128,7 @@ const PrintBillPageShortTax = () => {
         documentTitle={isOrdinaryReceipt ? 'ใบเสร็จรับเงิน' : undefined}
         printRootRef={printRuntime.printRootRef}
         documentLineEditor={documentLineEditor}
+        editableDocumentLines={canEditDocumentLines}
       />
     </>
   )

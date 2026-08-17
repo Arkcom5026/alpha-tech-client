@@ -4,6 +4,7 @@ import {
   BILL_DOCUMENT_SEARCH_POLICY,
   useSaleDocumentSearch,
 } from '@/features/sales/documents/search';
+import { CONSOLIDATED_DOCUMENT_SOURCE_TYPE } from '@/features/combinedBilling/adapters/consolidatedDocumentAdapter';
 import BillWorkspaceHeader from '../components/workspace/BillWorkspaceHeader';
 import BillSearchToolbar from '../components/workspace/BillSearchToolbar';
 import BillResultTable from '../components/workspace/BillResultTable';
@@ -108,13 +109,20 @@ const PrintBillListPage = () => {
       navigate(`../tax-document/print/${row.taxDocumentId}`);
       return;
     }
-    if (printFormat === 'short' && row.receiptPaymentId) {
+
+    const sourceType = row.documentSourceType || 'SALE';
+    const sourceId = row.documentSourceId ?? row.id;
+    const sourceQuery = sourceType === CONSOLIDATED_DOCUMENT_SOURCE_TYPE
+      ? `?sourceType=${CONSOLIDATED_DOCUMENT_SOURCE_TYPE}&sourceId=${encodeURIComponent(sourceId)}`
+      : '';
+
+    if (sourceType === 'SALE' && printFormat === 'short' && row.receiptPaymentId) {
       navigate(`../bill/print-short/${row.id}?document=receipt&paymentId=${row.receiptPaymentId}`);
       return;
     }
     navigate(printFormat === 'full'
-      ? `../bill/print-full/${row.id}`
-      : `../bill/print-short/${row.id}`);
+      ? `../bill/print-full/${sourceId}${sourceQuery}`
+      : `../bill/print-short/${sourceId}${sourceQuery}`);
   };
 
   const errorMessage = uiError || documentSearch.error;

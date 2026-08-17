@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope';
 import {
   loadSaleDocument,
   useSaleDocumentLineEditor,
 } from '@/features/sales/documents/workspace';
+import { getConsolidatedDeliveryPrintable } from '@/features/combinedBilling/api/combinedBillingApi';
+import {
+  buildConsolidatedSaleDocument,
+  isConsolidatedDocumentSource,
+} from '@/features/combinedBilling/adapters/consolidatedDocumentAdapter';
 import DeliveryNoteDocumentState from '../components/workspace/DeliveryNoteDocumentState';
 import DeliveryNotePrintShell from '../print/workspace/components/DeliveryNotePrintShell';
 import {
@@ -14,20 +19,32 @@ import {
 
 const PrintDeliveryNotePage = () => {
   const { saleId } = useParams();
+  const [searchParams] = useSearchParams();
+  const sourceType = String(searchParams.get('sourceType') || 'SALE').toUpperCase();
+  const sourceId = searchParams.get('sourceId') || saleId;
+  const isConsolidated = isConsolidatedDocumentSource(sourceType);
   const [currentSale, setCurrentSale] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState('');
   const [hideDate, setHideDate] = useState(false);
 
-  const reloadSaleDocument = useCallback(async () => {
-    if (!saleId) {
+  const loadCurrentDocument = useCallback(async () => {
+    if (!sourceId) {
       setCurrentSale(null);
       return null;
     }
-    const sale = await loadSaleDocument({ saleId });
+
+    if (isConsolidated) {
+      const printable = await getConsolidatedDeliveryPrintable(sourceId);
+      const sale = buildConsolidatedSaleDocument(printable);
+      setCurrentSale(sale || null);
+      return sale || null;
+    }
+
+    const sale = await loadSaleDocument({ saleId: sourceId });
     setCurrentSale(sale || null);
     return sale || null;
-  }, [saleId]);
+  }, [isConsolidated, sourceId]);
 
   const {
     editingLineKey,
@@ -35,13 +52,16 @@ const PrintDeliveryNotePage = () => {
     savingLineKey,
     error: editorError,
     actions: documentLineActions,
-  } = useSaleDocumentLineEditor({ saleId, reload: reloadSaleDocument });
+  } = useSaleDocumentLineEditor({
+    saleId: isConsolidated ? null : saleId,
+    reload: loadCurrentDocument,
+  });
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchData = async () => {
-      if (!saleId) {
+      if (!sourceId) {
         if (isMounted) {
           setCurrentSale(null);
           setIsLoading(false);
@@ -55,7 +75,9 @@ const PrintDeliveryNotePage = () => {
       setCurrentSale(null);
 
       try {
-        const sale = await loadSaleDocument({ saleId });
+        const sale = isConsolidated
+          ? buildConsolidatedSaleDocument(await getConsolidatedDeliveryPrintable(sourceId))
+          : await loadSaleDocument({ saleId: sourceId });
         if (isMounted) setCurrentSale(sale || null);
       } catch (error) {
         if (isMounted) {
@@ -75,7 +97,7 @@ const PrintDeliveryNotePage = () => {
     return () => {
       isMounted = false;
     };
-  }, [saleId]);
+  }, [isConsolidated, sourceId]);
 
   const preparedSaleItems = useMemo(
     () => prepareDeliveryNoteSaleItems(currentSale),
@@ -85,7 +107,7 @@ const PrintDeliveryNotePage = () => {
     () => buildDeliveryNoteBranchConfig(currentSale),
     [currentSale]
   );
-  const error = pageError || editorError;
+  const error = pageError || (isConsolidated ? '' : editorError);
 
   if (isLoading) {
     return <DeliveryNoteDocumentState status="loading" message="ระบบกำลังโหลดข้อมูลและจัดเตรียมเอกสารสำหรับพิมพ์" />;
@@ -96,7 +118,7 @@ const PrintDeliveryNotePage = () => {
   }
 
   if (!currentSale) {
-    return <DeliveryNoteDocumentState status="empty" message="ไม่พบรายการขายที่ใช้สร้างใบส่งสินค้านี้" />;
+    return <DeliveryNoteDocumentState status="empty" message="ไม่พบเอกสารที่ใช้สร้างใบส่งสินค้านี้" />;
   }
 
   return (
@@ -107,12 +129,13 @@ const PrintDeliveryNotePage = () => {
         setHideDate={setHideDate}
         saleItems={preparedSaleItems}
         config={preparedConfig}
-        editingLineKey={editingLineKey}
-        lineDrafts={lineDrafts}
-        savingLineKey={savingLineKey}
-        onToggleDocumentLineEdit={documentLineActions.toggle}
-        onChangeDocumentLineDraft={documentLineActions.change}
-        onSaveDocumentLine={documentLineActions.save}
+        editableDocumentLines={!isConsolidated}
+        editingLineKey={isConsolidated ? null : editingLineKey}
+        lineDrafts={isConsolidated ? {} : lineDrafts}
+        savingLineKey={isConsolidated ? null : savingLineKey}
+        onToggleDocumentLineEdit={isConsolidated ? undefined : documentLineActions.toggle}
+        onChangeDocumentLineDraft={isConsolidated ? undefined : documentLineActions.change}
+        onSaveDocumentLine={isConsolidated ? undefined : documentLineActions.save}
       />
     </StoreDocumentHeaderScope>
   );

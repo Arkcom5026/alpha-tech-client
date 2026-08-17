@@ -32,6 +32,13 @@ const nameSizeClass = {
   xl: 'text-2xl',
 };
 
+const logoSizeClass = {
+  sm: 'h-10 w-10',
+  md: 'h-14 w-14',
+  lg: 'h-[72px] w-[72px]',
+  xl: 'h-[88px] w-[88px]',
+};
+
 const DocumentFormatSettingsPage = () => {
   const employee = useAuthStore((state) => state.employee);
   const currentBranch = useBranchStore((state) => state.currentBranch);
@@ -92,6 +99,7 @@ const DocumentFormatSettingsPage = () => {
   const previewLogo = form.headerLogoUrl?.trim();
   const previewAlign = ['left', 'center', 'right'].includes(form.headerTextAlign) ? form.headerTextAlign : 'left';
   const previewLogoPosition = ['left', 'center', 'right'].includes(form.headerLogoPosition) ? form.headerLogoPosition : 'left';
+  const previewLogoSize = ['sm', 'md', 'lg', 'xl'].includes(form.headerLogoSize) ? form.headerLogoSize : 'md';
 
   const handleLogoUploaded = (url) => {
     setValue('headerLogoUrl', url, { shouldDirty: true, shouldValidate: true });
@@ -166,7 +174,8 @@ const DocumentFormatSettingsPage = () => {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="md:col-span-2"><label className={labelClassName}>URL โลโก้ (ทางเลือก)</label><input type="url" {...register('headerLogoUrl')} className={inputClassName} placeholder="https://..." /></div>
               <div><label className={labelClassName}>ตำแหน่งโลโก้</label><select {...register('headerLogoPosition')} className={inputClassName}><option value="left">ซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ขวา</option></select></div>
-              <div><label className={labelClassName}>แนวข้อความหัวเอกสาร</label><select {...register('headerTextAlign')} className={inputClassName}><option value="left">ชิดซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ชิดขวา</option></select></div>
+              <div><label className={labelClassName}>ขนาดโลโก้</label><select {...register('headerLogoSize')} className={inputClassName}><option value="sm">เล็ก · 40 px</option><option value="md">มาตรฐาน · 56 px</option><option value="lg">ใหญ่ · 72 px</option><option value="xl">ใหญ่มาก · 88 px</option></select></div>
+              <div className="md:col-span-2"><label className={labelClassName}>แนวข้อความหัวเอกสาร</label><select {...register('headerTextAlign')} className={inputClassName}><option value="left">ชิดซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ชิดขวา</option></select></div>
             </div>
           </section>
 
@@ -204,7 +213,7 @@ const DocumentFormatSettingsPage = () => {
             <div className="aspect-[1/1.414] min-h-[480px] overflow-hidden rounded-xl border border-slate-200 bg-white p-7 shadow-inner">
               <div className={previewLogoPosition === 'center' ? 'flex flex-col items-center gap-3' : previewLogoPosition === 'right' ? 'flex flex-row-reverse items-start justify-between gap-4' : 'flex items-start gap-4'}>
                 {form.headerShowLogo && (
-                  <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400">
+                  <div className={`flex ${logoSizeClass[previewLogoSize] || logoSizeClass.md} shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400`}>
                     {previewLogo ? <img src={previewLogo} alt="ตัวอย่างโลโก้" className="h-full w-full object-contain" /> : 'LOGO'}
                   </div>
                 )}

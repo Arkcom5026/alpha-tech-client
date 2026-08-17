@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useMemo } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useBillStore } from '@/features/bill/store/billStore'
+import { useBillDocumentSource } from '@/features/bill/hooks/useBillDocumentSource'
 import BillShortTaxPrintShell from '@/features/bill/shortTax/print/workspace/components/BillShortTaxPrintShell'
 import BillShortTaxPrintState from '@/features/bill/shortTax/print/workspace/components/BillShortTaxPrintState'
 import BillShortTaxPrintToolbar from '@/features/bill/shortTax/print/workspace/components/BillShortTaxPrintToolbar'
@@ -23,6 +23,15 @@ const PrintBillPageShortTax = () => {
     return value ? String(value) : null
   }, [searchParams])
 
+  const sourceType = useMemo(
+    () => String(searchParams.get('sourceType') || 'SALE').toUpperCase(),
+    [searchParams]
+  )
+  const sourceId = useMemo(
+    () => searchParams.get('sourceId') || saleId,
+    [saleId, searchParams]
+  )
+
   const autoPrint = useMemo(() => {
     const value = String(searchParams.get('autoPrint') || '').toLowerCase()
     return value === '1' || value === 'true' || value === 'yes'
@@ -37,46 +46,34 @@ const PrintBillPageShortTax = () => {
     config,
     loading,
     error,
-    loadSaleByIdAction,
-    resetAction,
-  } = useBillStore()
+    reload,
+    reset,
+    canEditDocumentLines,
+  } = useBillDocumentSource({ saleId, sourceType, sourceId, paymentId })
 
-  const reloadSaleForPrint = useCallback(async () => {
-    if (!saleId) return null
-
-    resetAction()
-    return loadSaleByIdAction(
-      saleId,
-      paymentId
-        ? {
-            paymentId,
-            params: { paymentId },
-          }
-        : undefined
-    )
-  }, [loadSaleByIdAction, paymentId, resetAction, saleId])
+  const reloadForPrint = useCallback(async () => reload(), [reload])
 
   const documentLineEditor = useSaleDocumentLineEditor({
-    saleId,
-    reload: reloadSaleForPrint,
+    saleId: canEditDocumentLines ? saleId : null,
+    reload: reloadForPrint,
   })
 
   useEffect(() => {
     const run = async () => {
       try {
         documentLineEditor.actions.clearError()
-        await reloadSaleForPrint()
+        await reloadForPrint()
       } catch {
-        // billStore owns load errors
+        // source runtime owns load errors
       }
     }
 
     run()
 
     return () => {
-      resetAction()
+      reset()
     }
-  }, [reloadSaleForPrint, resetAction])
+  }, [reloadForPrint, reset])
 
   const returnToSale = useCallback(() => {
     navigate(saleRoute, { replace: true })
@@ -91,7 +88,7 @@ const PrintBillPageShortTax = () => {
     returnToSale,
   })
 
-  const workspaceError = error || documentLineEditor.error
+  const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
   const state = (
     <BillShortTaxPrintState
       loading={loading}
@@ -126,6 +123,7 @@ const PrintBillPageShortTax = () => {
         documentTitle={isOrdinaryReceipt ? 'ใบเสร็จรับเงิน' : undefined}
         printRootRef={printRuntime.printRootRef}
         documentLineEditor={documentLineEditor}
+        editableDocumentLines={canEditDocumentLines}
       />
     </>
   )

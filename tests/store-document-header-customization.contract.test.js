@@ -17,6 +17,8 @@ const settingsDashboard = read('src/features/settings/workspaces/SettingsDashboa
 const routes = read('src/routes/partner/posPartnerRoutes.jsx');
 const customerReceiptLayout = read('src/features/customerReceipt/components/CustomerReceiptPrintLayout.jsx');
 const fullTaxPage = read('src/features/bill/pages/PrintBillPageFullTax.jsx');
+const mediaApi = read('src/features/storeExperience/api/storeExperienceApi.js');
+const mediaField = read('src/features/storeExperience/components/StorefrontMediaUploadField.jsx');
 
 assert.match(resolver, /DEFAULT_DOCUMENT_HEADER_PROFILE/, 'shared document header defaults must exist');
 assert.match(resolver, /documentHeaderConfig/, 'resolver must read store-scoped documentHeaderConfig');
@@ -36,6 +38,15 @@ assert.match(documentFormatPage, /รูปแบบเอกสาร/, 'docume
 assert.match(documentFormatPage, /ไม่เปลี่ยนข้อมูลทางกฎหมาย/, 'document format page must distinguish presentation from legal tax identity');
 assert.doesNotMatch(documentFormatPage, /headerShowBranchLabel/, 'branch legal label must not be exposed as a visual toggle before renderer support');
 assert.doesNotMatch(branchSettingsPage, /documentHeaderConfig/, 'branch profile settings must not duplicate document-format persistence');
+
+assert.match(documentFormatPage, /StorefrontMediaUploadField/, 'document format page must reuse the canonical store media picker');
+assert.match(documentFormatPage, /purpose="STORE_LOGO"/, 'document logos must use the existing store-logo media purpose');
+assert.match(documentFormatPage, /upload=\{uploadStorefrontMedia\}/, 'document logo selection must use the authenticated media upload pipeline');
+assert.match(documentFormatPage, /setValue\('headerLogoUrl', url/, 'uploaded logo URL must populate the document header form automatically');
+assert.match(documentFormatPage, /setValue\('headerShowLogo', true/, 'selecting a logo must enable document logo rendering');
+assert.match(mediaApi, /\/store-experience\/media\/upload/, 'canonical store media upload endpoint must remain available');
+assert.match(mediaField, /type="file"/, 'canonical media field must support local file selection');
+assert.match(mediaField, /เลือกจากคลัง/, 'canonical media field must support selecting an existing store asset');
 
 assert.match(scope, /store-document-header-logo-center/, 'shared A4 scope must support logo positioning');
 assert.match(scope, /store-document-header-hide-address/, 'shared A4 scope must support field visibility');

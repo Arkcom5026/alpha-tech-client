@@ -129,6 +129,7 @@ const PrintDeliveryNotePage = () => {
         setHideDate={setHideDate}
         saleItems={preparedSaleItems}
         config={preparedConfig}
+        editableDocumentLines={!isConsolidated}
         editingLineKey={isConsolidated ? null : editingLineKey}
         lineDrafts={isConsolidated ? {} : lineDrafts}
         savingLineKey={isConsolidated ? null : savingLineKey}

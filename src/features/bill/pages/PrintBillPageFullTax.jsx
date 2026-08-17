@@ -30,9 +30,6 @@ const PrintBillPageFullTax = () => {
     [saleId, searchParams]
   )
 
-  // Document Workspace baseline:
-  // - default: do not auto print, allowing document-line review first
-  // - opt in to the previous behavior with ?autoPrint=1
   const autoPrint = useMemo(() => {
     const value = String(searchParams.get('autoPrint') || '').toLowerCase()
     return value === '1' || value === 'true' || value === 'yes'
@@ -88,7 +85,6 @@ const PrintBillPageFullTax = () => {
     printedRef.current = false
   }, [sourceType, sourceId, autoPrint])
 
-  // Auto-print remains opt-in only via ?autoPrint=1.
   useEffect(() => {
     if (!autoPrint) return
     if (printedRef.current) return
@@ -113,18 +109,12 @@ const PrintBillPageFullTax = () => {
 
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
-  // BillLayoutFullTax keeps a legacy 20-row visual grid by adding filler rows.
-  // On paper, reserve the lower A4 area for totals/signatures while never hiding
-  // actual document lines. For short documents this removes only trailing fillers.
   const printFillerRowsToHide = useMemo(() => {
     const itemCount = Array.isArray(saleItems) ? saleItems.length : 0
     const printableGridRows = Math.max(12, itemCount)
     return Math.max(20 - printableGridRows, 0)
   }, [saleItems])
 
-  // Short invoices get a deterministic A4 frame: normal-flow header/table in the
-  // upper zone, and totals/signatures pinned into a reserved lower footer zone.
-  // Longer invoices keep natural pagination so a pinned footer cannot overlap lines.
   const pinPrintFooter = useMemo(
     () => Array.isArray(saleItems) && saleItems.length > 0 && saleItems.length <= 12,
     [saleItems]
@@ -148,12 +138,6 @@ const PrintBillPageFullTax = () => {
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
         @media print {
-          /*
-           * BillLayoutFullTax owns @page { margin: 10mm }. Its legacy A4 shell
-           * still requests the full 210mm x 297mm physical sheet, which is
-           * larger than the 190mm x 277mm printable box and can push the
-           * no-break signature block onto an otherwise empty second page.
-           */
           .bill-print-page-shell {
             min-height: 0 !important;
           }
@@ -171,26 +155,15 @@ const PrintBillPageFullTax = () => {
             box-sizing: border-box !important;
           }
 
-          /*
-           * The layout's trailing rows are visual fillers, not sale lines.
-           * Hide only the computed number of trailing fillers on paper so the
-           * totals and signature no-break blocks stay on the first A4 sheet.
-           */
           .bill-print-root .print-a4 tbody tr:nth-last-child(-n+${printFillerRowsToHide}) {
             display: none !important;
           }
 
-          /*
-           * Deterministic single-sheet frame for short invoices.
-           * Do not use position:fixed: browsers repeat fixed print elements on
-           * every sheet. Instead pin only this document's footer inside its own
-           * A4 content box and reserve the lower 54mm for totals/signatures.
-           */
           .bill-print-short-document .print-a4 {
             position: relative !important;
             height: calc(297mm - 20mm) !important;
             min-height: calc(297mm - 20mm) !important;
-            padding-bottom: 54mm !important;
+            padding-bottom: 58mm !important;
             overflow: hidden !important;
           }
 
@@ -198,7 +171,8 @@ const PrintBillPageFullTax = () => {
             position: absolute !important;
             left: 20px !important;
             right: 20px !important;
-            bottom: 25mm !important;
+            top: 214mm !important;
+            bottom: auto !important;
             margin: 0 !important;
             padding-top: 0 !important;
             min-height: 28mm !important;
@@ -208,9 +182,17 @@ const PrintBillPageFullTax = () => {
             position: absolute !important;
             left: 20px !important;
             right: 20px !important;
-            bottom: 0 !important;
+            top: 246mm !important;
+            bottom: auto !important;
             margin: 0 !important;
-            min-height: 24mm !important;
+            min-height: 20mm !important;
+            height: 20mm !important;
+            page-break-inside: auto !important;
+            break-inside: auto !important;
+          }
+
+          .bill-print-short-document .print-a4 > table + div + div > div {
+            height: 20mm !important;
           }
         }
       `}</style>

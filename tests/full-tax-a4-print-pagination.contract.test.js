@@ -29,5 +29,17 @@ assert(
   /\.bill-print-root\s+\.print-a4\s*\{[\s\S]*?width:\s*100%\s*!important;[\s\S]*?max-width:\s*190mm\s*!important;[\s\S]*?min-height:\s*calc\(297mm\s*-\s*20mm\)\s*!important;[\s\S]*?box-sizing:\s*border-box\s*!important;/m.test(printPage),
   'Full-tax A4 shell must fit the 190 x 277 mm printable area including its own padding/border.'
 );
+assert(
+  printPage.includes('const printableGridRows = Math.max(12, itemCount)'),
+  'Short full-tax documents must reserve the lower A4 area by limiting printed filler rows.'
+);
+assert(
+  printPage.includes('return Math.max(20 - printableGridRows, 0)'),
+  'Filler-row suppression must never exceed the legacy 20-row grid.'
+);
+assert(
+  /tbody tr:nth-last-child\(-n\+\$\{printFillerRowsToHide\}\)[\s\S]*?display:\s*none\s*!important;/m.test(printPage),
+  'Only computed trailing rows may be suppressed during print.'
+);
 
 console.log('Full Tax A4 Print Pagination Contract: PASS');

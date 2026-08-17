@@ -137,7 +137,24 @@ const PrintBillPageFullTax = () => {
       <style>{`
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
+        /*
+         * Screen preview containment: BillLayoutFullTax still carries a legacy
+         * inline width of 210mm plus padding/border. Force the document box to
+         * use the available paper-preview content width and include its padding
+         * and border in that width so the right edge cannot spill outside paper.
+         */
+        .bill-print-root .print-a4 {
+          width: 100% !important;
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+        }
+
         @media print {
+          /*
+           * Own the physical sheet here instead of asking Chrome to compose a
+           * 210x297mm document inside a second 10mm @page margin box. Keeping
+           * the margin inside the A4 frame removes the trailing blank fragment.
+           */
           @page {
             size: A4;
             margin: 0 !important;
@@ -161,12 +178,6 @@ const PrintBillPageFullTax = () => {
             margin: 0 !important;
           }
 
-          /*
-           * The physical A4 sheet is the outer frame during printing. Do not
-           * draw the legacy component border on top of the sheet edge: a 1px
-           * CSS border is rasterized after print scaling and can look skewed or
-           * asymmetrical even when the document geometry itself is correct.
-           */
           .bill-print-root .print-a4 {
             width: 210mm !important;
             max-width: 210mm !important;

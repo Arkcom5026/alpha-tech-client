@@ -58,12 +58,10 @@ const bahtText = (amount) => {
       if (d === 0) continue;
 
       if (pos === 1) {
-        // tens
         if (d === 1) out += 'สิบ';
         else if (d === 2) out += 'ยี่สิบ';
         else out += `${digit[d]}สิบ`;
       } else if (pos === 0) {
-        // ones
         if (d === 1 && num > 1 && Number(s[4]) !== 0) out += 'เอ็ด';
         else out += digit[d];
       } else {
@@ -83,8 +81,6 @@ const bahtText = (amount) => {
       if (chunk) {
         const chunkText = readUnderMillion(chunk);
         out = first ? chunkText + out : chunkText + 'ล้าน' + out;
-      } else if (!first) {
-        // keep ล้าน placeholders only when higher chunks exist (handled by concatenation)
       }
       n2 = Math.floor(n2 / 1_000_000);
       first = false;
@@ -131,18 +127,14 @@ const BillLayoutFullTax = ({
   onChangeDocumentLineDraft,
   onSaveDocumentLine,
 }) => {
-  // Hooks must be called unconditionally at the top of the component
   const [hideDate, setHideDate] = useState(Boolean(config?.hideDate));
   const hideDateTouchedRef = useRef(false);
 
-  // ✅ sync initial hideDate from config when data arrives (but don't override user's toggle)
   useEffect(() => {
     if (hideDateTouchedRef.current) return;
     setHideDate(Boolean(config?.hideDate));
   }, [config?.hideDate]);
 
-  // ✅ Shared receipt grouping engine: keep Full Tax and Short Receipt behavior aligned.
-  // Hooks must stay before any early return.
   const displaySaleItems = React.useMemo(
     () => buildReceiptItems(saleItems || []),
     [saleItems]
@@ -150,20 +142,14 @@ const BillLayoutFullTax = ({
 
   if (!sale || !saleItems || !payments || !config) return null;
 
-  // ✅ Branch address truth: prefer structured Sale.branch relation, then config fallback.
   const branchAddress = buildBranchFullAddress(sale?.branch, config?.address);
 
-  // ✅ VAT rate: prefer Sale snapshot, fallback to config, then 7
   const vatRate = Number.isFinite(Number(sale?.vatRate))
     ? Number(sale.vatRate)
     : (Number.isFinite(Number(config?.vatRate)) ? Number(config.vatRate) : 7);
 
-  // ✅ Totals must come from Sale (snapshot at time of sale) — product prices can change later
-  // Sale.totalAmount = GROSS (รวม VAT)
-  // Sale.vat        = VAT (ถอดจาก gross ไว้แล้ว)
   let total = round2(Number(sale?.totalAmount ?? sale?.total ?? sale?.grandTotal ?? 0) || 0);
 
-  // Prefer stored VAT from DB; if missing, extract from gross using rate
   const vatRaw = sale?.vat ?? sale?.vatAmount;
   let vatAmount = Number.isFinite(Number(vatRaw))
     ? round2(Number(vatRaw))
@@ -171,7 +157,6 @@ const BillLayoutFullTax = ({
 
   let beforeVat = round2(total - vatAmount);
 
-  // ✅ Guard against rounding drift: lock (beforeVat + vatAmount) === total
   if (round2(beforeVat + vatAmount) !== total) {
     vatAmount = round2(total * vatRate / (100 + vatRate));
     beforeVat = round2(total - vatAmount);
@@ -196,8 +181,6 @@ const BillLayoutFullTax = ({
     return customer.name || '-';
   };
 
-  // ✅ Customer address: use the same formatter as DeliveryNoteForm
-  // This supports structured customer address fields and prevents blank/partial address display.
   const getCustomerAddressText = (customer) => {
     if (!customer) return '-';
 
@@ -270,6 +253,7 @@ const BillLayoutFullTax = ({
     if (!lineKey || editingLineKey !== lineKey) return null;
 
     const isSaving = savingLineKey === lineKey;
+    const isDescriptionOnlyEditor = item?.documentLineEditorMode === 'description';
 
     const draft = {
       documentPrefix: item?.documentPrefix || '',
@@ -288,23 +272,36 @@ const BillLayoutFullTax = ({
       <tr key={`editor-${lineKey}`} className="print:hidden bg-slate-50">
         <td colSpan={displayColumnCount} className="border border-black px-3 py-2">
           <div className="mx-auto max-w-[560px] space-y-2">
-            <input
-              value={draft.documentPrefix}
-              onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentPrefix', e.target.value)}
-              placeholder="ข้อความก่อนสินค้า"
-              className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
-            />
+            {isDescriptionOnlyEditor ? (
+              <textarea
+                rows={2}
+                value={draft.documentDescriptionRaw}
+                onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentDescriptionRaw', e.target.value)}
+                placeholder="คำอธิบายรายการเอกสาร"
+                disabled={isSaving}
+                className="w-full resize-y rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500 disabled:opacity-60"
+              />
+            ) : (
+              <>
+                <input
+                  value={draft.documentPrefix}
+                  onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentPrefix', e.target.value)}
+                  placeholder="ข้อความก่อนสินค้า"
+                  className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
 
-            <div className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700">
-              {readonlyDescription}
-            </div>
+                <div className="w-full rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700">
+                  {readonlyDescription}
+                </div>
 
-            <input
-              value={draft.documentSuffix}
-              onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentSuffix', e.target.value)}
-              placeholder="ข้อความท้ายสินค้า"
-              className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
-            />
+                <input
+                  value={draft.documentSuffix}
+                  onChange={(e) => onChangeDocumentLineDraft?.(item, 'documentSuffix', e.target.value)}
+                  placeholder="ข้อความท้ายสินค้า"
+                  className="w-full rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-500"
+                />
+              </>
+            )}
 
             <div className="text-right">
               <button
@@ -322,51 +319,47 @@ const BillLayoutFullTax = ({
     );
   };
 
-
   const getLineAmountIncVat = (item) => {
     const qty = Number(item?.quantity) || 0
-  
+
     const explicitAmount = item?.amount ?? item?.total ?? item?.totalAmount
     if (explicitAmount != null && Number.isFinite(Number(explicitAmount))) {
       return round2(explicitAmount)
     }
-  
+
     const explicitUnit = item?.unitPriceIncVat ?? item?.unitPrice
     if (explicitUnit != null && Number.isFinite(Number(explicitUnit))) {
       return round2(Number(explicitUnit) * qty)
     }
-  
+
     const exTotal = item?.totalExVat
     if (exTotal != null && Number.isFinite(Number(exTotal))) {
       return round2(Number(exTotal) * (1 + vatRate / 100))
     }
-  
+
     return 0
   }
-  
+
   const getUnitPriceIncVat = (item) => {
     const qty = Number(item?.quantity) || 0
-  
-    // ✅ เอกสารพิมพ์ต้องให้ UNIT PRICE สัมพันธ์กับ AMOUNT เสมอ
+
     const amountIncVat = getLineAmountIncVat(item)
     if (qty > 0 && Number.isFinite(amountIncVat)) {
       return round2(amountIncVat / qty)
     }
-  
+
     const explicit = item?.unitPriceIncVat ?? item?.unitPrice
     if (explicit != null && Number.isFinite(Number(explicit))) {
       return round2(explicit)
     }
-  
+
     const ex = item?.unitPriceExVat
     if (ex != null && Number.isFinite(Number(ex))) {
       return round2(Number(ex) * (1 + vatRate / 100))
     }
-  
+
     return 0
   }
-
-
 
   return (
     <>
@@ -386,7 +379,6 @@ const BillLayoutFullTax = ({
             margin: 10mm;
           }
 
-          /* Avoid breaking critical blocks */
           .no-break {
             page-break-inside: avoid;
             break-inside: avoid;
@@ -394,7 +386,6 @@ const BillLayoutFullTax = ({
           table { page-break-inside: auto; }
           tr, td, th { page-break-inside: avoid; break-inside: avoid; }
 
-          /* Keep the page at natural height on print */
           .print-a4 {
             width: 210mm !important;
             min-height: 297mm !important;

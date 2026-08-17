@@ -82,6 +82,7 @@ export const useBillDocumentSource = ({ saleId, sourceType, sourceId, paymentId 
 
   return useMemo(() => {
     const state = isConsolidated ? combinedState : billStore;
+    const documentSourceId = isConsolidated ? Number(consolidatedId) : Number(saleId);
     return {
       sale: state.sale,
       payment: state.payment,
@@ -92,8 +93,8 @@ export const useBillDocumentSource = ({ saleId, sourceType, sourceId, paymentId 
       reload,
       reset,
       isConsolidated,
-      canEditDocumentLines: !isConsolidated,
-      documentSourceId: isConsolidated ? Number(consolidatedId) : Number(saleId),
+      canEditDocumentLines: Number.isInteger(documentSourceId) && documentSourceId > 0,
+      documentSourceId,
     };
   }, [billStore, combinedState, consolidatedId, isConsolidated, reload, reset, saleId]);
 };

@@ -7,7 +7,9 @@ import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope'
 import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig'
 import { useBillDocumentSource } from '@/features/bill/hooks/useBillDocumentSource'
-import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
+import { useBillDocumentLineEditor } from '@/features/bill/hooks/useBillDocumentLineEditor'
+import { executeSaleDocumentLineUpdate } from '@/features/sales/documents/workspace'
+import { executeConsolidatedDocumentLineUpdate } from '@/features/combinedBilling/controllers/consolidatedDocumentLineUpdateController'
 
 const PrintBillPageFullTax = () => {
   const params = useParams()
@@ -44,7 +46,9 @@ const PrintBillPageFullTax = () => {
     error,
     reload,
     reset,
+    isConsolidated,
     canEditDocumentLines,
+    documentSourceId,
   } = useBillDocumentSource({ saleId, sourceType, sourceId, paymentId })
 
   const documentConfig = useMemo(() => (
@@ -59,9 +63,28 @@ const PrintBillPageFullTax = () => {
 
   const reloadForPrint = useCallback(async () => reload(), [reload])
 
-  const documentLineEditor = useSaleDocumentLineEditor({
-    saleId: canEditDocumentLines ? saleId : null,
-    reload: reloadForPrint,
+  const saveDocumentLine = useCallback(async ({ item, draft }) => {
+    if (isConsolidated) {
+      return executeConsolidatedDocumentLineUpdate({
+        documentId: documentSourceId,
+        lineId: item?.documentSourceLineId,
+        draft,
+        reload: reloadForPrint,
+      })
+    }
+
+    return executeSaleDocumentLineUpdate({
+      saleId,
+      saleItemIds: item?.saleItemIds,
+      simpleItemIds: item?.simpleItemIds,
+      draft,
+      reload: reloadForPrint,
+    })
+  }, [documentSourceId, isConsolidated, reloadForPrint, saleId])
+
+  const documentLineEditor = useBillDocumentLineEditor({
+    documentKey: `${sourceType}:${documentSourceId || ''}`,
+    saveDocumentLine: canEditDocumentLines ? saveDocumentLine : null,
   })
 
   useEffect(() => {

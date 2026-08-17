@@ -20,6 +20,8 @@ const deliveryPrint = read('src/features/deliveryNote/pages/PrintDeliveryNotePag
 const sourceHook = read('src/features/bill/hooks/useBillDocumentSource.js');
 const adapter = read('src/features/combinedBilling/adapters/consolidatedDocumentAdapter.js');
 const workspace = read('src/features/combinedBilling/pages/CombinedBillingPage.jsx');
+const settlementCompletion = read('src/features/customerMoneySettlement/utils/settlementDocumentCompletion.js');
+const settlementDetail = read('src/features/customerMoneySettlement/pages/DeliveryCreditSettlementDetailPage.jsx');
 const routes = read('src/routes/partner/salesRoutes.jsx');
 
 assert.match(searchApi, /\/combined-billing\/unified-document-history/, 'shared document search must consume the unified history bridge');
@@ -49,6 +51,12 @@ assert.doesNotMatch(workspace, /loadHistoryAction/, 'Combined Billing workspace 
 assert.doesNotMatch(workspace, /ประวัติใบส่งของรวม/, 'Combined Billing workspace must not expose a separate consolidated history silo');
 assert.match(workspace, /\/pos\/sales\/delivery-note/, 'post-confirm handoff must expose the standard Delivery Note lifecycle');
 assert.match(workspace, /\/pos\/sales\/bill/, 'post-confirm handoff must expose the standard Bill lifecycle');
+
+assert.match(settlementDetail, /buildGeneratedDeliveryPrintPath/, 'Settlement Detail must use the centralized generated-document handoff');
+assert.match(settlementCompletion, /\/pos\/sales\/delivery-note\/print\//, 'Settlement-generated delivery must enter the standard Delivery Note print route');
+assert.match(settlementCompletion, /sourceType=CONSOLIDATED_DELIVERY/, 'Settlement handoff must preserve consolidated source identity');
+assert.match(settlementCompletion, /sourceId=\$\{sourceId\}/, 'Settlement handoff must preserve the consolidated source id');
+assert.doesNotMatch(settlementCompletion, /combined-billing\/delivery\/print/, 'new Settlement handoff must never navigate to the legacy consolidated print silo');
 
 assert.match(routes, /path:\s*'bill'/, 'standard Bill history route must remain available');
 assert.match(routes, /path:\s*'delivery-note'/, 'standard Delivery Note history route must remain available');

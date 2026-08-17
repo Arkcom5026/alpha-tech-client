@@ -12,6 +12,7 @@ export const getSettlementDocumentCompletion = (record) => {
   };
 };
 
-export const buildGeneratedDeliveryPrintPath = (shopSlug, documentId) => (
-  `/${shopSlug || 'advancetech'}/pos/sales/combined-billing/delivery/print/${Number(documentId)}`
-);
+export const buildGeneratedDeliveryPrintPath = (shopSlug, documentId) => {
+  const sourceId = Number(documentId);
+  return `/${shopSlug || 'advancetech'}/pos/sales/delivery-note/print/${sourceId}?sourceType=CONSOLIDATED_DELIVERY&sourceId=${sourceId}`;
+};

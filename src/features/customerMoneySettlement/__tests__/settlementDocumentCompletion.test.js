@@ -34,9 +34,11 @@ describe('settlement generated consolidated delivery presentation', () => {
     expect(result.mode).toBe('AUTO_CANCELLED');
   });
 
-  it('navigates directly to the generated delivery printable route instead of the selection workspace', () => {
-    expect(buildGeneratedDeliveryPrintPath('advancetech', 91)).toBe(
-      '/advancetech/pos/sales/combined-billing/delivery/print/91',
+  it('hands the generated delivery to the standard Delivery Note print lifecycle', () => {
+    const path = buildGeneratedDeliveryPrintPath('advancetech', 91);
+    expect(path).toBe(
+      '/advancetech/pos/sales/delivery-note/print/91?sourceType=CONSOLIDATED_DELIVERY&sourceId=91',
     );
+    expect(path).not.toContain('/combined-billing/delivery/print/');
   });
 });

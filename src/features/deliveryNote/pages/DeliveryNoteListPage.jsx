@@ -5,6 +5,7 @@ import {
   DELIVERY_NOTE_SEARCH_POLICY,
   useSaleDocumentSearch,
 } from '@/features/sales/documents/search';
+import { CONSOLIDATED_DOCUMENT_SOURCE_TYPE } from '@/features/combinedBilling/adapters/consolidatedDocumentAdapter';
 import DeliveryNoteWorkspaceHeader from '../components/workspace/DeliveryNoteWorkspaceHeader';
 import DeliveryNoteSearchToolbar from '../components/workspace/DeliveryNoteSearchToolbar';
 import DeliveryNoteMetricGrid from '../components/workspace/DeliveryNoteMetricGrid';
@@ -117,6 +118,16 @@ const DeliveryNoteListPage = () => {
     };
   }, [sortedRows]);
 
+  const handlePrint = (row) => {
+    const sourceType = row?.documentSourceType || 'SALE';
+    const sourceId = row?.documentSourceId ?? row?.id;
+    if (sourceType === CONSOLIDATED_DOCUMENT_SOURCE_TYPE) {
+      navigate(`print/${sourceId}?sourceType=${CONSOLIDATED_DOCUMENT_SOURCE_TYPE}&sourceId=${encodeURIComponent(sourceId)}`);
+      return;
+    }
+    navigate(`print/${sourceId}`);
+  };
+
   const error = uiError || documentSearch.error;
 
   return (
@@ -154,7 +165,7 @@ const DeliveryNoteListPage = () => {
         sortKey={sortKey}
         sortDir={sortDir}
         onSort={toggleSort}
-        onPrint={(row) => navigate(`print/${row.id}`)}
+        onPrint={handlePrint}
       />
 
       <p className="text-xs text-slate-500">

@@ -1,6 +1,8 @@
 import React from 'react'
 
 import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
+import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope'
+import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig'
 import {
   buildCustomerReceiptLineItems,
   getCustomerReceiptVatSummary,
@@ -25,16 +27,21 @@ const resolvePrintBranch = (receipt, allocations) => {
   const saleBranch = allocations.find((allocation) => allocation?.sale?.branch)?.sale?.branch || null
   const receiptBranch = receipt?.branch || null
 
-  // Sale print data normally carries the same structured branch relation used by BillLayoutFullTax.
-  // Prefer it over the lighter Customer Receipt branch projection when available.
-  return saleBranch || receiptBranch || null
+  if (!saleBranch) return receiptBranch
+  if (!receiptBranch) return saleBranch
+
+  return {
+    ...receiptBranch,
+    ...saleBranch,
+    documentHeaderConfig: saleBranch?.documentHeaderConfig || receiptBranch?.documentHeaderConfig || null,
+  }
 }
 
 const buildPrintConfig = (receipt, branch, vatRate, total, beforeVat, vatAmount) => {
   const receiptBranch = receipt?.branch || null
   const receiptConfig = branch?.receiptConfig || receiptBranch?.receiptConfig || {}
 
-  return {
+  const legacyConfig = {
     branchName:
       receiptConfig?.branchName ||
       branch?.name ||
@@ -59,6 +66,12 @@ const buildPrintConfig = (receipt, branch, vatRate, total, beforeVat, vatAmount)
     formatThaiDate,
     totals: { total, beforeVat, vatAmount },
   }
+
+  return buildStoreDocumentHeader({
+    branch: branch || receiptBranch,
+    documentType: 'CUSTOMER_RECEIPT',
+    legacyConfig,
+  })
 }
 
 const CustomerReceiptPrintLayout = ({ receipt }) => {
@@ -111,13 +124,15 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
   ]
 
   return (
-    <BillLayoutFullTax
-      sale={sale}
-      saleItems={saleItems}
-      payments={payments}
-      config={config}
-      editableDocumentLines={false}
-    />
+    <StoreDocumentHeaderScope config={config}>
+      <BillLayoutFullTax
+        sale={sale}
+        saleItems={saleItems}
+        payments={payments}
+        config={config}
+        editableDocumentLines={false}
+      />
+    </StoreDocumentHeaderScope>
   )
 }
 

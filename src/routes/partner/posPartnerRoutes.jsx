@@ -15,6 +15,7 @@ import DashboardPage from '@features/pos/pages/DashboardPage';
 import LogoutPos from '@features/pos/pages/LogoutPos';
 import FinanceDashboardPage from '@/features/finance/pages/FinanceDashboardPage';
 import SettingsDashboardPage from '@/features/settings/pages/SettingsDashboardPage';
+import DocumentFormatSettingsPage from '@/features/settings/pages/DocumentFormatSettingsPage';
 import ServicesDashboardPage from '@/features/pos/pages/dashboard/ServicesDashboardPage';
 import { ReportsDashboardPage } from '@/features/pos/pages/dashboard/ReportsDashboardPage';
 import StoreHomepageEditorPage from '@/features/storeExperience/pages/StoreHomepageEditorPage';
@@ -168,6 +169,7 @@ export const posPartnerRoutes = [
           { path: 'printers', element: <PrinterSettingsPage /> },
           { path: 'communication', element: <CommunicationProfileSettingsPage /> },
           { path: 'tax-issuer', element: <TaxIssuerProfilePage /> },
+          { path: 'document-format', element: <DocumentFormatSettingsPage /> },
           { path: 'storefront', element: <StoreHomepageEditorPage /> },
           { path: 'online-products', element: <OnlineProductVisibilityDashboardPage /> },
           { path: 'employee', element: <ListEmployeePage /> },

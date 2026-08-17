@@ -4,7 +4,7 @@
 
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Users, ShieldAlert, Building2, Landmark, ArrowRight, KeyRound, Store, ShoppingBag, Printer, MessageCircle } from 'lucide-react';
+import { Users, ShieldAlert, Building2, Landmark, ArrowRight, KeyRound, Store, ShoppingBag, Printer, MessageCircle, LayoutTemplate } from 'lucide-react';
 
 const SettingTile = ({ title, desc, icon, onClick }) => {
   return (
@@ -18,14 +18,8 @@ const SettingTile = ({ title, desc, icon, onClick }) => {
           {React.createElement(icon, { className: 'w-5 h-5' })}
         </div>
         <div className="min-w-0">
-          <div className="font-black text-sm tracking-tight truncate text-slate-900">
-            {title}
-          </div>
-          {desc && (
-            <div className="text-xs mt-0.5 font-bold leading-snug text-slate-400">
-              {desc}
-            </div>
-          )}
+          <div className="font-black text-sm tracking-tight truncate text-slate-900">{title}</div>
+          {desc && <div className="text-xs mt-0.5 font-bold leading-snug text-slate-400">{desc}</div>}
         </div>
       </div>
       <ArrowRight className="w-4 h-4 mt-1 shrink-0 text-slate-300 transition-colors group-hover:text-emerald-600" />
@@ -42,21 +36,20 @@ const SettingsDashboardWorkspace = () => {
       <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 transition-all">
         <div className="min-w-0">
           <h1 className="text-xl font-black text-slate-900 tracking-tight">ศูนย์การตั้งค่าระบบร้านค้า</h1>
-          <p className="text-xs text-slate-400 font-bold mt-0.5 tracking-wide">จัดการหน้าร้าน สินค้าออนไลน์ พนักงาน เครื่องพิมพ์ ตำแหน่ง สาขา และช่องทางธุรกรรมของร้านจากจุดเดียว</p>
+          <p className="text-xs text-slate-400 font-bold mt-0.5 tracking-wide">จัดการหน้าร้าน รูปแบบเอกสาร สินค้าออนไลน์ พนักงาน เครื่องพิมพ์ ตำแหน่ง สาขา และช่องทางธุรกรรมของร้านจากจุดเดียว</p>
         </div>
-        <div className="bg-emerald-50 text-emerald-700 font-black text-xs px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm shrink-0 self-start sm:self-center select-none">
-          ⚙️ ตั้งค่าระบบ
-        </div>
+        <div className="bg-emerald-50 text-emerald-700 font-black text-xs px-3 py-1.5 rounded-xl border border-emerald-200 shadow-sm shrink-0 self-start sm:self-center select-none">⚙️ ตั้งค่าระบบ</div>
       </div>
 
       <div className="bg-white border border-slate-200/80 p-6 rounded-3xl shadow-[0_4px_25px_rgba(0,0,0,0.01)] space-y-4">
         <div className="select-none">
           <h2 className="text-base font-black text-slate-900">เมนูจัดการระบบ</h2>
-          <p className="text-xs text-slate-400 font-bold mt-0.5">เปิดตัวแก้ไขหน้าร้าน ตั้งค่าเครื่องพิมพ์ ตรวจความพร้อมสินค้าออนไลน์ และจัดการข้อมูลสำคัญของร้านจากจุดเดียว</p>
+          <p className="text-xs text-slate-400 font-bold mt-0.5">เปิดตัวแก้ไขหน้าร้าน รูปแบบเอกสาร ตั้งค่าเครื่องพิมพ์ ตรวจความพร้อมสินค้าออนไลน์ และจัดการข้อมูลสำคัญของร้านจากจุดเดียว</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
           <SettingTile title="ตั้งค่าเครื่องพิมพ์" desc="ค้นหาและเลือกเครื่องพิมพ์ประจำเครื่องขาย แยกตามประเภทเอกสาร" icon={Printer} onClick={() => navigate(`/${shopSlug}/pos/settings/printers`)} />
+          <SettingTile title="รูปแบบเอกสาร" desc="กำหนดโลโก้ ชื่อร้าน การจัดแนว และข้อมูลที่แสดงบนหัวเอกสารของร้าน" icon={LayoutTemplate} onClick={() => navigate(`/${shopSlug}/pos/settings/document-format`)} />
           <SettingTile title="ช่องทางติดต่อของสาขา" desc="ตั้งค่า LINE, Facebook, โทรศัพท์, อีเมล ลิงก์สาธารณะ และ QR สำหรับงานบริการ" icon={MessageCircle} onClick={() => navigate(`/${shopSlug}/pos/settings/communication`)} />
           <SettingTile title="ออกแบบหน้าร้านออนไลน์" desc="ตั้งค่าชื่อร้าน ธีม สี ส่วนประกอบ และตรวจตัวอย่างหน้าหลักก่อนเผยแพร่" icon={Store} onClick={() => navigate(`/${shopSlug}/pos/settings/storefront`)} />
           <SettingTile title="จัดการสินค้าออนไลน์" desc="ตรวจว่าสินค้าใดขึ้นหน้าร้านได้ พร้อมขาย หรือถูกบล็อกด้วยเหตุผลใด" icon={ShoppingBag} onClick={() => navigate(`/${shopSlug}/pos/settings/online-products`)} />

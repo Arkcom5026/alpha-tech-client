@@ -4,6 +4,8 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
+import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope'
+import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig'
 import { useBillStore } from '@/features/bill/store/billStore'
 import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
 
@@ -37,6 +39,16 @@ const PrintBillPageFullTax = () => {
     loadSaleByIdAction,
     resetAction,
   } = useBillStore()
+
+  const documentConfig = useMemo(() => (
+    config
+      ? buildStoreDocumentHeader({
+          branch: sale?.branch || null,
+          documentType: 'FULL_TAX_INVOICE',
+          legacyConfig: config,
+        })
+      : null
+  ), [config, sale?.branch])
 
   const reloadSaleForPrint = useCallback(async () => {
     if (!saleId) return null
@@ -86,7 +98,7 @@ const PrintBillPageFullTax = () => {
     if (!autoPrint) return
     if (printedRef.current) return
     if (!sale?.id) return
-    if (!config) return
+    if (!documentConfig) return
     if (!Array.isArray(saleItems) || saleItems.length === 0) return
     if (!payment) return
 
@@ -102,7 +114,7 @@ const PrintBillPageFullTax = () => {
     }, 300)
 
     return () => clearTimeout(timerId)
-  }, [autoPrint, sale?.id, config, saleItems, payment?.id])
+  }, [autoPrint, sale?.id, documentConfig, saleItems, payment?.id])
 
   const workspaceError = error || documentLineEditor.error
 
@@ -114,7 +126,7 @@ const PrintBillPageFullTax = () => {
     return <div className="text-center p-8 text-rose-400 font-bold bg-slate-900 min-h-screen">เกิดข้อผิดพลาด: {workspaceError}</div>
   }
 
-  if (!sale || !Array.isArray(saleItems) || saleItems.length === 0 || !payment || !config) {
+  if (!sale || !Array.isArray(saleItems) || saleItems.length === 0 || !payment || !documentConfig) {
     return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">ไม่พบข้อมูลใบเสร็จตามรหัสอ้างอิง</div>
   }
 
@@ -126,21 +138,23 @@ const PrintBillPageFullTax = () => {
 
       <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
         <div className="bill-print-root mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
-          <BillLayoutFullTax
-            sale={sale}
-            saleItems={saleItems}
-            payments={[payment]}
-            config={config}
-            mode="full"
-            taxMode="full"
-            editableDocumentLines
-            editingLineKey={documentLineEditor.editingLineKey}
-            lineDrafts={documentLineEditor.lineDrafts}
-            savingLineKey={documentLineEditor.savingLineKey}
-            onToggleDocumentLineEdit={documentLineEditor.actions.toggle}
-            onChangeDocumentLineDraft={documentLineEditor.actions.change}
-            onSaveDocumentLine={documentLineEditor.actions.save}
-          />
+          <StoreDocumentHeaderScope config={documentConfig}>
+            <BillLayoutFullTax
+              sale={sale}
+              saleItems={saleItems}
+              payments={[payment]}
+              config={documentConfig}
+              mode="full"
+              taxMode="full"
+              editableDocumentLines
+              editingLineKey={documentLineEditor.editingLineKey}
+              lineDrafts={documentLineEditor.lineDrafts}
+              savingLineKey={documentLineEditor.savingLineKey}
+              onToggleDocumentLineEdit={documentLineEditor.actions.toggle}
+              onChangeDocumentLineDraft={documentLineEditor.actions.change}
+              onSaveDocumentLine={documentLineEditor.actions.save}
+            />
+          </StoreDocumentHeaderScope>
         </div>
       </div>
     </>

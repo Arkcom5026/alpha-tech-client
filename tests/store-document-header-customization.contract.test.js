@@ -25,6 +25,9 @@ assert.match(resolver, /documentHeaderConfig/, 'resolver must read store-scoped 
 assert.match(resolver, /config\?\.documents\?\.\[key\]/, 'resolver must support document-specific overrides');
 assert.match(resolver, /buildStoreDocumentHeader/, 'shared print projection must exist');
 assert.match(resolver, /buildDocumentHeaderConfigFromForm/, 'settings payload builder must exist');
+assert.match(resolver, /HEADER_LOGO_SIZES = new Set\(\['sm', 'md', 'lg', 'xl'\]\)/, 'client resolver must authorize four logo size presets');
+assert.match(resolver, /logoSize: 'md'/, 'document logo size must default to standard');
+assert.match(resolver, /headerLogoSize: profile\.logoSize/, 'settings projection must expose the persisted logo size');
 
 assert.match(routes, /path: 'document-format'/, 'document format must have a dedicated settings route');
 assert.match(routes, /path: 'tax-issuer'/, 'tax issuer settings must remain a separate route');
@@ -44,11 +47,20 @@ assert.match(documentFormatPage, /purpose="STORE_LOGO"/, 'document logos must us
 assert.match(documentFormatPage, /upload=\{uploadStorefrontMedia\}/, 'document logo selection must use the authenticated media upload pipeline');
 assert.match(documentFormatPage, /setValue\('headerLogoUrl', url/, 'uploaded logo URL must populate the document header form automatically');
 assert.match(documentFormatPage, /setValue\('headerShowLogo', true/, 'selecting a logo must enable document logo rendering');
+assert.match(documentFormatPage, /headerLogoSize/, 'document format page must expose logo sizing');
+assert.match(documentFormatPage, /ใหญ่ · 72 px/, 'document format page must label the approved large logo preset');
+assert.match(documentFormatPage, /ใหญ่มาก · 88 px/, 'document format page must label the approved extra-large logo preset');
 assert.match(mediaApi, /\/store-experience\/media\/upload/, 'canonical store media upload endpoint must remain available');
 assert.match(mediaField, /type="file"/, 'canonical media field must support local file selection');
 assert.match(mediaField, /เลือกจากคลัง/, 'canonical media field must support selecting an existing store asset');
 
 assert.match(scope, /store-document-header-logo-center/, 'shared A4 scope must support logo positioning');
+assert.match(scope, /store-document-header-logo-size-sm/, 'shared A4 scope must support small logo sizing');
+assert.match(scope, /store-document-header-logo-size-md/, 'shared A4 scope must support standard logo sizing');
+assert.match(scope, /store-document-header-logo-size-lg/, 'shared A4 scope must support large logo sizing');
+assert.match(scope, /store-document-header-logo-size-xl/, 'shared A4 scope must support extra-large logo sizing');
+assert.match(scope, /width: 72px !important/, 'large A4 logo preset must render at 72px');
+assert.match(scope, /width: 88px !important/, 'extra-large A4 logo preset must render at 88px');
 assert.match(scope, /store-document-header-hide-address/, 'shared A4 scope must support field visibility');
 assert.match(scope, /--store-document-header-note/, 'shared A4 scope must render the optional header note');
 assert.match(customerReceiptLayout, /buildStoreDocumentHeader/, 'customer receipt A4 layout must use the shared document header resolver');

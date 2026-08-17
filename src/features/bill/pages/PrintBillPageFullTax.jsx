@@ -138,20 +138,41 @@ const PrintBillPageFullTax = () => {
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
         @media print {
+          /*
+           * Own the physical sheet here instead of asking Chrome to compose a
+           * 210x297mm document inside a second 10mm @page margin box. Keeping
+           * the margin inside the A4 frame removes the trailing blank fragment.
+           */
+          @page {
+            size: A4;
+            margin: 0 !important;
+          }
+
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
           .bill-print-page-shell {
+            width: 210mm !important;
             min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
 
           .bill-print-root {
-            width: 100% !important;
-            max-width: 190mm !important;
+            width: 210mm !important;
+            max-width: 210mm !important;
+            margin: 0 !important;
           }
 
           .bill-print-root .print-a4 {
-            width: 100% !important;
-            max-width: 190mm !important;
-            min-height: calc(297mm - 20mm) !important;
+            width: 210mm !important;
+            max-width: 210mm !important;
+            min-height: 296mm !important;
             height: auto !important;
+            margin: 0 !important;
+            padding: 10mm !important;
             box-sizing: border-box !important;
           }
 
@@ -161,16 +182,16 @@ const PrintBillPageFullTax = () => {
 
           .bill-print-short-document .print-a4 {
             position: relative !important;
-            height: calc(297mm - 20mm) !important;
-            min-height: calc(297mm - 20mm) !important;
-            padding-bottom: 58mm !important;
+            height: 296mm !important;
+            min-height: 296mm !important;
+            padding: 10mm 10mm 58mm !important;
             overflow: hidden !important;
           }
 
           .bill-print-short-document .print-a4 > table + div {
             position: absolute !important;
-            left: 20px !important;
-            right: 20px !important;
+            left: 10mm !important;
+            right: 10mm !important;
             top: 214mm !important;
             bottom: auto !important;
             margin: 0 !important;
@@ -180,8 +201,8 @@ const PrintBillPageFullTax = () => {
 
           .bill-print-short-document .print-a4 > table + div + div {
             position: absolute !important;
-            left: 20px !important;
-            right: 20px !important;
+            left: 10mm !important;
+            right: 10mm !important;
             top: 246mm !important;
             bottom: auto !important;
             margin: 0 !important;

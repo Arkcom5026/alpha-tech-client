@@ -44,7 +44,9 @@ export const buildConsolidatedSaleDocument = (data) => {
       id: line.id,
       lineType: 'CONSOLIDATED',
       description: line.description,
-      documentDescription: line.description,
+      documentPrefix: line.documentPrefix || '',
+      documentDescription: line.documentDescription || '',
+      documentSuffix: line.documentSuffix || '',
       quantity: Number(line.quantity || 0),
       unit: 'ชิ้น',
       unitPrice: Number(line.documentUnitPrice || 0),
@@ -67,17 +69,20 @@ export const buildConsolidatedBillProjection = (data) => {
     const unitInclVat = quantity > 0 ? amount / quantity : amount;
     const unitExVat = vatRate > 0 ? unitInclVat / (1 + vatRate / 100) : unitInclVat;
     const totalExVat = vatRate > 0 ? amount / (1 + vatRate / 100) : amount;
+    const rawDescription = line.documentDescription || '';
+    const displayDescription = rawDescription || line.description || 'สินค้า';
 
     return {
       id: `consolidated-line-${line.id}`,
       documentLineKey: `consolidated-line-${line.id}`,
+      documentSourceLineId: Number(line.id),
       saleItemIds: [],
       simpleItemIds: [],
-      documentPrefix: '',
-      documentDescriptionRaw: line.description || '',
-      documentDescription: line.description || 'สินค้า',
-      documentSuffix: '',
-      hasDocumentLine: Boolean(line.description),
+      documentPrefix: line.documentPrefix || '',
+      documentDescriptionRaw: rawDescription,
+      documentDescription: displayDescription,
+      documentSuffix: line.documentSuffix || '',
+      hasDocumentLine: Boolean(line.documentPrefix || rawDescription || line.documentSuffix),
       productName: line.description || 'สินค้า',
       productModel: '-',
       quantity,

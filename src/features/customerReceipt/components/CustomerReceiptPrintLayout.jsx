@@ -1,6 +1,7 @@
 import React from 'react'
 
 import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
+import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig'
 import {
   buildCustomerReceiptLineItems,
   getCustomerReceiptVatSummary,
@@ -27,14 +28,22 @@ const resolvePrintBranch = (receipt, allocations) => {
 
   // Sale print data normally carries the same structured branch relation used by BillLayoutFullTax.
   // Prefer it over the lighter Customer Receipt branch projection when available.
-  return saleBranch || receiptBranch || null
+  if (!saleBranch) return receiptBranch
+  if (!receiptBranch) return saleBranch
+
+  // Customer Receipt projections can carry store print configuration even when the nested Sale branch is lighter.
+  return {
+    ...receiptBranch,
+    ...saleBranch,
+    documentHeaderConfig: saleBranch?.documentHeaderConfig || receiptBranch?.documentHeaderConfig || null,
+  }
 }
 
 const buildPrintConfig = (receipt, branch, vatRate, total, beforeVat, vatAmount) => {
   const receiptBranch = receipt?.branch || null
   const receiptConfig = branch?.receiptConfig || receiptBranch?.receiptConfig || {}
 
-  return {
+  const legacyConfig = {
     branchName:
       receiptConfig?.branchName ||
       branch?.name ||
@@ -59,6 +68,12 @@ const buildPrintConfig = (receipt, branch, vatRate, total, beforeVat, vatAmount)
     formatThaiDate,
     totals: { total, beforeVat, vatAmount },
   }
+
+  return buildStoreDocumentHeader({
+    branch: branch || receiptBranch,
+    documentType: 'CUSTOMER_RECEIPT',
+    legacyConfig,
+  })
 }
 
 const CustomerReceiptPrintLayout = ({ receipt }) => {

@@ -1,5 +1,4 @@
 const HEADER_ALIGNMENTS = new Set(['left', 'center', 'right']);
-const HEADER_LOGO_SIZES = new Set(['sm', 'md', 'lg']);
 const HEADER_NAME_SIZES = new Set(['sm', 'md', 'lg', 'xl']);
 
 const DEFAULT_DOCUMENT_HEADER_PROFILE = Object.freeze({
@@ -78,11 +77,11 @@ const buildStoreDocumentHeader = ({ branch, documentType = 'DEFAULT', legacyConf
 
   return {
     ...legacyConfig,
-    branchName: storeName,
-    address,
-    phone,
-    taxId,
-    logoUrl,
+    branchName: profile.showStoreName ? storeName : '',
+    address: profile.showAddress ? address : '',
+    phone: profile.showPhone ? phone : '',
+    taxId: profile.showTaxId ? taxId : '',
+    logoUrl: profile.showLogo ? logoUrl : null,
     headerStyle: {
       ...profile,
       logoUrl,
@@ -149,7 +148,6 @@ const buildDocumentHeaderConfigFromForm = (data = {}, currentConfig = null) => (
 export {
   DEFAULT_DOCUMENT_HEADER_PROFILE,
   HEADER_ALIGNMENTS,
-  HEADER_LOGO_SIZES,
   HEADER_NAME_SIZES,
   buildDocumentHeaderConfigFromForm,
   buildStoreDocumentHeader,

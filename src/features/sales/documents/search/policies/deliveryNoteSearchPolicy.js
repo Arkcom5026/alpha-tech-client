@@ -88,7 +88,7 @@ const getBalanceAmount = (sale) => {
 
 export const DELIVERY_NOTE_SEARCH_POLICY = Object.freeze({
   id: 'DELIVERY_NOTE',
-  queryParams: Object.freeze({ onlyWithDeliveryNote: 1 }),
+  queryParams: Object.freeze({ onlyWithDeliveryNote: 1, documentPurpose: 'DELIVERY_NOTE' }),
   isEligible: (sale) => {
     if (sale?.officialDocumentNumber) return true;
     if (getBalanceAmount(sale) > 0.0001) return true;
@@ -105,6 +105,10 @@ export const DELIVERY_NOTE_SEARCH_POLICY = Object.freeze({
     return {
       id: sale?.id,
       code: sale?.code,
+      officialDocumentNumber: sale?.officialDocumentNumber ?? null,
+      documentSourceType: sale?.documentSourceType || 'SALE',
+      documentSourceId: sale?.documentSourceId ?? sale?.id,
+      taxDocumentId: sale?.taxDocumentId ?? null,
       companyName: sale?.companyName ?? sale?.customer?.companyName ?? '-',
       customerName: sale?.customerName ?? sale?.customer?.name ?? '-',
       customerPhone: sale?.customerPhone ?? sale?.customer?.phone ?? '-',

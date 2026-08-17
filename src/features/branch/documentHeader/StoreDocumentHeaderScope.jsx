@@ -3,6 +3,7 @@ import React from 'react'
 const getHeaderScopeClassName = (style = {}) => [
   'store-document-header-scope',
   `store-document-header-logo-${style.logoPosition || 'left'}`,
+  `store-document-header-logo-size-${style.logoSize || 'md'}`,
   `store-document-header-text-${style.textAlign || 'left'}`,
   `store-document-header-name-${style.storeNameSize || 'md'}`,
   style.showAddress === false ? 'store-document-header-hide-address' : '',
@@ -36,6 +37,34 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
         }
         .store-document-header-logo-right .print-a4 > div:first-child > div:first-child {
           flex-direction: row-reverse;
+        }
+        .store-document-header-logo-size-sm .print-a4 > div:first-child > div:first-child > img {
+          width: 40px !important;
+          height: 40px !important;
+          max-width: 40px !important;
+          max-height: 40px !important;
+          object-fit: contain;
+        }
+        .store-document-header-logo-size-md .print-a4 > div:first-child > div:first-child > img {
+          width: 56px !important;
+          height: 56px !important;
+          max-width: 56px !important;
+          max-height: 56px !important;
+          object-fit: contain;
+        }
+        .store-document-header-logo-size-lg .print-a4 > div:first-child > div:first-child > img {
+          width: 72px !important;
+          height: 72px !important;
+          max-width: 72px !important;
+          max-height: 72px !important;
+          object-fit: contain;
+        }
+        .store-document-header-logo-size-xl .print-a4 > div:first-child > div:first-child > img {
+          width: 88px !important;
+          height: 88px !important;
+          max-width: 88px !important;
+          max-height: 88px !important;
+          object-fit: contain;
         }
         .store-document-header-name-sm .print-a4 > div:first-child h2 { font-size: 13px !important; }
         .store-document-header-name-md .print-a4 > div:first-child h2 { font-size: 16px !important; }

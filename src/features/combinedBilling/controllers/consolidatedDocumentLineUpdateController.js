@@ -1,4 +1,4 @@
-import { updateConsolidatedDeliveryDocumentLines } from '../api/combinedBillingApi';
+import { updateConsolidatedDeliveryDocumentLine } from '../api/combinedBillingApi';
 
 const normalizeDocumentText = (value) => {
   if (typeof value !== 'string') return null;
@@ -14,6 +14,7 @@ export const executeConsolidatedDocumentLineUpdate = async ({
 } = {}) => {
   const normalizedDocumentId = Number(documentId);
   const normalizedLineId = Number(lineId);
+  const description = normalizeDocumentText(draft?.documentDescriptionRaw);
 
   if (!Number.isInteger(normalizedDocumentId) || normalizedDocumentId <= 0) {
     return {
@@ -29,20 +30,19 @@ export const executeConsolidatedDocumentLineUpdate = async ({
       error: 'ไม่พบรายการเอกสารสำหรับบันทึก',
     };
   }
-
-  const payload = {
-    lines: [{
-      id: normalizedLineId,
-      documentPrefix: normalizeDocumentText(draft?.documentPrefix),
-      documentDescription: normalizeDocumentText(draft?.documentDescriptionRaw),
-      documentSuffix: normalizeDocumentText(draft?.documentSuffix),
-    }],
-  };
+  if (!description) {
+    return {
+      ok: false,
+      code: 'CONSOLIDATED_DOCUMENT_LINE_DESCRIPTION_REQUIRED',
+      error: 'กรุณาระบุคำอธิบายรายการเอกสาร',
+    };
+  }
 
   try {
-    const data = await updateConsolidatedDeliveryDocumentLines({
-      id: normalizedDocumentId,
-      lines: payload.lines,
+    const data = await updateConsolidatedDeliveryDocumentLine({
+      documentId: normalizedDocumentId,
+      lineId: normalizedLineId,
+      description,
     });
 
     if (typeof reload === 'function') {
@@ -71,7 +71,7 @@ export const executeConsolidatedDocumentLineUpdate = async ({
         error?.response?.data?.message
         || error?.response?.data?.error
         || error?.message
-        || 'บันทึกข้อความรายการเอกสารรวมไม่สำเร็จ',
+        || 'บันทึกคำอธิบายรายการเอกสารรวมไม่สำเร็จ',
     };
   }
 };

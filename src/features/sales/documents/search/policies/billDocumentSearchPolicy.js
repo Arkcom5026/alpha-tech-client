@@ -5,7 +5,7 @@ const toNumber = (value) => {
 
 export const BILL_DOCUMENT_SEARCH_POLICY = Object.freeze({
   id: 'BILL',
-  queryParams: Object.freeze({ onlyPaid: 1 }),
+  queryParams: Object.freeze({ onlyPaid: 1, documentPurpose: 'BILL' }),
   isEligible: (sale) => toNumber(sale?.paidAmount) > 0,
   projectRow: (sale) => {
     const gross = toNumber(sale?.totalAmount);

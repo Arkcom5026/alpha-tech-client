@@ -3,6 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 import { getCustomerMoneyReceive } from '../api/customerMoneyReceiveApi';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
+import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope';
+import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig';
 
 const formatMoney = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -21,15 +23,8 @@ const formatDateTime = (value) => {
   });
 };
 
-const paymentMethodLabel = (value) => ({
-  CASH: 'เงินสด',
-  TRANSFER: 'โอนเงิน',
-  CARD: 'บัตร',
-  QR: 'QR / พร้อมเพย์',
-}[value] || value || '-');
-
+const paymentMethodLabel = (value) => ({ CASH: 'เงินสด', TRANSFER: 'โอนเงิน', CARD: 'บัตร', QR: 'QR / พร้อมเพย์' }[value] || value || '-');
 const customerName = getCustomerDisplayName;
-
 const THAI_DIGITS = ['', 'หนึ่ง', 'สอง', 'สาม', 'สี่', 'ห้า', 'หก', 'เจ็ด', 'แปด', 'เก้า'];
 const THAI_PLACES = ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน'];
 
@@ -65,7 +60,7 @@ const thaiBahtText = (value) => {
   return satang ? `${bahtText}${readThaiInteger(satang)}สตางค์` : `${bahtText}ถ้วน`;
 };
 
-const CustomerMoneyReceiptDocument = ({ record, mode }) => {
+const CustomerMoneyReceiptDocument = ({ record, mode, headerConfig }) => {
   const isShort = mode === 'SHORT';
   const isCancelled = record.status === 'CANCELLED';
   const isFullyAllocated = record.status === 'FULLY_ALLOCATED';
@@ -80,24 +75,33 @@ const CustomerMoneyReceiptDocument = ({ record, mode }) => {
       : `รับเข้า Customer Money และยังพร้อมใช้ ฿${formatMoney(record.remainingAmount)}`;
 
   return (
-    <article className={`customer-money-receipt-document bg-white text-black ${isShort ? 'w-[80mm] p-4 text-[12px]' : 'min-h-[277mm] w-[190mm] p-8 text-[14px]'}`}>
-      <header className="border-b-2 border-black pb-4 text-center">
-        <h1 className={`${isShort ? 'text-xl' : 'text-2xl'} font-bold`}>{branch.name || 'ร้านค้า'}</h1>
-        {!isShort && <div className="mt-1 text-sm">{branch.address || '-'}</div>}
-        <div className="mt-1 text-sm">
-          {[branch.phone && `โทร ${branch.phone}`, branch.taxId && `เลขประจำตัวผู้เสียภาษี ${branch.taxId}`].filter(Boolean).join(' · ')}
-        </div>
-        {!isShort && branch.name && <div className="mt-1 text-xs">{branchIdentity}</div>}
-        <div className={`${isShort ? 'mt-3 text-lg' : 'mt-4 text-xl'} font-bold`}>ใบรับเงิน</div>
-        <div className="text-xs tracking-wide">CUSTOMER MONEY RECEIPT</div>
-      </header>
+    <article className={`customer-money-receipt-document bg-white text-black ${isShort ? 'w-[80mm] p-4 text-[12px]' : 'credit-collection-a4 min-h-[277mm] w-[190mm] p-8 text-[14px]'}`}>
+      {isShort ? (
+        <header className="border-b-2 border-black pb-4 text-center">
+          <h1 className="text-xl font-bold">{branch.name || 'ร้านค้า'}</h1>
+          <div className="mt-1 text-sm">{[branch.phone && `โทร ${branch.phone}`, branch.taxId && `เลขประจำตัวผู้เสียภาษี ${branch.taxId}`].filter(Boolean).join(' · ')}</div>
+          <div className="mt-3 text-lg font-bold">ใบรับเงิน</div>
+          <div className="text-xs tracking-wide">CUSTOMER MONEY RECEIPT</div>
+        </header>
+      ) : (
+        <header className="credit-collection-header border-b-2 border-black pb-4">
+          <div className="credit-collection-store-header flex items-start gap-4">
+            {headerConfig?.logoUrl ? <img className="credit-collection-store-logo shrink-0 object-contain" src={headerConfig.logoUrl} alt="โลโก้ร้าน" /> : null}
+            <div className="credit-collection-store-copy min-w-0 flex-1">
+              {headerConfig?.branchName ? <h1 className="credit-collection-store-name font-bold">{headerConfig.branchName}</h1> : null}
+              {headerConfig?.address ? <p className="credit-collection-store-address mt-1 text-sm">{headerConfig.address}</p> : null}
+              {headerConfig?.phone ? <p className="credit-collection-store-phone mt-1 text-sm">โทร {headerConfig.phone}</p> : null}
+              {headerConfig?.taxId ? <p className="credit-collection-store-tax mt-1 text-sm">เลขประจำตัวผู้เสียภาษี {headerConfig.taxId}</p> : null}
+              {headerConfig?.headerStyle?.showBranchLabel !== false && branch.name ? <p className="mt-1 text-xs">{branchIdentity}</p> : null}
+            </div>
+          </div>
+          <div className="mt-4 text-center text-xl font-bold">ใบรับเงิน</div>
+          <div className="text-center text-xs tracking-wide">CUSTOMER MONEY RECEIPT</div>
+        </header>
+      )}
 
-      {isCancelled && (
-        <div className="my-4 border-2 border-black p-2 text-center font-bold">ยกเลิกแล้ว / CANCELLED</div>
-      )}
-      {isFullyAllocated && (
-        <div className="my-4 border border-black p-2 text-center font-bold">ใช้ Customer Money ครบแล้ว / FULLY ALLOCATED</div>
-      )}
+      {isCancelled && <div className="my-4 border-2 border-black p-2 text-center font-bold">ยกเลิกแล้ว / CANCELLED</div>}
+      {isFullyAllocated && <div className="my-4 border border-black p-2 text-center font-bold">ใช้ Customer Money ครบแล้ว / FULLY ALLOCATED</div>}
 
       <section className="mt-4 grid grid-cols-2 gap-x-5 gap-y-2">
         <div><span className="font-semibold">เลขที่:</span> {record.documentNo}</div>
@@ -190,9 +194,7 @@ const CustomerMoneyReceiptPrintPage = () => {
         feedback.actionError(err, message, `customer-money-receive:print:${recordIdSnapshot}:load:error`);
       });
 
-    return () => {
-      if (loadRequestRef.current === requestId) loadRequestRef.current += 1;
-    };
+    return () => { if (loadRequestRef.current === requestId) loadRequestRef.current += 1; };
   }, [id, requestedMode]);
 
   useEffect(() => {
@@ -203,8 +205,12 @@ const CustomerMoneyReceiptPrintPage = () => {
     return () => window.clearTimeout(timer);
   }, [autoPrint, record, error, id]);
 
+  const a4HeaderConfig = useMemo(() => record ? buildStoreDocumentHeader({ branch: record.branch, documentType: 'CUSTOMER_MONEY_RECEIPT' }) : null, [record]);
+
   if (error) return <div className="p-8 text-center text-rose-700">{error}</div>;
   if (!record) return <div className="p-8 text-center text-slate-500">กำลังโหลดใบรับเงิน...</div>;
+
+  const receiptDocument = <CustomerMoneyReceiptDocument record={record} mode={mode} headerConfig={a4HeaderConfig} />;
 
   return (
     <>
@@ -220,10 +226,7 @@ const CustomerMoneyReceiptPrintPage = () => {
       `}</style>
       <div className="customer-money-receipt-toolbar w-full bg-white px-4 py-3 print:hidden">
         <div className="mx-auto flex max-w-[210mm] flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="font-bold text-slate-900">ใบรับเงิน {record.documentNo}</div>
-            <div className="text-xs text-slate-500">Customer Money Receipt · เลือกขนาดเอกสารก่อนพิมพ์</div>
-          </div>
+          <div><div className="font-bold text-slate-900">ใบรับเงิน {record.documentNo}</div><div className="text-xs text-slate-500">Customer Money Receipt · เลือกขนาดเอกสารก่อนพิมพ์</div></div>
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold">กลับ</button>
             <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1">
@@ -236,7 +239,7 @@ const CustomerMoneyReceiptPrintPage = () => {
       </div>
       <main className="min-h-screen bg-slate-100 p-4 print:bg-white print:p-0">
         <div className="mx-auto w-fit shadow print:shadow-none">
-          <CustomerMoneyReceiptDocument record={record} mode={mode} />
+          {mode === 'SHORT' ? receiptDocument : <StoreDocumentHeaderScope config={a4HeaderConfig}>{receiptDocument}</StoreDocumentHeaderScope>}
         </div>
       </main>
     </>

@@ -2,22 +2,11 @@ import {
   Building2,
   CheckCircle,
   Edit3,
-  FileText,
   RefreshCw,
   Save,
   ShieldAlert,
   X,
 } from 'lucide-react';
-
-const ToggleField = ({ register, name, label, hint }) => (
-  <label className="flex items-start gap-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50/50 dark:bg-zinc-800/40 px-3 py-2.5 cursor-pointer">
-    <input type="checkbox" {...register(name)} className="mt-0.5 h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500" />
-    <span>
-      <span className="block text-xs font-bold text-zinc-700 dark:text-zinc-200">{label}</span>
-      {hint ? <span className="block text-[10px] text-zinc-400 mt-0.5">{hint}</span> : null}
-    </span>
-  </label>
-);
 
 const BranchListWorkspace = ({
   shopSlug,
@@ -51,26 +40,13 @@ const BranchListWorkspace = ({
               </p>
             </div>
           </div>
-
           <div className="flex items-center gap-2">
             {branches.length > 0 && (
-              <button
-                type="button"
-                onClick={() => onOpenEdit(branches[0])}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-sm transition focus:outline-none focus:ring-4 focus:ring-emerald-100"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>แก้ไขข้อมูลร้าน/บริษัท</span>
+              <button type="button" onClick={() => onOpenEdit(branches[0])} className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl shadow-sm transition focus:outline-none focus:ring-4 focus:ring-emerald-100">
+                <Edit3 className="w-3.5 h-3.5" /><span>แก้ไขข้อมูลร้าน/บริษัท</span>
               </button>
             )}
-
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={loading}
-              className="p-2 border rounded-xl bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-zinc-700 transition disabled:opacity-50"
-              title="รีเฟรชข้อมูล"
-            >
+            <button type="button" onClick={onRefresh} disabled={loading} className="p-2 border rounded-xl bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:border-emerald-300 hover:bg-emerald-50 dark:hover:bg-zinc-700 transition disabled:opacity-50" title="รีเฟรชข้อมูล">
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
           </div>
@@ -89,26 +65,15 @@ const BranchListWorkspace = ({
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-            {loading && branches.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-8 text-center text-zinc-400 font-medium">กำลังดึงข้อมูลพิกัดโครงสร้างระบบจากคลาวด์...</td></tr>
-            )}
-            {!loading && branches.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-12 text-center text-zinc-400 font-medium">ไม่พบข้อมูลโครงสร้างออนไลน์ที่ลงทะเบียนภายใต้สิทธิ์ของแบรนด์นี้</td></tr>
-            )}
+            {loading && branches.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-zinc-400 font-medium">กำลังดึงข้อมูลพิกัดโครงสร้างระบบจากคลาวด์...</td></tr>}
+            {!loading && branches.length === 0 && <tr><td colSpan={5} className="px-4 py-12 text-center text-zinc-400 font-medium">ไม่พบข้อมูลโครงสร้างออนไลน์ที่ลงทะเบียนภายใต้สิทธิ์ของแบรนด์นี้</td></tr>}
             {branches.map((branch, index) => (
               <tr key={branch.id || index} className="hover:bg-emerald-50/30 dark:hover:bg-emerald-950/10 transition-colors">
                 <td className="px-4 py-3.5 text-center font-mono text-zinc-400">{index + 1}</td>
-                <td className="px-4 py-3.5">
-                  <div className="font-bold text-zinc-800 dark:text-zinc-100">{branch.name || '-'}</div>
-                  <div className="text-[10px] text-zinc-400 font-mono mt-0.5">ID: {branch.id || branch.code || index + 1}</div>
-                </td>
+                <td className="px-4 py-3.5"><div className="font-bold text-zinc-800 dark:text-zinc-100">{branch.name || '-'}</div><div className="text-[10px] text-zinc-400 font-mono mt-0.5">ID: {branch.id || branch.code || index + 1}</div></td>
                 <td className="px-4 py-3.5 font-mono text-zinc-700 dark:text-zinc-300">{branch.phone || branch.telephone || '—'}</td>
                 <td className="px-4 py-3.5 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed max-w-sm truncate" title={branch.address}>{branch.address || 'ไม่ได้ระบุข้อมูลที่อยู่ทางพิกัด'}</td>
-                <td className="px-4 py-3.5 text-center">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-600/20">
-                    <CheckCircle className="w-3 h-3" /> Verified
-                  </span>
-                </td>
+                <td className="px-4 py-3.5 text-center"><span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-inset ring-emerald-600/20"><CheckCircle className="w-3 h-3" /> Verified</span></td>
               </tr>
             ))}
           </tbody>
@@ -123,108 +88,16 @@ const BranchListWorkspace = ({
 
     {isModalOpen && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-sm animate-fadeIn">
-        <div className="w-full max-w-3xl max-h-[92vh] bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xl flex flex-col overflow-hidden">
-          <div className="px-5 py-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-emerald-50/40 dark:bg-emerald-950/10 shrink-0">
-            <div className="flex items-center gap-2">
-              <Edit3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <h3 className="font-bold text-sm text-slate-900 dark:text-white">แก้ไขข้อมูลร้านและรูปแบบหัวเอกสาร</h3>
-            </div>
+        <div className="w-full max-w-lg bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl shadow-xl flex flex-col overflow-hidden">
+          <div className="px-5 py-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-emerald-50/40 dark:bg-emerald-950/10">
+            <div className="flex items-center gap-2"><Edit3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /><h3 className="font-bold text-sm text-slate-900 dark:text-white">✏️ แก้ไขข้อมูลร้าน/บริษัท</h3></div>
             <button type="button" onClick={onCloseModal} className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition"><X className="w-4 h-4" /></button>
           </div>
-
-          <form onSubmit={onSubmit} className="p-5 space-y-5 overflow-y-auto">
-            <section className="space-y-4">
-              <div className="flex items-center gap-2 text-xs font-black text-zinc-500 uppercase tracking-wider">
-                <Building2 className="w-4 h-4" /> ข้อมูลร้าน/บริษัท
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">ชื่อร้านค้า / บริษัท</label>
-                <input type="text" {...register('name', { required: 'กรุณากรอกชื่อร้าน/บริษัท' })} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100 font-bold focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition" />
-                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">เบอร์โทรศัพท์ติดต่อ</label>
-                  <input type="text" {...register('phone', { required: 'กรุณากรอกเบอร์โทรศัพท์' })} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100 font-mono focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition" />
-                  {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>}
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">พิกัด / ที่อยู่สถานประกอบการ</label>
-                  <textarea rows={2} {...register('address', { required: 'กรุณากรอกที่อยู่' })} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-100 font-medium leading-relaxed focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition" placeholder="ระบุเลขที่ ถนน ตำบล อำเภอ จังหวัด..." />
-                  {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address.message}</p>}
-                </div>
-              </div>
-            </section>
-
-            <section className="border-t border-zinc-100 dark:border-zinc-800 pt-5 space-y-4">
-              <div>
-                <div className="flex items-center gap-2 text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-                  <FileText className="w-4 h-4" /> รูปแบบหัวเอกสารของร้าน
-                </div>
-                <p className="mt-1 text-[11px] text-zinc-400">ค่าที่เว้นว่างจะใช้ข้อมูลร้าน/บริษัทเป็นค่าเริ่มต้น และมีผลเฉพาะร้านนี้เท่านั้น</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-zinc-500 mb-1">ชื่อร้านบนหัวเอกสาร</label>
-                  <input type="text" {...register('headerStoreName')} placeholder="เว้นว่างเพื่อใช้ชื่อร้านหลัก" className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm font-bold focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-500 mb-1">ขนาดชื่อร้าน</label>
-                  <select {...register('headerStoreNameSize')} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
-                    <option value="sm">เล็ก</option><option value="md">มาตรฐาน</option><option value="lg">ใหญ่</option><option value="xl">ใหญ่มาก</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-500 mb-1">URL โลโก้บนเอกสาร</label>
-                  <input type="url" {...register('headerLogoUrl')} placeholder="https://..." className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-xs font-mono focus:border-emerald-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-500 mb-1">ตำแหน่งโลโก้</label>
-                  <select {...register('headerLogoPosition')} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
-                    <option value="left">ซ้าย</option><option value="center">กลาง</option><option value="right">ขวา</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-500 mb-1">การจัดแนวข้อมูลหัวเอกสาร</label>
-                  <select {...register('headerTextAlign')} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none">
-                    <option value="left">ชิดซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ชิดขวา</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-500 mb-1">เบอร์โทรบนเอกสาร</label>
-                  <input type="text" {...register('headerPhone')} placeholder="เว้นว่างเพื่อใช้เบอร์ร้านหลัก" className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-zinc-500 mb-1">ที่อยู่บนเอกสาร</label>
-                  <textarea rows={2} {...register('headerAddress')} placeholder="เว้นว่างเพื่อใช้ที่อยู่ร้านหลัก" className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-xs focus:border-emerald-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-500 mb-1">เลขประจำตัวผู้เสียภาษีบนเอกสาร</label>
-                  <input type="text" {...register('headerTaxId')} maxLength={13} placeholder="เว้นว่างเพื่อใช้ Tax ID ร้าน" className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm font-mono focus:border-emerald-500 focus:outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-zinc-500 mb-1">ข้อความเสริมใต้หัวเอกสาร</label>
-                  <input type="text" {...register('headerNote')} placeholder="เช่น ขอบคุณที่ใช้บริการ" className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm focus:border-emerald-500 focus:outline-none" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                <ToggleField register={register} name="headerShowLogo" label="แสดงโลโก้" />
-                <ToggleField register={register} name="headerShowStoreName" label="แสดงชื่อร้าน" />
-                <ToggleField register={register} name="headerShowAddress" label="แสดงที่อยู่" />
-                <ToggleField register={register} name="headerShowPhone" label="แสดงเบอร์โทร" />
-                <ToggleField register={register} name="headerShowTaxId" label="แสดง Tax ID" />
-                <ToggleField register={register} name="headerShowBranchLabel" label="แสดงข้อมูลสาขา" hint="เตรียมรองรับป้ายสำนักงานใหญ่/สาขา" />
-              </div>
-            </section>
-
-            <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
-              <button type="button" onClick={onCloseModal} className="px-4 py-2 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-bold rounded-xl transition">ยกเลิก</button>
-              <button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl flex items-center gap-1 shadow-sm transition focus:outline-none focus:ring-4 focus:ring-emerald-100">
-                <Save className="w-3.5 h-3.5" /><span>บันทึกข้อมูลและหัวเอกสาร</span>
-              </button>
-            </div>
+          <form onSubmit={onSubmit} className="p-5 space-y-4">
+            <div><label className="block text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">ชื่อร้านค้า / บริษัท</label><input type="text" {...register('name', { required: 'กรุณากรอกชื่อร้าน/บริษัท' })} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100 font-bold focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition" />{errors.name && <p className="text-xs text-red-500 mt-1">{errors.name.message}</p>}</div>
+            <div><label className="block text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">เบอร์โทรศัพท์ติดต่อ</label><input type="text" {...register('phone', { required: 'กรุณากรอกเบอร์โทรศัพท์' })} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-sm text-zinc-800 dark:text-zinc-100 font-mono focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition" />{errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>}</div>
+            <div><label className="block text-xs font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider mb-1">พิกัด / ที่อยู่สถานประกอบการ</label><textarea rows={3} {...register('address', { required: 'กรุณากรอกที่อยู่' })} className="w-full border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 rounded-xl px-3 py-2 text-xs text-zinc-800 dark:text-zinc-100 font-medium leading-relaxed focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100 focus:outline-none transition" placeholder="ระบุเลขที่ ถนน ตำบล อำเภอ จังหวัด..." />{errors.address && <p className="text-xs text-red-500 mt-1">{errors.address.message}</p>}</div>
+            <div className="pt-2 flex justify-end gap-2"><button type="button" onClick={onCloseModal} className="px-4 py-2 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 text-xs font-bold rounded-xl transition">ยกเลิก</button><button type="submit" className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black rounded-xl flex items-center gap-1 shadow-sm transition focus:outline-none focus:ring-4 focus:ring-emerald-100"><Save className="w-3.5 h-3.5" /><span>บันทึกการแก้ไข</span></button></div>
           </form>
         </div>
       </div>

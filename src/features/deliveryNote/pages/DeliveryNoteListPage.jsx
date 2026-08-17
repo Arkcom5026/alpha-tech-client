@@ -107,11 +107,13 @@ const DeliveryNoteListPage = () => {
 
   const summary = useMemo(() => {
     const count = sortedRows.length;
+    const outstandingCount = sortedRows.filter((row) => Number(row?.balanceAmount || 0) > 0.0001).length;
     const totalSum = round2(sortedRows.reduce((sum, row) => sum + Number(row?.totalAmount || 0), 0));
     const balanceSum = round2(sortedRows.reduce((sum, row) => sum + Number(row?.balanceAmount || 0), 0));
 
     return {
       count,
+      outstandingCount,
       totalSum,
       balanceSum,
       avg: count > 0 ? round2(totalSum / count) : 0,

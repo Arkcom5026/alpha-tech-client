@@ -4,9 +4,9 @@ const formatMoney = (value) => Number(value || 0).toLocaleString('th-TH', { mini
 
 const DeliveryNoteMetricGrid = ({ summary }) => {
   const metrics = [
-    { label: 'เอกสารค้างชำระ', value: `${summary.count.toLocaleString('th-TH')} ใบ`, tone: 'text-slate-950' },
+    { label: 'เอกสารทั้งหมด', value: `${summary.count.toLocaleString('th-TH')} ใบ`, tone: 'text-slate-950' },
     { label: 'มูลค่ารวม', value: `฿${formatMoney(summary.totalSum)}`, tone: 'text-blue-700' },
-    { label: 'ยอดค้างชำระ', value: `฿${formatMoney(summary.balanceSum)}`, tone: 'text-rose-700' },
+    { label: `ยอดค้างชำระ (${Number(summary.outstandingCount || 0).toLocaleString('th-TH')} ใบ)`, value: `฿${formatMoney(summary.balanceSum)}`, tone: 'text-rose-700' },
     { label: 'เฉลี่ยต่อใบ', value: `฿${formatMoney(summary.avg)}`, tone: 'text-emerald-700' },
   ];
 

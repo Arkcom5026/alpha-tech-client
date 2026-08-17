@@ -9,6 +9,7 @@ const BillShortTaxPrintShell = ({
   documentTitle,
   printRootRef,
   documentLineEditor,
+  editableDocumentLines = true,
 }) => (
   <>
     <style>{`
@@ -82,13 +83,13 @@ const BillShortTaxPrintShell = ({
           config={{ ...config, hideDate: false }}
           hideContactName={hideContactName}
           documentTitle={documentTitle}
-          editableDocumentLines
-          editingLineKey={documentLineEditor.editingLineKey}
-          lineDrafts={documentLineEditor.lineDrafts}
-          savingLineKey={documentLineEditor.savingLineKey}
-          onToggleDocumentLineEdit={documentLineEditor.actions.toggle}
-          onChangeDocumentLineDraft={documentLineEditor.actions.change}
-          onSaveDocumentLine={documentLineEditor.actions.save}
+          editableDocumentLines={editableDocumentLines}
+          editingLineKey={editableDocumentLines ? documentLineEditor?.editingLineKey : null}
+          lineDrafts={editableDocumentLines ? documentLineEditor?.lineDrafts : {}}
+          savingLineKey={editableDocumentLines ? documentLineEditor?.savingLineKey : null}
+          onToggleDocumentLineEdit={editableDocumentLines ? documentLineEditor?.actions?.toggle : undefined}
+          onChangeDocumentLineDraft={editableDocumentLines ? documentLineEditor?.actions?.change : undefined}
+          onSaveDocumentLine={editableDocumentLines ? documentLineEditor?.actions?.save : undefined}
         />
       </div>
     </div>

@@ -138,11 +138,6 @@ const PrintBillPageFullTax = () => {
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
         @media print {
-          /*
-           * Own the physical sheet here instead of asking Chrome to compose a
-           * 210x297mm document inside a second 10mm @page margin box. Keeping
-           * the margin inside the A4 frame removes the trailing blank fragment.
-           */
           @page {
             size: A4;
             margin: 0 !important;
@@ -166,6 +161,12 @@ const PrintBillPageFullTax = () => {
             margin: 0 !important;
           }
 
+          /*
+           * The physical A4 sheet is the outer frame during printing. Do not
+           * draw the legacy component border on top of the sheet edge: a 1px
+           * CSS border is rasterized after print scaling and can look skewed or
+           * asymmetrical even when the document geometry itself is correct.
+           */
           .bill-print-root .print-a4 {
             width: 210mm !important;
             max-width: 210mm !important;
@@ -174,6 +175,9 @@ const PrintBillPageFullTax = () => {
             margin: 0 !important;
             padding: 10mm !important;
             box-sizing: border-box !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
           }
 
           .bill-print-root .print-a4 tbody tr:nth-last-child(-n+${printFillerRowsToHide}) {

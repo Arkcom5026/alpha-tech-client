@@ -9,6 +9,8 @@ import {
   buildDocumentHeaderConfigFromForm,
   projectDocumentHeaderFormDefaults,
 } from '@/features/branch/documentHeader/documentHeaderConfig';
+import StorefrontMediaUploadField from '@/features/storeExperience/components/StorefrontMediaUploadField';
+import { uploadStorefrontMedia } from '@/features/storeExperience/api/storeExperienceApi';
 
 const inputClassName = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100';
 const labelClassName = 'mb-1.5 block text-xs font-black text-slate-600';
@@ -40,8 +42,9 @@ const DocumentFormatSettingsPage = () => {
   const [branch, setBranch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
-  const { register, handleSubmit, reset, watch } = useForm({
+  const { register, handleSubmit, reset, setValue, watch } = useForm({
     defaultValues: projectDocumentHeaderFormDefaults(null),
   });
 
@@ -90,8 +93,14 @@ const DocumentFormatSettingsPage = () => {
   const previewAlign = ['left', 'center', 'right'].includes(form.headerTextAlign) ? form.headerTextAlign : 'left';
   const previewLogoPosition = ['left', 'center', 'right'].includes(form.headerLogoPosition) ? form.headerLogoPosition : 'left';
 
+  const handleLogoUploaded = (url) => {
+    setValue('headerLogoUrl', url, { shouldDirty: true, shouldValidate: true });
+    setValue('headerShowLogo', true, { shouldDirty: true });
+    feedback.actionSuccess('เลือกโลโก้สำหรับเอกสารเรียบร้อยแล้ว', 'document-format-logo-selected');
+  };
+
   const onSubmit = async (data) => {
-    if (!branchId || saving) return;
+    if (!branchId || saving || uploadingLogo) return;
     setSaving(true);
     try {
       const documentHeaderConfig = buildDocumentHeaderConfigFromForm(data, branch?.documentHeaderConfig);
@@ -141,11 +150,21 @@ const DocumentFormatSettingsPage = () => {
           <section className="space-y-4">
             <div>
               <div className="flex items-center gap-2 text-sm font-black text-slate-900"><Image className="h-4 w-4 text-emerald-600" /> โลโก้และตำแหน่ง</div>
-              <p className="mt-1 text-[11px] font-medium text-slate-400">ใช้ URL รูปโลโก้ที่เข้าถึงได้จากเครื่องพิมพ์/เบราว์เซอร์ของร้าน</p>
+              <p className="mt-1 text-[11px] font-medium text-slate-400">อัปโหลดจากเครื่อง เลือกจากคลังรูปของร้าน หรือระบุ URL เองก็ได้</p>
             </div>
             <Toggle register={register} name="headerShowLogo" label="แสดงโลโก้" description="ปิดได้เมื่อเอกสารบางชุดไม่ต้องการโลโก้ร้าน" />
+            <StorefrontMediaUploadField
+              label="โลโก้เอกสาร"
+              purpose="STORE_LOGO"
+              value={previewLogo}
+              upload={uploadStorefrontMedia}
+              onUploaded={handleLogoUploaded}
+              onBusyChange={(busy) => setUploadingLogo(busy)}
+              disabled={saving}
+              accept="image/png,image/jpeg,image/webp,image/gif"
+            />
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="md:col-span-2"><label className={labelClassName}>URL โลโก้</label><input type="url" {...register('headerLogoUrl')} className={inputClassName} placeholder="https://..." /></div>
+              <div className="md:col-span-2"><label className={labelClassName}>URL โลโก้ (ทางเลือก)</label><input type="url" {...register('headerLogoUrl')} className={inputClassName} placeholder="https://..." /></div>
               <div><label className={labelClassName}>ตำแหน่งโลโก้</label><select {...register('headerLogoPosition')} className={inputClassName}><option value="left">ซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ขวา</option></select></div>
               <div><label className={labelClassName}>แนวข้อความหัวเอกสาร</label><select {...register('headerTextAlign')} className={inputClassName}><option value="left">ชิดซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ชิดขวา</option></select></div>
             </div>
@@ -175,7 +194,7 @@ const DocumentFormatSettingsPage = () => {
 
           <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-2 text-[11px] font-medium leading-relaxed text-slate-400"><Info className="mt-0.5 h-4 w-4 shrink-0" /><span>ระยะแรกใช้กับเอกสาร A4 ที่เชื่อมต่อแล้ว ส่วนใบเสร็จ 80 มม. จะเปิดใช้งานหลังผ่านการตรวจสอบความสูงและการตัดหน้าของเครื่องพิมพ์จริง</span></div>
-            <button type="submit" disabled={saving} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"><Save className="h-4 w-4" />{saving ? 'กำลังบันทึก...' : 'บันทึกรูปแบบ'}</button>
+            <button type="submit" disabled={saving || uploadingLogo} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"><Save className="h-4 w-4" />{uploadingLogo ? 'กำลังอัปโหลดโลโก้...' : saving ? 'กำลังบันทึก...' : 'บันทึกรูปแบบ'}</button>
           </div>
         </form>
 

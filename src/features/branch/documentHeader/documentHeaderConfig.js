@@ -109,41 +109,44 @@ const projectDocumentHeaderFormDefaults = (branch) => {
     headerPhone: profile.phone,
     headerShowTaxId: profile.showTaxId,
     headerTaxId: profile.taxId,
-    headerShowBranchLabel: profile.showBranchLabel,
     headerNote: profile.headerNote,
   };
 };
 
-const buildDocumentHeaderConfigFromForm = (data = {}, currentConfig = null) => ({
-  version: 1,
-  default: {
-    showLogo: Boolean(data.headerShowLogo),
-    logoUrl: cleanString(data.headerLogoUrl),
-    logoPosition: HEADER_ALIGNMENTS.has(cleanString(data.headerLogoPosition).toLowerCase())
-      ? cleanString(data.headerLogoPosition).toLowerCase()
-      : 'left',
-    textAlign: HEADER_ALIGNMENTS.has(cleanString(data.headerTextAlign).toLowerCase())
-      ? cleanString(data.headerTextAlign).toLowerCase()
-      : 'left',
-    showStoreName: Boolean(data.headerShowStoreName),
-    storeName: cleanString(data.headerStoreName),
-    storeNameSize: HEADER_NAME_SIZES.has(cleanString(data.headerStoreNameSize).toLowerCase())
-      ? cleanString(data.headerStoreNameSize).toLowerCase()
-      : 'md',
-    showAddress: Boolean(data.headerShowAddress),
-    address: cleanString(data.headerAddress),
-    showPhone: Boolean(data.headerShowPhone),
-    phone: cleanString(data.headerPhone),
-    showTaxId: Boolean(data.headerShowTaxId),
-    taxId: cleanString(data.headerTaxId),
-    showBranchLabel: Boolean(data.headerShowBranchLabel),
-    headerNote: cleanString(data.headerNote),
-  },
-  documents:
-    currentConfig?.documents && typeof currentConfig.documents === 'object' && !Array.isArray(currentConfig.documents)
-      ? currentConfig.documents
-      : {},
-});
+const buildDocumentHeaderConfigFromForm = (data = {}, currentConfig = null) => {
+  const currentDefault = normalizeHeaderProfile(currentConfig?.default);
+
+  return {
+    version: 1,
+    default: {
+      showLogo: Boolean(data.headerShowLogo),
+      logoUrl: cleanString(data.headerLogoUrl),
+      logoPosition: HEADER_ALIGNMENTS.has(cleanString(data.headerLogoPosition).toLowerCase())
+        ? cleanString(data.headerLogoPosition).toLowerCase()
+        : 'left',
+      textAlign: HEADER_ALIGNMENTS.has(cleanString(data.headerTextAlign).toLowerCase())
+        ? cleanString(data.headerTextAlign).toLowerCase()
+        : 'left',
+      showStoreName: Boolean(data.headerShowStoreName),
+      storeName: cleanString(data.headerStoreName),
+      storeNameSize: HEADER_NAME_SIZES.has(cleanString(data.headerStoreNameSize).toLowerCase())
+        ? cleanString(data.headerStoreNameSize).toLowerCase()
+        : 'md',
+      showAddress: Boolean(data.headerShowAddress),
+      address: cleanString(data.headerAddress),
+      showPhone: Boolean(data.headerShowPhone),
+      phone: cleanString(data.headerPhone),
+      showTaxId: Boolean(data.headerShowTaxId),
+      taxId: cleanString(data.headerTaxId),
+      showBranchLabel: currentDefault.showBranchLabel,
+      headerNote: cleanString(data.headerNote),
+    },
+    documents:
+      currentConfig?.documents && typeof currentConfig.documents === 'object' && !Array.isArray(currentConfig.documents)
+        ? currentConfig.documents
+        : {},
+  };
+};
 
 export {
   DEFAULT_DOCUMENT_HEADER_PROFILE,

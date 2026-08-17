@@ -18,11 +18,22 @@ vi.mock('@/features/supplier/api/supplierApi', () => ({ getAllSuppliers: mocks.g
 
 const api = await import('./quickReceiptSessionApi');
 
+const deferred = () => {
+  let resolve;
+  let reject;
+  const promise = new Promise((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+};
+
 describe('quickReceiptSessionApi', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal('crypto', { randomUUID: mocks.randomUUID });
     api.__resetQuickReceiptCommandKeysForTest();
+    api.__resetQuickReceiptReadRequestsForTest();
     mocks.randomUUID.mockReturnValue('cmd-test-001');
   });
 
@@ -30,6 +41,40 @@ describe('quickReceiptSessionApi', () => {
     mocks.getAllSuppliers.mockResolvedValue({ data: [{ id: 1, name: 'Supplier A' }] });
     await expect(api.loadQuickReceiptSuppliers()).resolves.toEqual([{ id: 1, name: 'Supplier A' }]);
     expect(mocks.getAllSuppliers).toHaveBeenCalledWith({});
+  });
+
+  it('coalesces concurrent supplier reads across StrictMode effect re-entry', async () => {
+    const pending = deferred();
+    mocks.getAllSuppliers.mockReturnValue(pending.promise);
+
+    const first = api.loadQuickReceiptSuppliers();
+    const second = api.loadQuickReceiptSuppliers();
+
+    expect(second).toBe(first);
+    await Promise.resolve();
+    expect(mocks.getAllSuppliers).toHaveBeenCalledTimes(1);
+
+    pending.resolve({ data: [{ id: 1, name: 'Supplier A' }] });
+    await expect(first).resolves.toEqual([{ id: 1, name: 'Supplier A' }]);
+  });
+
+  it('coalesces equivalent concurrent draft-list reads without caching completed reads', async () => {
+    const firstPending = deferred();
+    mocks.get.mockReturnValueOnce(firstPending.promise);
+
+    const first = api.listQuickReceiptDrafts({ status: 'DRAFT', supplierId: 7 });
+    const second = api.listQuickReceiptDrafts({ supplierId: 7, status: 'DRAFT' });
+
+    expect(second).toBe(first);
+    await Promise.resolve();
+    expect(mocks.get).toHaveBeenCalledTimes(1);
+
+    firstPending.resolve({ data: { data: [{ id: 77, status: 'DRAFT' }] } });
+    await expect(first).resolves.toEqual([{ id: 77, status: 'DRAFT' }]);
+
+    mocks.get.mockResolvedValueOnce({ data: { data: [] } });
+    await api.listQuickReceiptDrafts({ status: 'DRAFT', supplierId: 7 });
+    expect(mocks.get).toHaveBeenCalledTimes(2);
   });
 
   it('creates a resumable draft through the receipt collection endpoint', async () => {

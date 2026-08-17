@@ -4,6 +4,7 @@ import { getAllSuppliers } from '@/features/supplier/api/supplierApi';
 
 const unwrap = (response) => response?.data?.data ?? response?.data ?? response;
 const pendingCommandKeys = new Map();
+const pendingReadRequests = new Map();
 
 function makeIdempotencyKey() {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
@@ -22,6 +23,24 @@ const stablePayload = (value) => {
 };
 
 const commandFingerprint = (scope, payload) => `${scope}:${JSON.stringify(stablePayload(payload))}`;
+const readFingerprint = (scope, payload = {}) => `${scope}:${JSON.stringify(stablePayload(payload))}`;
+
+const coalesceRead = (fingerprint, reader) => {
+  const existing = pendingReadRequests.get(fingerprint);
+  if (existing) return existing;
+
+  const requestPromise = Promise.resolve()
+    .then(reader)
+    .finally(() => {
+      if (pendingReadRequests.get(fingerprint) === requestPromise) {
+        pendingReadRequests.delete(fingerprint);
+      }
+    });
+
+  pendingReadRequests.set(fingerprint, requestPromise);
+  return requestPromise;
+};
+
 const getCommandKey = (fingerprint, explicitKey) => {
   if (explicitKey) return explicitKey;
   if (!pendingCommandKeys.has(fingerprint)) pendingCommandKeys.set(fingerprint, makeIdempotencyKey());
@@ -31,7 +50,7 @@ const completeCommand = (fingerprint, explicitKey) => {
   if (!explicitKey) pendingCommandKeys.delete(fingerprint);
 };
 
-export const loadQuickReceiptSuppliers = async () => {
+export const loadQuickReceiptSuppliers = () => coalesceRead('suppliers', async () => {
   try {
     const raw = await getAllSuppliers({});
     const data = raw?.data ?? raw;
@@ -39,15 +58,18 @@ export const loadQuickReceiptSuppliers = async () => {
   } catch (error) {
     throw parseApiError(error);
   }
-};
+});
 
-export const listQuickReceiptDrafts = async (filters = {}) => {
-  try {
-    const response = await apiClient.get('quick-stock/receipts', { params: filters });
-    return unwrap(response);
-  } catch (error) {
-    throw parseApiError(error);
-  }
+export const listQuickReceiptDrafts = (filters = {}) => {
+  const normalizedFilters = stablePayload(filters);
+  return coalesceRead(readFingerprint('drafts', normalizedFilters), async () => {
+    try {
+      const response = await apiClient.get('quick-stock/receipts', { params: filters });
+      return unwrap(response);
+    } catch (error) {
+      throw parseApiError(error);
+    }
+  });
 };
 
 export const getQuickReceipt = async (id) => {
@@ -137,3 +159,4 @@ export const cancelQuickReceipt = async (id, reason) => {
 };
 
 export const __resetQuickReceiptCommandKeysForTest = () => pendingCommandKeys.clear();
+export const __resetQuickReceiptReadRequestsForTest = () => pendingReadRequests.clear();

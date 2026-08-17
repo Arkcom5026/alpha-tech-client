@@ -129,9 +129,34 @@ const PrintBillPageFullTax = () => {
     <>
       <style>{`
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
+
+        @media print {
+          /*
+           * BillLayoutFullTax owns @page { margin: 10mm }. Its legacy A4 shell
+           * still requests the full 210mm x 297mm physical sheet, which is
+           * larger than the 190mm x 277mm printable box and can push the
+           * no-break signature block onto an otherwise empty second page.
+           */
+          .bill-print-page-shell {
+            min-height: 0 !important;
+          }
+
+          .bill-print-root {
+            width: 100% !important;
+            max-width: 190mm !important;
+          }
+
+          .bill-print-root .print-a4 {
+            width: 100% !important;
+            max-width: 190mm !important;
+            min-height: calc(297mm - 20mm) !important;
+            height: auto !important;
+            box-sizing: border-box !important;
+          }
+        }
       `}</style>
 
-      <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
+      <div className="bill-print-page-shell w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
         <div className="bill-print-root mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
           <StoreDocumentHeaderScope config={documentConfig}>
             <BillLayoutFullTax

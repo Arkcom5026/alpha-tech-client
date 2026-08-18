@@ -290,7 +290,7 @@ const DeliveryNoteForm = ({
             bottom: 3mm !important;
             padding-top: 0 !important;
           }
-          .dn-signatures p { min-height: 60px !important; }
+          .dn-signatures p { min-height: 40px !important; }
         }
 
         .dn-signatures {

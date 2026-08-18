@@ -1,7 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
-    "deploymentEnabled": false
+    "deploymentEnabled": {
+      "main": true,
+      "*": false
+    }
   },
   "ignoreCommand": "exit 1",
   "buildCommand": "npm run build && node scripts/generate-release-metadata.mjs",

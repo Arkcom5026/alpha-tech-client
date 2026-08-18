@@ -35,12 +35,17 @@ includes(editor, 'searchSaleItems', 'Existing product catalog may assist documen
 
 includes(printPage, "documentType: 'QUOTATION'", 'Quotation print must use store document-header authority');
 includes(printPage, 'whitespace-pre-wrap', 'A4 document must preserve multiline descriptions');
-includes(printPage, 'items.length === 0', 'A4 print must remain valid with zero document lines');
-includes(printPage, 'h-[24mm]', 'Zero-line quotation must preserve a formal blank document table area');
+includes(printPage, 'tableFillerHeightMm', 'Quotation table must reserve formal document body space instead of collapsing around short content');
+includes(printPage, 'quotation-table-filler', 'Reserved table body must retain the document column grid');
 includes(printPage, 'quotation-document-header', 'Quotation must expose a dedicated document header boundary');
+includes(printPage, 'quotation-document-title', 'Quotation title must be a centered document anchor like the delivery note standard');
+includes(printPage, 'ต้นฉบับลูกค้า', 'Issued quotation must expose a customer-original document marker');
 includes(printPage, 'quotation-info-panel', 'Customer and document metadata must use consistent information panels');
-includes(printPage, 'quotation-settlement', 'Terms and totals must form a stable settlement section');
+includes(printPage, '<span className="font-semibold">เลขที่:</span>', 'Quotation number must live inside document metadata rather than compete with the document title');
+includes(printPage, 'quotation-settlement grid', 'Terms and totals must attach directly to the item table as one document block');
 includes(printPage, 'quotation-signatures', 'Quotation must retain a dedicated signature boundary');
+includes(printPage, 'ผู้เสนอราคา / QUOTED BY', 'Quotation signature language must be explicit and bilingual');
+includes(printPage, 'ผู้ตอบรับใบเสนอราคา / ACCEPTED BY', 'Customer acceptance signature must remain explicit');
 includes(printPage, 'width: 195mm !important', 'Quotation print must follow the established 195mm printable A4 frame');
 includes(printPage, 'height: 280mm !important', 'Quotation print must follow the established 280mm printable A4 height');
 includes(printPage, 'overflow: hidden !important', 'Single-page quotation shell must prevent phantom overflow pages');

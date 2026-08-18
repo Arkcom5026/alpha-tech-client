@@ -15,8 +15,8 @@ const assert = (condition, message) => {
 };
 
 assert(
-  document.includes('const MAX_ROWS_LAST_PAGE = 18;'),
-  'Full-tax last-page table must retain the fuller 18-row presentation.'
+  document.includes('const MAX_ROWS_LAST_PAGE = 20;'),
+  'Full-tax last-page table must retain the fuller 20-row presentation.'
 );
 
 assert(
@@ -37,8 +37,9 @@ assert(
 
 assert(
   css.includes('body .full-tax-a4-page')
-    && css.includes('border: 0.3mm solid #444 !important;'),
-  'Printed full-tax sheets must retain the large outer document frame inside the print-safe content box.'
+    && css.includes('border: 0.3mm solid #444 !important;')
+    && document.includes('border-radius: 2.5mm !important;'),
+  'Printed full-tax sheets must retain the large rounded outer document frame inside the print-safe content box.'
 );
 
 console.log('Full Tax Document Presentation Polish Contract: PASS');

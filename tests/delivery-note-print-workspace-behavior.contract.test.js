@@ -11,7 +11,7 @@ describe('delivery note print workspace behavior contract', () => {
   const shell = read('src/features/deliveryNote/print/workspace/components/DeliveryNotePrintShell.jsx');
 
   it('keeps sale-document loading and mounted lifecycle intact', () => {
-    expect(page).toContain('const sale = await loadSaleDocument({ saleId });');
+    expect(page).toContain('const sale = await loadSaleDocument({ saleId: sourceId });');
     expect(page).toContain('let isMounted = true;');
     expect(page).toContain('if (isMounted) setCurrentSale(sale || null);');
     expect(page).toContain('isMounted = false;');
@@ -19,11 +19,12 @@ describe('delivery note print workspace behavior contract', () => {
   });
 
   it('keeps editable document-line runtime wired through the sales workspace', () => {
-    expect(page).toContain('useSaleDocumentLineEditor({ saleId, reload: reloadSaleDocument })');
+    expect(page).toContain('saleId: isConsolidated ? null : saleId');
+    expect(page).toContain('reload: loadCurrentDocument');
     expect(page).toContain('documentLineActions.clearError();');
-    expect(page).toContain('onToggleDocumentLineEdit={documentLineActions.toggle}');
-    expect(page).toContain('onChangeDocumentLineDraft={documentLineActions.change}');
-    expect(page).toContain('onSaveDocumentLine={documentLineActions.save}');
+    expect(page).toContain('onToggleDocumentLineEdit={isConsolidated ? undefined : documentLineActions.toggle}');
+    expect(page).toContain('onChangeDocumentLineDraft={isConsolidated ? undefined : documentLineActions.change}');
+    expect(page).toContain('onSaveDocumentLine={isConsolidated ? undefined : documentLineActions.save}');
   });
 
   it('preserves sale-line fallback across saleLines, items, and simpleItems', () => {
@@ -64,7 +65,8 @@ describe('delivery note print workspace behavior contract', () => {
 
   it('keeps branch projection, document states, and printable form composition intact across workspace ownership', () => {
     expect(page).toContain('buildDeliveryNoteBranchConfig(currentSale)');
-    expect(policy).toContain('address: buildDeliveryNoteBranchAddress(branch)');
+    expect(policy).toContain('const fullAddress = buildDeliveryNoteBranchAddress(branch);');
+    expect(policy).toContain('address: fullAddress,');
     expect(policy).toContain("branchName: branch.companyName || branch.name || '-'");
     expect(page).toContain('<DeliveryNoteDocumentState status="loading"');
     expect(page).toContain('<DeliveryNoteDocumentState status="error"');

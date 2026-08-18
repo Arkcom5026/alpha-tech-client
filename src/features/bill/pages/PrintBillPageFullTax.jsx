@@ -32,9 +32,6 @@ const PrintBillPageFullTax = () => {
     [saleId, searchParams]
   )
 
-  // Document Workspace baseline:
-  // - default: do not auto print, allowing document-line review first
-  // - opt in to the previous behavior with ?autoPrint=1
   const autoPrint = useMemo(() => {
     const value = String(searchParams.get('autoPrint') || '').toLowerCase()
     return value === '1' || value === 'true' || value === 'yes'
@@ -111,7 +108,6 @@ const PrintBillPageFullTax = () => {
     printedRef.current = false
   }, [sourceType, sourceId, autoPrint])
 
-  // Auto-print remains opt-in only via ?autoPrint=1.
   useEffect(() => {
     if (!autoPrint) return
     if (printedRef.current) return
@@ -136,15 +132,6 @@ const PrintBillPageFullTax = () => {
 
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
-  // Keep the main-branch 20-row preview unchanged. On paper only, trim the
-  // trailing visual filler rows down to a 15-row grid. This reserves space for
-  // totals/signatures while never hiding a real sale row.
-  const printFillerRowsToHide = useMemo(() => {
-    const itemCount = Array.isArray(saleItems) ? saleItems.length : 0
-    const printableGridRows = Math.max(15, itemCount)
-    return Math.max(20 - printableGridRows, 0)
-  }, [saleItems])
-
   if (loading) {
     return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
   }
@@ -162,42 +149,64 @@ const PrintBillPageFullTax = () => {
       <style>{`
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
+        /*
+         * Single A4 authority: screen preview and native print use the same
+         * physical 210 x 297 mm sheet. BillLayoutFullTax already owns the
+         * document's internal padding, so the browser must not add another
+         * 10 mm @page margin and shrink/reflow the document.
+         */
+        .bill-print-root .print-a4 {
+          width: 210mm !important;
+          max-width: 210mm !important;
+          min-height: 297mm !important;
+          box-sizing: border-box !important;
+        }
+
         @media print {
-          /* Keep browser/app wrappers from creating an empty second fragment. */
+          @page {
+            size: A4;
+            margin: 0 !important;
+          }
+
           html,
           body,
           #root,
           .bill-print-page-shell,
           .bill-print-root {
+            width: 210mm !important;
             min-height: 0 !important;
             height: auto !important;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
             overflow: visible !important;
           }
 
-          .bill-print-page-shell {
+          .bill-print-page-shell,
+          .bill-print-root {
             display: block !important;
+            max-width: 210mm !important;
           }
 
-          /*
-           * BillLayoutFullTax owns @page { size:A4; margin:10mm }. Keep its A4
-           * width inside the 190mm printable area, but do NOT impose a paper
-           * height on the flex container. A fixed/minimum page height combines
-           * with the summary's mt-auto and pushes the signature into page 2.
-           */
           .bill-print-root .print-a4 {
-            width: 190mm !important;
-            max-width: 190mm !important;
-            min-height: 0 !important;
-            height: auto !important;
+            width: 210mm !important;
+            max-width: 210mm !important;
+            min-height: 297mm !important;
+            height: 297mm !important;
+            margin: 0 !important;
             box-sizing: border-box !important;
+            overflow: hidden !important;
+            border-radius: 0 !important;
           }
 
-          /* These are trailing visual fillers from the legacy 20-row grid. */
-          .bill-print-root .print-a4 tbody tr:nth-last-child(-n+${printFillerRowsToHide}) {
+          /* Keep the editor column's 4% width so the printable columns do not reflow. */
+          .bill-print-root .print-a4 thead th:nth-child(7),
+          .bill-print-root .print-a4 tbody tr > td:nth-child(7) {
+            display: table-cell !important;
+            visibility: hidden !important;
+          }
+
+          /* Expanded editor rows are workspace UI and never belong on paper. */
+          .bill-print-root .print-a4 tbody tr.print\\:hidden {
             display: none !important;
           }
         }

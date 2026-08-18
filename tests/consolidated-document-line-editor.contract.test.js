@@ -72,9 +72,10 @@ assert(
   'Consolidated saves must target persisted line ids while sharing the SALE inline edit column.'
 );
 assert(
-  page.includes('width: 210mm !important;')
-    && page.includes('min-height: 297mm !important;')
-    && page.includes('height: 297mm !important;')
+  page.includes('display: block !important;')
+    && page.includes('width: 210mm !important;')
+    && page.includes('min-height: 296mm !important;')
+    && page.includes('height: auto !important;')
     && page.includes('margin: 0 !important;')
     && page.includes('box-sizing: border-box !important;')
     && page.includes('thead th:nth-child(7)')
@@ -83,7 +84,7 @@ assert(
     && !page.includes('printFillerRowsToHide')
     && !page.includes('Math.max(15, itemCount)')
     && !page.includes('Math.max(16, itemCount)'),
-  'Full-tax preview and native print must share one physical A4 geometry without print-only row reflow.'
+  'Full-tax preview and native print must share one block-flow A4-safe geometry without print-only row reflow.'
 );
 
 console.log('Consolidated Document Line Editor Contract: PASS');

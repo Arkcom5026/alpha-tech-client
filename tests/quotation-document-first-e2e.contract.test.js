@@ -72,7 +72,7 @@ excludes(editor, 'issueQuotation', 'Quotation lifecycle issue action must not re
 includes(printPage, "documentType: 'QUOTATION'", 'Quotation print must use store document-header authority');
 includes(printPage, 'whitespace-pre-wrap', 'A4 document must preserve multiline descriptions');
 includes(printPage, 'tableFillerHeightMm', 'Quotation table must reserve formal document body space instead of collapsing around short content');
-includes(printPage, '118 - occupied', 'Quotation table must reserve enough body depth for the compact delivery-note-aligned lower section');
+includes(printPage, '130 - occupied', 'Quotation table must extend roughly two additional row heights toward the lower document reserve');
 includes(printPage, 'quotation-table-filler', 'Reserved table body must retain the document column grid');
 includes(printPage, 'quotation-document-header', 'Quotation must expose a dedicated document header boundary');
 includes(printPage, 'deliveryAlignedLogoSize', 'Quotation header must keep delivery-note-aligned logo bounds');

@@ -54,6 +54,8 @@ assert.match(documentFormatPage, /type="number"/, 'document format page must exp
 assert.match(documentFormatPage, /min=\{DOCUMENT_LOGO_SIZE_MIN\}/, 'custom logo input must expose the lower bound');
 assert.match(documentFormatPage, /max=\{DOCUMENT_LOGO_SIZE_MAX\}/, 'custom logo input must expose the upper bound');
 assert.match(documentFormatPage, /คืนค่ามาตรฐาน 56 px/, 'document format page must provide a one-click standard reset');
+assert.match(documentFormatPage, /flex flex-row-reverse items-center justify-between gap-4/, 'right-positioned preview logo must stay vertically centered against store copy');
+assert.match(documentFormatPage, /: 'flex items-center gap-4'/, 'left-positioned preview logo must stay vertically centered against store copy');
 assert.match(mediaApi, /\/store-experience\/media\/upload/, 'canonical store media upload endpoint must remain available');
 assert.match(mediaField, /type="file"/, 'canonical media field must support local file selection');
 assert.match(mediaField, /เลือกจากคลัง/, 'canonical media field must support selecting an existing store asset');
@@ -62,6 +64,9 @@ assert.match(scope, /--store-document-header-logo-size/, 'shared A4 scope must p
 assert.match(scope, /width: var\(--store-document-header-logo-size\) !important/, 'A4 logo width must use the custom pixel size');
 assert.match(scope, /height: var\(--store-document-header-logo-size\) !important/, 'A4 logo height must use the custom pixel size');
 assert.match(scope, /Math\.min\(120, Math\.max\(24/, 'A4 renderer must clamp custom logo size defensively');
+assert.match(scope, /\.store-document-header-scope \.print-a4 > div:first-child > div:first-child \{ align-items: center; \}/, 'shared A4 header row must vertically center the logo against store copy');
+assert.match(scope, /top: 50%; transform: translateY\(-50%\)/, 'delivery-note side logos must vertically center against the full store-copy block');
+assert.match(scope, /credit-collection-store-header \{ text-align: left; align-items: center; \}/, 'credit collection A4 header must vertically center the logo against store copy');
 assert.match(scope, /store-document-header-logo-center/, 'shared A4 scope must support logo positioning');
 assert.match(scope, /store-document-header-hide-address/, 'shared A4 scope must support field visibility');
 assert.match(scope, /--store-document-header-note/, 'shared A4 scope must render the optional header note');

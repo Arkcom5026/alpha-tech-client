@@ -36,6 +36,7 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
       }}
     >
       <style>{`
+        .store-document-header-scope .print-a4 > div:first-child > div:first-child { align-items: center; }
         .store-document-header-scope .print-a4 > div:first-child > div:first-child > div { text-align: left; }
         .store-document-header-text-center .print-a4 > div:first-child > div:first-child > div { text-align: center; }
         .store-document-header-text-right .print-a4 > div:first-child > div:first-child > div { text-align: right; }
@@ -70,9 +71,9 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
           background-image: var(--store-document-header-logo-image); background-position: center; background-repeat: no-repeat; background-size: contain;
         }
         .store-document-header-has-logo.store-document-header-logo-left .dn-print-page > div:first-child > div:first-child { min-height: var(--store-document-header-logo-size); padding-left: calc(var(--store-document-header-logo-size) + 10px); }
-        .store-document-header-has-logo.store-document-header-logo-left .dn-print-page > div:first-child > div:first-child::before { left: 0; }
+        .store-document-header-has-logo.store-document-header-logo-left .dn-print-page > div:first-child > div:first-child::before { left: 0; top: 50%; transform: translateY(-50%); }
         .store-document-header-has-logo.store-document-header-logo-right .dn-print-page > div:first-child > div:first-child { min-height: var(--store-document-header-logo-size); padding-right: calc(var(--store-document-header-logo-size) + 10px); }
-        .store-document-header-has-logo.store-document-header-logo-right .dn-print-page > div:first-child > div:first-child::before { right: 0; }
+        .store-document-header-has-logo.store-document-header-logo-right .dn-print-page > div:first-child > div:first-child::before { right: 0; top: 50%; transform: translateY(-50%); }
         .store-document-header-has-logo.store-document-header-logo-center .dn-print-page > div:first-child > div:first-child { padding-top: calc(var(--store-document-header-logo-size) + 6px); }
         .store-document-header-has-logo.store-document-header-logo-center .dn-print-page > div:first-child > div:first-child::before { left: 50%; transform: translateX(-50%); }
         .store-document-header-text-center .dn-print-page > div:first-child > div:first-child { text-align: center; }
@@ -89,7 +90,7 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
         }
 
         /* Credit collection A4 adapter. Thermal modes never receive this class/scope. */
-        .store-document-header-scope .credit-collection-a4 .credit-collection-store-header { text-align: left; }
+        .store-document-header-scope .credit-collection-a4 .credit-collection-store-header { text-align: left; align-items: center; }
         .store-document-header-scope .credit-collection-a4 .credit-collection-store-logo {
           width: var(--store-document-header-logo-size) !important;
           height: var(--store-document-header-logo-size) !important;

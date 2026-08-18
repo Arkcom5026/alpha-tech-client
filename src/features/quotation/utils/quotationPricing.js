@@ -7,7 +7,7 @@ const normalizeRate = (value) => {
 
 export const isVatInclusiveQuotation = (quotation) => {
   if (!quotation) return true;
-  if (quotation.status === 'DRAFT') return true;
+  if (!quotation.issuedSnapshot) return true;
   return quotation?.issuedSnapshot?.totals?.vatInclusive === true;
 };
 

@@ -188,10 +188,13 @@ export default function PartnerStoreApplicationReviewPage() {
         'partner-store-review:reject',
       );
     } else if (type === 'provision') {
+      const provisionSuccessMessage = item.provisionedBranchId
+        ? 'ซิงก์สถานะร้านเรียบร้อยแล้ว'
+        : 'สร้างร้านพาร์ตเนอร์เรียบร้อยแล้ว';
       result = await run(
         item,
         () => provisionPartnerStoreApplication(applicationIdSnapshot),
-        'สร้างร้านพาร์ตเนอร์เรียบร้อยแล้ว',
+        provisionSuccessMessage,
         'partner-store-review:provision',
         { recoverProvisioningConflict: true },
       );

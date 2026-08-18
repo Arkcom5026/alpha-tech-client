@@ -14,5 +14,9 @@ assert.match(page, /requiresProvisioningReconciliation/);
 assert.match(page, /Boolean\(item\.provisionedBranchId\)/);
 assert.match(page, /ซิงก์สถานะร้าน/);
 assert.match(page, /ไม่สร้างร้านซ้ำ/);
+assert.match(page, /const provisionSuccessMessage = item\.provisionedBranchId/);
+assert.match(page, /'ซิงก์สถานะร้านเรียบร้อยแล้ว'/);
+assert.match(page, /'สร้างร้านพาร์ตเนอร์เรียบร้อยแล้ว'/);
+assert.match(page, /provisionSuccessMessage,/);
 
 console.log('Partner Store Provisioning Conflict Recovery Contract: PASS');

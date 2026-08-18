@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowDown, ArrowLeft, ArrowUp, FileCheck2, Plus, Printer, Save, Search, Trash2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { feedback } from '@/design-system';
+import { ConfirmActionDialog, feedback } from '@/design-system';
 import { searchSaleItems } from '@/features/sales/item-search/api/saleItemSearchApi';
 import {
   addQuotationLine,
@@ -58,6 +58,18 @@ const buildDocumentForm = (quotation) => ({
   vatRate: Number(quotation?.vatRate ?? 7),
 });
 
+const normalizeLine = (line = {}) => ({
+  id: line.id || null,
+  sourceProductId: line.sourceProductId || null,
+  title: line.title || '',
+  description: line.description || '',
+  quantity: Number(line.quantity || 1),
+  unitName: line.unitName || '',
+  unitPrice: Number(line.unitPrice || 0),
+  discountAmount: Number(line.discountAmount || 0),
+  sortOrder: Number(line.sortOrder || 0),
+});
+
 const QuotationEditorPage = () => {
   const { shopSlug, quotationId } = useParams();
   const navigate = useNavigate();
@@ -71,6 +83,7 @@ const QuotationEditorPage = () => {
   const [productQuery, setProductQuery] = useState('');
   const [productResults, setProductResults] = useState([]);
   const [productSearching, setProductSearching] = useState(false);
+  const [confirmation, setConfirmation] = useState(null);
 
   const editable = quotation?.status === 'DRAFT';
 
@@ -91,6 +104,7 @@ const QuotationEditorPage = () => {
 
   const patch = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const patchLine = (key, value) => setLineForm((current) => ({ ...current, [key]: value }));
+  const resetLine = () => setLineForm({ ...EMPTY_LINE, sortOrder: quotation?.items?.length || 0 });
 
   const handleSaveDocument = async () => {
     if (!editable || saving) return;
@@ -115,7 +129,7 @@ const QuotationEditorPage = () => {
     try {
       const result = await searchSaleItems(query);
       const seen = new Set();
-      const deduped = (result.items || []).filter((item) => {
+      const deduped = (result?.items || []).filter((item) => {
         const productId = Number(item?.productId ?? item?.product?.id);
         if (!productId || seen.has(productId)) return false;
         seen.add(productId);
@@ -146,8 +160,6 @@ const QuotationEditorPage = () => {
     setProductQuery('');
   };
 
-  const resetLine = () => setLineForm({ ...EMPTY_LINE, sortOrder: quotation?.items?.length || 0 });
-
   const handleSaveLine = async () => {
     if (!editable || lineBusy || !lineForm.title.trim()) {
       if (!lineForm.title.trim()) feedback.info('กรุณาระบุชื่อรายการ');
@@ -155,14 +167,12 @@ const QuotationEditorPage = () => {
     }
     setLineBusy(true);
     try {
-      if (lineForm.id) {
-        await updateQuotationLine(quotationId, lineForm.id, lineForm);
-      } else {
-        await addQuotationLine(quotationId, lineForm);
-      }
+      const wasEditing = Boolean(lineForm.id);
+      if (wasEditing) await updateQuotationLine(quotationId, lineForm.id, lineForm);
+      else await addQuotationLine(quotationId, lineForm);
       await load();
       resetLine();
-      feedback.actionSuccess(lineForm.id ? 'แก้ไขรายการแล้ว' : 'เพิ่มรายการในใบเสนอราคาแล้ว', `quotation:${quotationId}:line:save:success`);
+      feedback.actionSuccess(wasEditing ? 'แก้ไขรายการแล้ว' : 'เพิ่มรายการในใบเสนอราคาแล้ว', `quotation:${quotationId}:line:save:success`);
     } catch (error) {
       feedback.actionError(error, 'บันทึกรายการไม่สำเร็จ', `quotation:${quotationId}:line:save:error`);
     } finally {
@@ -170,20 +180,7 @@ const QuotationEditorPage = () => {
     }
   };
 
-  const editLine = (line) => setLineForm({
-    id: line.id,
-    sourceProductId: line.sourceProductId || null,
-    title: line.title || '',
-    description: line.description || '',
-    quantity: Number(line.quantity || 1),
-    unitName: line.unitName || '',
-    unitPrice: Number(line.unitPrice || 0),
-    discountAmount: Number(line.discountAmount || 0),
-    sortOrder: Number(line.sortOrder || 0),
-  });
-
-  const deleteLine = async (lineId) => {
-    if (!editable || lineBusy || !window.confirm('ลบรายการนี้ออกจากใบเสนอราคา?')) return;
+  const executeDeleteLine = async (lineId) => {
     setLineBusy(true);
     try {
       const updated = await removeQuotationLine(quotationId, lineId);
@@ -194,6 +191,7 @@ const QuotationEditorPage = () => {
       feedback.actionError(error, 'ลบรายการไม่สำเร็จ', `quotation:${quotationId}:line:${lineId}:delete:error`);
     } finally {
       setLineBusy(false);
+      setConfirmation(null);
     }
   };
 
@@ -202,7 +200,7 @@ const QuotationEditorPage = () => {
     const nextSortOrder = Math.max(0, Number(line.sortOrder || 0) + delta);
     setLineBusy(true);
     try {
-      await updateQuotationLine(quotationId, line.id, { ...line, quantity: Number(line.quantity), unitPrice: Number(line.unitPrice), discountAmount: Number(line.discountAmount), sortOrder: nextSortOrder });
+      await updateQuotationLine(quotationId, line.id, { ...normalizeLine(line), sortOrder: nextSortOrder });
       await load();
     } catch (error) {
       feedback.actionError(error, 'จัดลำดับรายการไม่สำเร็จ', `quotation:${quotationId}:line:${line.id}:sort:error`);
@@ -211,9 +209,7 @@ const QuotationEditorPage = () => {
     }
   };
 
-  const handleIssue = async () => {
-    if (!editable || saving) return;
-    if (!window.confirm('ยืนยันออกใบเสนอราคา? หลังจากออกเอกสารแล้วข้อมูล Draft จะถูกล็อกเพื่อรักษา snapshot ของเอกสาร')) return;
+  const executeIssue = async () => {
     setSaving(true);
     try {
       await updateQuotation(quotationId, form);
@@ -225,9 +221,11 @@ const QuotationEditorPage = () => {
       feedback.actionError(error, 'ออกใบเสนอราคาไม่สำเร็จ', `quotation:${quotationId}:issue:error`);
     } finally {
       setSaving(false);
+      setConfirmation(null);
     }
   };
 
+  const confirmBusy = confirmation?.kind === 'DELETE_LINE' ? lineBusy : saving;
   const totals = useMemo(() => ({
     subtotal: Number(quotation?.subtotal || 0),
     lineDiscount: Number(quotation?.lineDiscountTotal || 0),
@@ -255,7 +253,7 @@ const QuotationEditorPage = () => {
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => navigate(`${prefix}/${quotationId}/print`)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-semibold text-blue-800 hover:bg-blue-100"><Printer className="h-4 w-4" /> ดูเอกสาร A4</button>
           {editable ? <button type="button" onClick={handleSaveDocument} disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-xl border border-teal-300 bg-white px-4 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50"><Save className="h-4 w-4" /> บันทึก</button> : null}
-          {editable ? <button type="button" onClick={handleIssue} disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-xl bg-teal-700 px-4 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50"><FileCheck2 className="h-4 w-4" /> ออกใบเสนอราคา</button> : null}
+          {editable ? <button type="button" onClick={() => setConfirmation({ kind: 'ISSUE' })} disabled={saving} className="inline-flex h-10 items-center gap-2 rounded-xl bg-teal-700 px-4 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50"><FileCheck2 className="h-4 w-4" /> ออกใบเสนอราคา</button> : null}
         </div>
       </div>
 
@@ -283,49 +281,37 @@ const QuotationEditorPage = () => {
           </section>
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex flex-col gap-2 border-b border-slate-100 pb-3 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h2 className="font-bold text-slate-950">รายการและรายละเอียด</h2>
-                <p className="text-xs text-slate-500">พิมพ์เองได้ทั้งหมด หรือค้นหาสินค้าเพื่อช่วยเติมชื่อ/ราคา โดยข้อมูลที่บันทึกเป็น snapshot ของเอกสาร</p>
-              </div>
+            <div className="mb-3 border-b border-slate-100 pb-3">
+              <h2 className="font-bold text-slate-950">รายการและรายละเอียด</h2>
+              <p className="text-xs text-slate-500">พิมพ์เองได้ทั้งหมด หรือค้นหาสินค้าเพื่อช่วยเติมชื่อ/ราคา โดยข้อมูลที่บันทึกเป็น snapshot ของเอกสาร</p>
             </div>
 
-            {editable ? (
-              <div className="mb-4 rounded-xl border border-teal-100 bg-teal-50/40 p-3">
-                <form onSubmit={handleProductSearch} className="flex gap-2">
-                  <label className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                    <input value={productQuery} onChange={(e) => setProductQuery(e.target.value)} placeholder="ค้นหาสินค้าเพื่อช่วยกรอก (ไม่บังคับ)" className="h-10 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm" />
-                  </label>
-                  <button type="submit" disabled={productSearching} className="rounded-xl border border-teal-300 bg-white px-4 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50">{productSearching ? 'ค้นหา...' : 'ค้นหา'}</button>
-                </form>
-                {productResults.length ? <div className="mt-2 grid gap-2 md:grid-cols-2">{productResults.map((item) => <button key={Number(item?.productId ?? item?.product?.id)} type="button" onClick={() => useProductHelper(item)} className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-300"><p className="font-semibold text-slate-900">{item?.product?.name || 'สินค้า'}</p><p className="mt-1 text-xs text-slate-500">{item?.product?.codeType || ''} · ราคาแนะนำ {money(item?.prices?.retail || 0)} ฿</p></button>)}</div> : null}
-              </div>
-            ) : null}
+            {editable ? <div className="mb-4 rounded-xl border border-teal-100 bg-teal-50/40 p-3">
+              <form onSubmit={handleProductSearch} className="flex gap-2">
+                <label className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={productQuery} onChange={(e) => setProductQuery(e.target.value)} placeholder="ค้นหาสินค้าเพื่อช่วยกรอก (ไม่บังคับ)" className="h-10 w-full rounded-xl border border-slate-300 bg-white pl-10 pr-3 text-sm" /></label>
+                <button type="submit" disabled={productSearching} className="rounded-xl border border-teal-300 bg-white px-4 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50">{productSearching ? 'ค้นหา...' : 'ค้นหา'}</button>
+              </form>
+              {productResults.length ? <div className="mt-2 grid gap-2 md:grid-cols-2">{productResults.map((item) => <button key={Number(item?.productId ?? item?.product?.id)} type="button" onClick={() => useProductHelper(item)} className="rounded-xl border border-slate-200 bg-white p-3 text-left hover:border-teal-300"><p className="font-semibold text-slate-900">{item?.product?.name || 'สินค้า'}</p><p className="mt-1 text-xs text-slate-500">{item?.product?.codeType || ''} · ราคาแนะนำ {money(item?.prices?.retail || 0)} ฿</p></button>)}</div> : null}
+            </div> : null}
 
-            {editable ? (
-              <div className="mb-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 lg:grid-cols-12">
-                <input value={lineForm.title} onChange={(e) => patchLine('title', e.target.value)} placeholder="ชื่อรายการ" className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm lg:col-span-8" />
-                <input type="number" min="0.01" step="0.01" value={lineForm.quantity} onChange={(e) => patchLine('quantity', e.target.value)} placeholder="จำนวน" className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm lg:col-span-2" />
-                <input value={lineForm.unitName} onChange={(e) => patchLine('unitName', e.target.value)} placeholder="หน่วย" className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm lg:col-span-2" />
-                <textarea value={lineForm.description} onChange={(e) => patchLine('description', e.target.value)} placeholder="รายละเอียดหลายบรรทัด เช่น รุ่น สเปก ขอบเขตงาน รับประกัน หรือเงื่อนไขเฉพาะรายการ" rows="4" className="rounded-xl border border-slate-300 bg-white p-3 text-sm leading-6 lg:col-span-8" />
-                <div className="space-y-2 lg:col-span-4">
-                  <input type="number" min="0" step="0.01" value={lineForm.unitPrice} onChange={(e) => patchLine('unitPrice', e.target.value)} placeholder="ราคาต่อหน่วย" className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm" />
-                  <input type="number" min="0" step="0.01" value={lineForm.discountAmount} onChange={(e) => patchLine('discountAmount', e.target.value)} placeholder="ส่วนลดรายการ" className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm" />
-                  <div className="flex gap-2">
-                    {lineForm.id ? <button type="button" onClick={resetLine} className="h-10 flex-1 rounded-xl border border-slate-300 bg-white text-sm font-semibold">ยกเลิกแก้ไข</button> : null}
-                    <button type="button" onClick={handleSaveLine} disabled={lineBusy} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 text-sm font-semibold text-white disabled:opacity-50"><Plus className="h-4 w-4" />{lineForm.id ? 'บันทึกแก้ไข' : 'เพิ่มรายการ'}</button>
-                  </div>
-                </div>
+            {editable ? <div className="mb-4 grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 lg:grid-cols-12">
+              <input value={lineForm.title} onChange={(e) => patchLine('title', e.target.value)} placeholder="ชื่อรายการ" className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm lg:col-span-8" />
+              <input type="number" min="0.01" step="0.01" value={lineForm.quantity} onChange={(e) => patchLine('quantity', e.target.value)} placeholder="จำนวน" className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm lg:col-span-2" />
+              <input value={lineForm.unitName} onChange={(e) => patchLine('unitName', e.target.value)} placeholder="หน่วย" className="h-10 rounded-xl border border-slate-300 bg-white px-3 text-sm lg:col-span-2" />
+              <textarea value={lineForm.description} onChange={(e) => patchLine('description', e.target.value)} placeholder="รายละเอียดหลายบรรทัด เช่น รุ่น สเปก ขอบเขตงาน รับประกัน หรือเงื่อนไขเฉพาะรายการ" rows="4" className="rounded-xl border border-slate-300 bg-white p-3 text-sm leading-6 lg:col-span-8" />
+              <div className="space-y-2 lg:col-span-4">
+                <input type="number" min="0" step="0.01" value={lineForm.unitPrice} onChange={(e) => patchLine('unitPrice', e.target.value)} placeholder="ราคาต่อหน่วย" className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm" />
+                <input type="number" min="0" step="0.01" value={lineForm.discountAmount} onChange={(e) => patchLine('discountAmount', e.target.value)} placeholder="ส่วนลดรายการ" className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm" />
+                <div className="flex gap-2">{lineForm.id ? <button type="button" onClick={resetLine} className="h-10 flex-1 rounded-xl border border-slate-300 bg-white text-sm font-semibold">ยกเลิกแก้ไข</button> : null}<button type="button" onClick={handleSaveLine} disabled={lineBusy} className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-teal-700 px-4 text-sm font-semibold text-white disabled:opacity-50"><Plus className="h-4 w-4" />{lineForm.id ? 'บันทึกแก้ไข' : 'เพิ่มรายการ'}</button></div>
               </div>
-            ) : null}
+            </div> : null}
 
             <div className="overflow-x-auto rounded-xl border border-slate-200">
               <table className="min-w-[920px] w-full text-sm">
                 <thead className="bg-slate-50 text-xs text-slate-500"><tr><th className="w-14 px-3 py-3">#</th><th className="px-3 py-3 text-left">รายการ / รายละเอียด</th><th className="w-24 px-3 py-3 text-right">จำนวน</th><th className="w-24 px-3 py-3">หน่วย</th><th className="w-32 px-3 py-3 text-right">ราคา/หน่วย</th><th className="w-28 px-3 py-3 text-right">ส่วนลด</th><th className="w-32 px-3 py-3 text-right">จำนวนเงิน</th>{editable ? <th className="w-36 px-3 py-3">จัดการ</th> : null}</tr></thead>
                 <tbody className="divide-y divide-slate-100">
                   {(quotation.items || []).length === 0 ? <tr><td colSpan={editable ? 8 : 7} className="px-3 py-10 text-center text-slate-500">ยังไม่มีรายการ — สามารถเพิ่มรายการเองได้จากฟอร์มด้านบน</td></tr> : null}
-                  {(quotation.items || []).map((line, index) => <tr key={line.id} className="align-top"><td className="px-3 py-3 text-center text-slate-500">{index + 1}</td><td className="px-3 py-3"><button type="button" onClick={() => editable && editLine(line)} className="w-full text-left"><p className="font-semibold text-slate-950">{line.title}</p>{line.description ? <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{line.description}</p> : null}{line.sourceProductId ? <span className="mt-1 inline-block rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">ช่วยกรอกจากสินค้า #{line.sourceProductId}</span> : null}</button></td><td className="px-3 py-3 text-right">{Number(line.quantity)}</td><td className="px-3 py-3 text-center">{line.unitName || '-'}</td><td className="px-3 py-3 text-right">{money(line.unitPrice)}</td><td className="px-3 py-3 text-right">{money(line.discountAmount)}</td><td className="px-3 py-3 text-right font-semibold">{money(line.lineTotal)}</td>{editable ? <td className="px-3 py-3"><div className="flex justify-center gap-1"><button type="button" onClick={() => moveLine(line, -1)} className="rounded-lg border border-slate-200 p-1.5 hover:bg-slate-50"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" onClick={() => moveLine(line, 1)} className="rounded-lg border border-slate-200 p-1.5 hover:bg-slate-50"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => deleteLine(line.id)} className="rounded-lg border border-rose-200 p-1.5 text-rose-700 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /></button></div></td> : null}</tr>)}
+                  {(quotation.items || []).map((line, index) => <tr key={line.id} className="align-top"><td className="px-3 py-3 text-center text-slate-500">{index + 1}</td><td className="px-3 py-3"><button type="button" onClick={() => editable && setLineForm(normalizeLine(line))} className="w-full text-left"><p className="font-semibold text-slate-950">{line.title}</p>{line.description ? <p className="mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-600">{line.description}</p> : null}{line.sourceProductId ? <span className="mt-1 inline-block rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">ช่วยกรอกจากสินค้า #{line.sourceProductId}</span> : null}</button></td><td className="px-3 py-3 text-right">{Number(line.quantity)}</td><td className="px-3 py-3 text-center">{line.unitName || '-'}</td><td className="px-3 py-3 text-right">{money(line.unitPrice)}</td><td className="px-3 py-3 text-right">{money(line.discountAmount)}</td><td className="px-3 py-3 text-right font-semibold">{money(line.lineTotal)}</td>{editable ? <td className="px-3 py-3"><div className="flex justify-center gap-1"><button type="button" onClick={() => moveLine(line, -1)} className="rounded-lg border border-slate-200 p-1.5 hover:bg-slate-50" aria-label="เลื่อนรายการขึ้น"><ArrowUp className="h-3.5 w-3.5" /></button><button type="button" onClick={() => moveLine(line, 1)} className="rounded-lg border border-slate-200 p-1.5 hover:bg-slate-50" aria-label="เลื่อนรายการลง"><ArrowDown className="h-3.5 w-3.5" /></button><button type="button" onClick={() => setConfirmation({ kind: 'DELETE_LINE', lineId: line.id, title: line.title })} className="rounded-lg border border-rose-200 p-1.5 text-rose-700 hover:bg-rose-50" aria-label="ลบรายการ"><Trash2 className="h-3.5 w-3.5" /></button></div></td> : null}</tr>)}
                 </tbody>
               </table>
             </div>
@@ -356,6 +342,23 @@ const QuotationEditorPage = () => {
           </section>
         </aside>
       </div>
+
+      <ConfirmActionDialog
+        open={Boolean(confirmation)}
+        title={confirmation?.kind === 'DELETE_LINE' ? 'ลบรายการออกจากใบเสนอราคา' : 'ออกใบเสนอราคา'}
+        description={confirmation?.kind === 'DELETE_LINE'
+          ? `ยืนยันลบรายการ “${confirmation?.title || ''}” ออกจากเอกสาร?`
+          : 'หลังออกใบเสนอราคาแล้ว Draft จะถูกล็อกเพื่อรักษาข้อมูลและรูปแบบเอกสาร ณ เวลาที่ออกเอกสาร'}
+        confirmLabel={confirmation?.kind === 'DELETE_LINE' ? 'ลบรายการ' : 'ยืนยันออกใบเสนอราคา'}
+        intent={confirmation?.kind === 'DELETE_LINE' ? 'destructive' : 'warning'}
+        loading={confirmBusy}
+        loadingLabel={confirmation?.kind === 'DELETE_LINE' ? 'กำลังลบ...' : 'กำลังออกเอกสาร...'}
+        onClose={() => !confirmBusy && setConfirmation(null)}
+        onConfirm={() => {
+          if (confirmation?.kind === 'DELETE_LINE') executeDeleteLine(confirmation.lineId);
+          if (confirmation?.kind === 'ISSUE') executeIssue();
+        }}
+      />
     </div>
   );
 };

@@ -177,6 +177,22 @@ const PrintBillPageFullTax = () => {
           </StoreDocumentHeaderScope>
         </section>
       </main>
+
+      <style>{`
+        @media print {
+          @page { size: A4; margin: 6mm !important; }
+
+          body .full-tax-a4-page {
+            box-sizing: border-box !important;
+            width: 195mm !important;
+            max-width: 195mm !important;
+            height: 280mm !important;
+            min-height: 280mm !important;
+            max-height: 280mm !important;
+            margin: 0 auto !important;
+          }
+        }
+      `}</style>
     </>
   )
 }

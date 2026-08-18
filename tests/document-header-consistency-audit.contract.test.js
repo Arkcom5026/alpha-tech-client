@@ -26,8 +26,10 @@ assert.match(scope, /Math\.min\(180,\s*Math\.max\(24/, 'shared renderer must pre
 assert.match(fullTaxPage, /StoreDocumentHeaderScope/, 'Full Tax must use the shared document header scope');
 assert.match(fullTaxPage, /documentType:\s*'FULL_TAX_INVOICE'/, 'Full Tax must resolve its dedicated document header profile');
 assert.match(scope, /\.print-a4 > div:first-child > div:first-child \{ align-items: center; \}/, 'Full Tax store header row must vertically center logo and store copy');
-assert.match(scope, /@page \{ size: A4; margin: 0; \}/, 'shared Full Tax shell must own physical A4 margins inside the document');
-assert.match(scope, /\.store-document-header-scope \.print-a4 \{[\s\S]*padding: 6mm !important;[\s\S]*border-radius: 0 !important;[\s\S]*overflow: visible !important;/, 'Full Tax shell must match Delivery Note inner A4 geometry without changing pagination logic');
+assert.match(fullTaxPage, /@page \{ size: A4; margin: 4mm !important; \}/, 'Full Tax page wrapper must match the deterministic A4 document margin authority');
+assert.match(fullTaxPage, /body \.full-tax-a4-page \{[\s\S]*width: 201mm !important;[\s\S]*height: 288mm !important;/, 'Full Tax page wrapper must match the deterministic document dimensions');
+assert.match(fullTaxPage, /\.full-tax-print-shell,[\s\S]*\.full-tax-print-frame \{[\s\S]*width: 100% !important;[\s\S]*max-width: none !important;/, 'Full Tax outer wrappers must not exceed the printable page box');
+assert.match(fullTaxPage, /\.full-tax-a4-page > div:nth-last-child\(3\) \{[\s\S]*transform: translateY\(4mm\) !important;/, 'Full Tax summary spacing must move visually without increasing page flow');
 
 // Customer Receipt may use the historical Full Tax renderer or the newer dedicated A4 document,
 // but it must remain inside the shared store-document-header authority.

@@ -1,6 +1,10 @@
-const assert = require('node:assert/strict');
-const fs = require('node:fs');
-const path = require('node:path');
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const source = fs.readFileSync(
   path.join(__dirname, '../src/features/sales/create/customer/hooks/useSaleCustomerEditor.js'),

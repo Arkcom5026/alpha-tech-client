@@ -77,7 +77,15 @@ const resolveDocumentHeaderProfile = (branch, documentType = 'DEFAULT') => {
   const base = normalizeHeaderProfile(config.default);
   const key = cleanString(documentType).toUpperCase();
   const override = config?.documents?.[key];
-  return normalizeHeaderProfile(override, base);
+  const resolved = normalizeHeaderProfile(override, base);
+
+  // Logo sizing is currently a store-wide setting. The settings UI does not expose
+  // per-document logo sizing yet, so hidden legacy overrides must not shadow the
+  // visible value the store just configured.
+  return {
+    ...resolved,
+    logoSize: base.logoSize,
+  };
 };
 
 const buildStoreDocumentHeader = ({ branch, documentType = 'DEFAULT', legacyConfig = {} } = {}) => {

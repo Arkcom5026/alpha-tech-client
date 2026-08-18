@@ -70,9 +70,17 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
           width: var(--store-document-header-logo-size); height: var(--store-document-header-logo-size);
           background-image: var(--store-document-header-logo-image); background-position: center; background-repeat: no-repeat; background-size: contain;
         }
-        .store-document-header-has-logo.store-document-header-logo-left .dn-print-page > div:first-child > div:first-child { min-height: var(--store-document-header-logo-size); padding-left: calc(var(--store-document-header-logo-size) + 10px); }
+        .store-document-header-has-logo.store-document-header-logo-left .dn-print-page > div:first-child > div:first-child {
+          display: flex; flex-direction: column; justify-content: center;
+          min-height: var(--store-document-header-logo-size);
+          padding-left: calc(var(--store-document-header-logo-size) + 10px);
+        }
         .store-document-header-has-logo.store-document-header-logo-left .dn-print-page > div:first-child > div:first-child::before { left: 0; top: 50%; transform: translateY(-50%); }
-        .store-document-header-has-logo.store-document-header-logo-right .dn-print-page > div:first-child > div:first-child { min-height: var(--store-document-header-logo-size); padding-right: calc(var(--store-document-header-logo-size) + 10px); }
+        .store-document-header-has-logo.store-document-header-logo-right .dn-print-page > div:first-child > div:first-child {
+          display: flex; flex-direction: column; justify-content: center;
+          min-height: var(--store-document-header-logo-size);
+          padding-right: calc(var(--store-document-header-logo-size) + 10px);
+        }
         .store-document-header-has-logo.store-document-header-logo-right .dn-print-page > div:first-child > div:first-child::before { right: 0; top: 50%; transform: translateY(-50%); }
         .store-document-header-has-logo.store-document-header-logo-center .dn-print-page > div:first-child > div:first-child { padding-top: calc(var(--store-document-header-logo-size) + 6px); }
         .store-document-header-has-logo.store-document-header-logo-center .dn-print-page > div:first-child > div:first-child::before { left: 50%; transform: translateX(-50%); }
@@ -117,6 +125,23 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
         }
       `}</style>
       {children}
+      <style>{`
+        /* Full Tax / Customer Receipt A4 shell normalization.
+           This style is intentionally rendered after the document so it wins over
+           legacy page-shell rules without changing the pagination implementation. */
+        @media print {
+          @page { size: A4; margin: 0; }
+          .store-document-header-scope .print-a4 {
+            box-sizing: border-box !important;
+            width: 210mm !important;
+            min-height: 297mm !important;
+            height: 297mm !important;
+            padding: 6mm !important;
+            border-radius: 0 !important;
+            overflow: visible !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

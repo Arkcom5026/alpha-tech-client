@@ -140,8 +140,6 @@ const PrintBillPageFullTax = () => {
     <>
       <style>{`
         @media print {
-          @page { size: A4; margin: 6mm !important; }
-
           html,
           body,
           #root {
@@ -151,8 +149,9 @@ const PrintBillPageFullTax = () => {
             height: auto !important;
           }
 
-          /* Mirror the delivery-note isolation pattern so Chrome lays out the
-             full-tax sheet against the same printable ancestor geometry. */
+          /* Mirror Delivery Note's phantom-sheet protection. Chrome paginates the
+             full POS ancestor chain even when navigation/chrome is hidden, so any
+             inherited flex/min-height/transform can manufacture a blank sheet. */
           body:has(.full-tax-print-shell) #root *:has(.full-tax-print-shell) {
             box-sizing: border-box !important;
             display: block !important;
@@ -172,7 +171,7 @@ const PrintBillPageFullTax = () => {
           .full-tax-print-frame {
             display: block !important;
             position: static !important;
-            width: auto !important;
+            width: 100% !important;
             max-width: none !important;
             min-height: 0 !important;
             height: auto !important;
@@ -183,27 +182,6 @@ const PrintBillPageFullTax = () => {
             box-shadow: none !important;
             overflow: visible !important;
             background: #fff !important;
-          }
-
-          body .full-tax-a4-page {
-            display: block !important;
-            position: relative !important;
-            box-sizing: border-box !important;
-            width: 195mm !important;
-            max-width: 195mm !important;
-            height: 280mm !important;
-            min-height: 280mm !important;
-            max-height: 280mm !important;
-            margin: 0 auto !important;
-            padding: 5mm !important;
-            overflow: hidden !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid-page !important;
-          }
-
-          body .full-tax-a4-page:last-of-type {
-            page-break-after: auto !important;
-            break-after: auto !important;
           }
         }
       `}</style>
@@ -227,6 +205,34 @@ const PrintBillPageFullTax = () => {
           </StoreDocumentHeaderScope>
         </section>
       </main>
+
+      <style>{`
+        @media print {
+          @page { size: A4; margin: 0 !important; }
+
+          body .full-tax-a4-page {
+            box-sizing: border-box !important;
+            width: 201mm !important;
+            max-width: 201mm !important;
+            height: 288mm !important;
+            min-height: 288mm !important;
+            max-height: 288mm !important;
+            margin: 4mm auto 0 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid-page !important;
+          }
+
+          body .full-tax-a4-page:last-of-type {
+            page-break-after: auto !important;
+            break-after: auto !important;
+          }
+
+          /* Preserve the approved spacing without adding flow height. */
+          body .full-tax-a4-page > div:nth-last-child(3) {
+            transform: translateY(4mm) !important;
+          }
+        }
+      `}</style>
     </>
   )
 }

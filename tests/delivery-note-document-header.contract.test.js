@@ -27,6 +27,8 @@ assert.match(scope, /--store-document-header-logo-image/, 'delivery note adapter
 assert.match(scope, /--store-document-header-logo-size/, 'delivery note adapter must consume the configured custom logo size');
 assert.match(scope, /store-document-header-logo-center.*dn-print-page/s, 'delivery note adapter must support centered logos');
 assert.match(scope, /store-document-header-logo-right.*dn-print-page/s, 'delivery note adapter must support right-aligned logos');
+assert.match(scope, /store-document-header-logo-left[\s\S]*display: flex; flex-direction: column; justify-content: center;/, 'delivery note left logo must vertically center the full store-copy block');
+assert.match(scope, /store-document-header-logo-right[\s\S]*display: flex; flex-direction: column; justify-content: center;/, 'delivery note right logo must vertically center the full store-copy block');
 assert.match(scope, /store-document-header-hide-address.*dn-print-page/s, 'delivery note adapter must honor address visibility');
 assert.match(scope, /store-document-header-hide-phone.*dn-print-page/s, 'delivery note adapter must honor phone visibility');
 assert.match(scope, /store-document-header-hide-tax-id.*dn-print-page/s, 'delivery note adapter must honor tax ID visibility');

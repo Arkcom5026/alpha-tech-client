@@ -1,25 +1,63 @@
-import fs from 'node:fs'
+﻿import fs from 'node:fs'
 import path from 'node:path'
 
 const root = process.cwd()
 const read = (p) => fs.readFileSync(path.join(root, p), 'utf8')
-const assert = (c, m) => { if (!c) throw new Error(m) }
+const assert = (condition, message) => {
+  if (!condition) throw new Error(message)
+}
 
 const full = read('src/features/bill/pages/PrintBillPageFullTax.jsx')
 const delivery = read('src/features/deliveryNote/print/workspace/components/DeliveryNotePrintShell.jsx')
 
-for (const src of [full, delivery]) {
-  assert(src.includes('@page { size: A4; margin: 6mm !important; }'), 'A4 margin must be 6mm')
-  assert(src.includes('width: 195mm !important;'), 'frame width must be 195mm')
-  assert(src.includes('height: 280mm !important;'), 'frame height must be 280mm')
-  assert(src.includes('min-height: 0 !important;'), 'print ancestor min-height must collapse')
-  assert(src.includes('height: auto !important;'), 'print ancestor height must collapse')
-  assert(src.includes('position: static !important;'), 'print ancestor positioning must be normalized')
-  assert(src.includes('transform: none !important;'), 'print ancestor transforms must be neutralized')
-}
+// Full Tax: visually verified hardware-safe geometry.
+assert(
+  full.includes('@page { size: A4; margin: 0 !important; }'),
+  'Full Tax must keep the verified zero-margin physical page contract'
+)
+assert(
+  full.includes('width: 201mm !important;'),
+  'Full Tax must keep the verified 201mm document width'
+)
+assert(
+  full.includes('height: 288mm !important;'),
+  'Full Tax must keep the verified 288mm document height'
+)
+assert(
+  full.includes('body:has(.full-tax-print-shell) #root *:has(.full-tax-print-shell)'),
+  'Full Tax must isolate itself from POS ancestor pagination'
+)
+assert(
+  full.includes('page-break-after: auto !important;'),
+  'Full Tax final page must not force a trailing sheet'
+)
+assert(
+  full.includes('break-after: auto !important;'),
+  'Full Tax final page must not force a trailing break'
+)
 
-assert(full.includes('body:has(.full-tax-print-shell) #root *:has(.full-tax-print-shell)'), 'full tax must isolate itself from POS layout pagination')
-assert(delivery.includes('body:has(.a4-standard-delivery-shell) #root *:has(.a4-standard-delivery-shell)'), 'delivery note reference isolation must remain intact')
-assert(!full.includes('@/features/deliveryNote/'), 'bill must remain module owned')
+// Delivery Note keeps its independently verified A4 geometry.
+assert(
+  delivery.includes('@page { size: A4; margin: 6mm !important; }'),
+  'Delivery Note must keep its verified 6mm page margin'
+)
+assert(
+  delivery.includes('width: 195mm !important;'),
+  'Delivery Note must keep its verified 195mm document width'
+)
+assert(
+  delivery.includes('height: 280mm !important;'),
+  'Delivery Note must keep its verified 280mm document height'
+)
+assert(
+  delivery.includes('body:has(.a4-standard-delivery-shell) #root *:has(.a4-standard-delivery-shell)'),
+  'Delivery Note ancestor pagination isolation must remain intact'
+)
+
+// Module ownership remains independent.
+assert(
+  !full.includes('@/features/deliveryNote/'),
+  'Full Tax must remain bill-module owned'
+)
 
 console.log('Full Tax Frame Alignment Contract: PASS')

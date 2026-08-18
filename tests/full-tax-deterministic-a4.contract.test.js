@@ -28,12 +28,16 @@ assert(
 );
 
 assert(
-  document.includes("@page { size: A4; margin: 0; }")
+  document.includes('const PHYSICAL_PAGE_HEIGHT_MM = 296;')
+    && document.includes("@page { size: A4; margin: 0; }")
     && document.includes('width: 210mm !important;')
-    && document.includes('height: 297mm !important;')
+    && document.includes('height: ${PHYSICAL_PAGE_HEIGHT_MM}mm !important;')
+    && document.includes('min-height: ${PHYSICAL_PAGE_HEIGHT_MM}mm !important;')
     && document.includes('padding: 6mm !important;')
-    && document.includes('overflow: hidden !important;'),
-  'Each printed full-tax sheet must own a fixed physical A4 box without browser margins.'
+    && document.includes('overflow: hidden !important;')
+    && !document.includes('height: 297mm !important;')
+    && !document.includes("height: '297mm'"),
+  'Each deterministic sheet must keep a 1mm Chromium rounding reserve instead of touching the exact 297mm page boundary.'
 );
 
 assert(

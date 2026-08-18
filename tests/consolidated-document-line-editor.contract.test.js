@@ -78,16 +78,24 @@ assert(
     && page.includes('height: auto !important;')
     && page.includes('box-sizing: border-box !important;')
     && page.includes('useCompactA4Grid')
-    && page.includes("saleItems.length <= 18")
+    && page.includes('saleItems.length <= 18')
     && page.includes('.bill-print-compact-a4 .print-a4 tbody tr:nth-last-child(-n+2)')
     && page.includes("'bill-print-compact-a4'")
     && page.includes('thead th:nth-child(7)')
     && page.includes('visibility: hidden !important;')
     && !page.includes('width: 190mm !important;')
-    && !page.includes('printFillerRowsToHide')
-    && !page.includes('Math.max(15, itemCount)')
-    && !page.includes('Math.max(16, itemCount)'),
-  'Short full-tax previews must physically fit A4 before printing by sharing the same two-filler-row reduction in screen and print.'
+    && !page.includes('printFillerRowsToHide'),
+  'Short full-tax previews must physically fit A4 before printing by sharing one geometry in screen and print.'
+);
+
+const layoutCloseIndex = page.indexOf('</StoreDocumentHeaderScope>');
+const finalAuthorityIndex = page.indexOf('data-bill-print-final-authority');
+assert(
+  layoutCloseIndex >= 0
+    && finalAuthorityIndex > layoutCloseIndex
+    && page.slice(finalAuthorityIndex).includes('margin: 0 !important;')
+    && page.slice(finalAuthorityIndex).includes('min-height: 296mm !important;'),
+  'The final @page/A4 authority must render after BillLayoutFullTax so its embedded 10mm @page rule cannot win the cascade.'
 );
 
 console.log('Consolidated Document Line Editor Contract: PASS');

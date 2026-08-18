@@ -28,7 +28,6 @@ includes(createPage, 'เริ่มจากเอกสารเปล่า�
 excludes(createPage, 'items.length', 'Create action must never depend on quotation item count');
 excludes(createPage, 'productId', 'Create surface must not require or own product selection');
 
-includes(editor, 'หน้านี้ใช้สำหรับเลือกลูกค้าและสินค้าเท่านั้น', 'Quotation intake must explain its deliberately narrow responsibility');
 includes(editor, 'searchStoreCustomersAction', 'Quotation intake must provide canonical store-scoped customer search');
 includes(editor, 'chooseCustomer', 'Quotation intake must allow selecting or changing the quotation customer');
 includes(editor, 'buildPreservedDraftPayload', 'Customer selection must preserve existing draft document fields while changing customer authority');
@@ -43,7 +42,9 @@ includes(editor, 'addProductHelper', 'Product helper selection must create a sta
 includes(editor, 'addQuotationLine(quotationId', 'Product-assisted starter lines must persist through canonical quotation line authority');
 includes(editor, 'เป็นตัวช่วยเท่านั้น — เพิ่มแล้วสามารถแก้รายละเอียดทั้งหมดต่อบนหน้าเอกสาร', 'Product helper must remain subordinate to the document workspace');
 includes(editor, 'Manual ได้จากหน้าเอกสารโดยตรง', 'Manual-first authoring must remain explicit after simplifying intake');
-includes(editor, 'เปิดหน้าเอกสาร', 'Quotation intake must route users directly to the document workspace');
+includes(editor, 'ไปหน้าเอกสาร', 'Quotation intake must keep a single document-workspace action at the bottom of the flow');
+excludes(editor, 'หน้านี้ใช้สำหรับเลือกลูกค้าและสินค้าเท่านั้น', 'Redundant quotation intake header copy must not return');
+excludes(editor, 'เปิดหน้าเอกสาร', 'Duplicate top document action must not return');
 includes(editor, 'updateQuotationLine(quotationId, line.id', 'Intake quantity and price adjustments must persist through canonical quotation line authority');
 includes(editor, 'saveLineQuickEdit', 'Quotation intake must expose a dedicated quick edit path instead of reusing the document line editor');
 includes(editor, 'data-testid={`quotation-intake-quantity-${line.id}`}', 'Quotation intake must allow draft quantity adjustment per line');

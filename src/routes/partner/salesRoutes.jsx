@@ -22,6 +22,10 @@ import ProductReservationInboxPage from '@/features/productReservation/merchant/
 import ProductReservationDetailPage from '@/features/productReservation/merchant/pages/ProductReservationDetailPage';
 import OnlineCommerceWorkCenterPage from '@/features/productReservation/merchant/pages/OnlineCommerceWorkCenterPage';
 import ReservationSaleBridgePage from '@/features/productReservation/merchant/pages/ReservationSaleBridgePage';
+import QuotationListPage from '@/features/quotation/pages/QuotationListPage';
+import CreateQuotationPage from '@/features/quotation/pages/CreateQuotationPage';
+import QuotationEditorPage from '@/features/quotation/pages/QuotationEditorPage';
+import QuotationPrintPage from '@/features/quotation/pages/QuotationPrintPage';
 
 const salesRoutes = {
   path: 'sales',
@@ -29,6 +33,13 @@ const salesRoutes = {
     { index: true, element: <SalesDashboardPage /> },
     { path: 'dashboard', element: <SalesDashboardPage /> },
     { path: 'sale', element: <CreateSalePage /> },
+
+    // Quotation is document-first: a zero-line draft can be created before any
+    // product or even recipient detail is finalized.
+    { path: 'quotations', element: <QuotationListPage /> },
+    { path: 'quotations/new', element: <CreateQuotationPage /> },
+    { path: 'quotations/:quotationId', element: <QuotationEditorPage /> },
+    { path: 'quotations/:quotationId/print', element: <QuotationPrintPage /> },
 
     // ProductReservation is the primary online-commerce work queue.
     { path: 'reservations', element: <ProductReservationInboxPage /> },

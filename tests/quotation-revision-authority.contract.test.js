@@ -22,6 +22,10 @@ for (const token of [
   'revisionNumber: snapshot.revisionNumber',
   'revisionRootId: snapshot.revisionRootId',
   'revisedFromId: snapshot.revisedFromId',
+  'const superseded = Boolean(quotation.revisedTo);',
+  "status: superseded ? 'SUPERSEDED' : quotation.status",
+  'lifecycleStatus: quotation.status',
+  'isSuperseded: superseded',
 ]) includes(api, token, `Quotation revision API contract missing: ${token}`);
 
 for (const token of [

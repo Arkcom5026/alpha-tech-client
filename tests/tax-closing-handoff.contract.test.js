@@ -27,7 +27,8 @@ test('handoff finalization is bound to the exact snapshot reviewed by the user',
   assert.match(api, /\{ expectedSnapshotHash \}/);
   assert.match(api, /TAX_CLOSING_FINALIZATION_EXPECTED_SNAPSHOT_REQUIRED/);
   assert.match(api, /TAX_CLOSING_FINALIZATION_SNAPSHOT_CHANGED/);
-  assert.match(page, /expectedSnapshotHash: data\.snapshotHash/);
+  assert.match(page, /const snapshotHashSnapshot = data\.snapshotHash/);
+  assert.match(page, /expectedSnapshotHash: snapshotHashSnapshot/);
 });
 
 test('handoff workspace exposes deterministic package identity and readiness state', () => {

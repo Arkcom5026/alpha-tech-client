@@ -227,7 +227,7 @@ const DocumentFormatSettingsPage = () => {
           <div className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
             <div className="mb-4"><h2 className="text-sm font-black text-slate-900">ตัวอย่างหัวเอกสาร</h2><p className="mt-0.5 text-[11px] font-medium text-slate-400">ตัวอย่างเพื่อช่วยจัดรูปแบบ ไม่ใช่ภาพพิมพ์ขนาดจริง</p></div>
             <div className="aspect-[1/1.414] min-h-[480px] overflow-hidden rounded-xl border border-slate-200 bg-white p-7 shadow-inner">
-              <div className={previewLogoPosition === 'center' ? 'flex flex-col items-center gap-3' : previewLogoPosition === 'right' ? 'flex flex-row-reverse items-start justify-between gap-4' : 'flex items-start gap-4'}>
+              <div className={previewLogoPosition === 'center' ? 'flex flex-col items-center gap-3' : previewLogoPosition === 'right' ? 'flex flex-row-reverse items-center justify-between gap-4' : 'flex items-center gap-4'}>
                 {form.headerShowLogo && (
                   <div
                     className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400"

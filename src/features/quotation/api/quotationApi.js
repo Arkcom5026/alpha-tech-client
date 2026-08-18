@@ -14,11 +14,46 @@ const sanitizeLinePayload = (payload = {}) => ({
   description: sanitizeLineDescription(payload.description),
 });
 
-const sanitizeQuotation = (quotation) => {
-  if (!quotation || !Array.isArray(quotation.items)) return quotation;
+const hydrateIssuedSnapshot = (quotation) => {
+  const snapshot = quotation?.issuedSnapshot;
+  if (!quotation || quotation.status === 'DRAFT' || !snapshot) return quotation;
+
+  const customer = snapshot.customer || {};
+  const totals = snapshot.totals || {};
   return {
     ...quotation,
-    items: quotation.items.map((item) => ({
+    issueDate: snapshot.issueDate ?? quotation.issueDate,
+    validUntil: snapshot.validUntil ?? quotation.validUntil,
+    subject: snapshot.subject ?? quotation.subject,
+    introduction: snapshot.introduction ?? quotation.introduction,
+    closingNote: snapshot.closingNote ?? quotation.closingNote,
+    notes: snapshot.notes ?? quotation.notes,
+    paymentTerms: snapshot.paymentTerms ?? quotation.paymentTerms,
+    documentHeaderSnapshot: snapshot.documentHeader ?? quotation.documentHeaderSnapshot,
+    customerName: customer.name ?? quotation.customerName,
+    customerCompany: customer.company ?? quotation.customerCompany,
+    customerDepartment: customer.department ?? quotation.customerDepartment,
+    customerContactName: customer.contactName ?? quotation.customerContactName,
+    customerPhone: customer.phone ?? quotation.customerPhone,
+    customerTaxId: customer.taxId ?? quotation.customerTaxId,
+    customerAddress: customer.address ?? quotation.customerAddress,
+    subtotal: totals.subtotal ?? quotation.subtotal,
+    lineDiscountTotal: totals.lineDiscountTotal ?? quotation.lineDiscountTotal,
+    billDiscount: totals.billDiscount ?? quotation.billDiscount,
+    vatEnabled: totals.vatEnabled ?? quotation.vatEnabled,
+    vatRate: totals.vatRate ?? quotation.vatRate,
+    vatAmount: totals.vatAmount ?? quotation.vatAmount,
+    grandTotal: totals.grandTotal ?? quotation.grandTotal,
+    items: Array.isArray(snapshot.items) ? snapshot.items : quotation.items,
+  };
+};
+
+const sanitizeQuotation = (quotation) => {
+  const hydrated = hydrateIssuedSnapshot(quotation);
+  if (!hydrated || !Array.isArray(hydrated.items)) return hydrated;
+  return {
+    ...hydrated,
+    items: hydrated.items.map((item) => ({
       ...item,
       description: sanitizeLineDescription(item?.description),
     })),
@@ -52,13 +87,13 @@ export const removeQuotationLine = async (quotationId, lineId) =>
   unwrap(await apiClient.delete(`/sales/quotations/${quotationId}/items/${lineId}`));
 
 export const issueQuotation = async (quotationId, note = null) =>
-  unwrap(await apiClient.post(`/sales/quotations/${quotationId}/issue`, { note }));
+  sanitizeQuotation(unwrap(await apiClient.post(`/sales/quotations/${quotationId}/issue`, { note })));
 
 export const acceptQuotation = async (quotationId, note = null) =>
-  unwrap(await apiClient.post(`/sales/quotations/${quotationId}/accept`, { note }));
+  sanitizeQuotation(unwrap(await apiClient.post(`/sales/quotations/${quotationId}/accept`, { note })));
 
 export const rejectQuotation = async (quotationId, note = null) =>
-  unwrap(await apiClient.post(`/sales/quotations/${quotationId}/reject`, { note }));
+  sanitizeQuotation(unwrap(await apiClient.post(`/sales/quotations/${quotationId}/reject`, { note })));
 
 export const cancelQuotation = async (quotationId, note = null) =>
-  unwrap(await apiClient.post(`/sales/quotations/${quotationId}/cancel`, { note }));
+  sanitizeQuotation(unwrap(await apiClient.post(`/sales/quotations/${quotationId}/cancel`, { note })));

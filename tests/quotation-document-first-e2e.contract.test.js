@@ -53,7 +53,9 @@ includes(printPage, 'beginLineEdit', 'Quotation A4 workspace must expose direct 
 includes(printPage, 'beginNewLine', 'Quotation A4 workspace must expose direct line creation');
 includes(printPage, "editingLineId === 'NEW'", 'New-line authoring must have an explicit document workspace state');
 includes(printPage, 'addQuotationLine(quotationId, lineDraft)', 'New document lines must persist through canonical quotation line authority');
-includes(printPage, '> เพิ่มรายการ</button>', 'Draft A4 workspace must expose an add-line action directly below the table');
+includes(printPage, 'quotation-add-line-row print:hidden', 'Draft A4 workspace must place the add action as the next document row');
+includes(printPage, 'aria-label="เพิ่มรายการถัดไปบนใบเสนอราคา"', 'Next-row add action must be explicit and accessible');
+excludes(printPage, '> เพิ่มรายการ</button>', 'Add-line authority must not fall back to a detached button below the table');
 includes(printPage, 'quotation-line-editor print:hidden', 'Inline line editor must remain screen-only and never print');
 includes(printPage, 'updateQuotationLine(quotationId, editingLineId, lineDraft)', 'Inline document editing must persist through canonical quotation line authority');
 includes(printPage, 'พิมพ์เองได้ทั้งหมด ไม่จำเป็นต้องอ้างอิงสินค้า', 'Direct line creation must preserve manual-first quotation semantics');

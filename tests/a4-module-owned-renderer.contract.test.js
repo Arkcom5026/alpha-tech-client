@@ -10,6 +10,7 @@ const consolidatedTax = read('src/features/combinedBilling/pages/PrintConsolidat
 const combinedRenderer = read('src/features/combinedBilling/bill/components/FullTaxA4Document.jsx')
 const customerReceiptLayout = read('src/features/customerReceipt/components/CustomerReceiptPrintLayout.jsx')
 const customerReceiptRenderer = read('src/features/customerReceipt/components/CustomerReceiptA4Document.jsx')
+const purchaseOrderShell = read('src/features/purchaseOrder/print/workspace/components/PurchaseOrderPrintShell.jsx')
 
 assert(!consolidatedBill.includes("@/features/bill/components/FullTaxA4Document"), 'Consolidated Bill A4 must not import the bill module document renderer.')
 assert(!consolidatedTax.includes("@/features/bill/components/FullTaxA4Document"), 'Consolidated Tax A4 must not import the bill module document renderer.')
@@ -23,5 +24,11 @@ assert(customerReceiptLayout.includes("./CustomerReceiptA4Document"), 'Customer 
 assert(customerReceiptRenderer.includes('customer-receipt-a4-page'), 'Customer Receipt renderer must own a namespaced A4 presentation surface.')
 assert(customerReceiptRenderer.includes('LAST_PAGE_ROWS = 20'), 'Customer Receipt renderer must own its row capacity.')
 assert(customerReceiptRenderer.includes('@page { size: A4; margin: 4mm; }'), 'Customer Receipt renderer must own its print-safe A4 geometry.')
+
+assert(purchaseOrderShell.includes('purchase-order-a4-page'), 'Purchase Order must own a namespaced A4 presentation surface.')
+assert(purchaseOrderShell.includes('@page { size: A4; margin: 4mm; }'), 'Purchase Order must own its print-safe A4 geometry.')
+assert(!purchaseOrderShell.includes('@/features/bill/'), 'Purchase Order must not import document renderers from the bill module.')
+assert(!purchaseOrderShell.includes('@/features/customerReceipt/'), 'Purchase Order must not import document renderers from the customerReceipt module.')
+assert(!purchaseOrderShell.includes('@/features/combinedBilling/'), 'Purchase Order must not import document renderers from the combinedBilling module.')
 
 console.log('A4 Module-Owned Renderer Contract: PASS')

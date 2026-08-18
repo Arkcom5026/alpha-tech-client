@@ -15,6 +15,7 @@ const paymentSection = read('src/features/sales/create/components/PaymentSection
 const paymentHook = read('src/features/sales/create/payment/hooks/useSalePaymentWorkflow.js');
 const paymentController = read('src/features/sales/create/payment/controllers/salePaymentConfirmationController.js');
 const documentApi = read('src/features/sales/documents/workspace/api/saleDocumentWorkspaceApi.js');
+const deliveryShell = read('src/features/deliveryNote/print/workspace/components/DeliveryNotePrintShell.jsx');
 
 includes(quotationApi, 'export const getQuotationDocumentLineage');
 for (const token of [
@@ -30,6 +31,12 @@ includes(paymentHook, 'sourceQuotationId,');
 includes(paymentController, 'sourceQuotationId: sourceQuotationId || undefined');
 includes(documentApi, '`/sales/${saleId}/quotation-reference`');
 includes(documentApi, 'sourceQuotation: sourceQuotation || null');
+for (const token of [
+  'data-testid="delivery-note-source-quotation"',
+  'อ้างอิงใบเสนอราคา:',
+  'sale.sourceQuotation.code',
+  'sale.sourceQuotation.revisionNumber',
+]) includes(deliveryShell, token);
 
 if (/quotation.*items|items.*quotation/i.test(payload)) {
   throw new Error('Sale completion payload must not derive sale lines from quotation items');

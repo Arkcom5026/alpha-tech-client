@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { CircleHelp, Search } from 'lucide-react';
 
 import useSalesStore from '@/features/sales/store/salesStore';
-import { listQuotations } from '@/features/quotation/api/quotationApi';
+import { listQuotationReferenceCandidates } from '@/features/quotation/api/quotationApi';
 import { useCreateSaleWorkflow } from '../index';
 import { SaleCustomerSection as CustomerSection } from '../customer';
 import PaymentSection from '../components/PaymentSection';
@@ -57,16 +57,22 @@ const QuickSalePage = ({
 
   useEffect(() => {
     let alive = true;
-    listQuotations({ status: 'ACCEPTED', limit: 100 })
+    setSourceQuotationId('');
+    setAcceptedQuotations([]);
+
+    if (!customerId) return () => { alive = false; };
+
+    listQuotationReferenceCandidates(customerId)
       .then((rows) => {
         if (!alive) return;
-        setAcceptedQuotations((Array.isArray(rows) ? rows : []).filter((row) => !row.revisedTo));
+        setAcceptedQuotations(Array.isArray(rows) ? rows : []);
       })
       .catch(() => {
         if (alive) setAcceptedQuotations([]);
       });
+
     return () => { alive = false; };
-  }, []);
+  }, [customerId]);
 
   useEffect(() => {
     if (clearPhoneTrigger) setHideCustomerDetails(false);
@@ -170,28 +176,30 @@ const QuickSalePage = ({
         </div>
       </div>
 
-      <div className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <div className="min-w-[190px]">
-            <p className="text-xs font-bold text-slate-700">อ้างอิงใบเสนอราคา</p>
-            <p className="text-[11px] text-slate-500">ไม่บังคับ และไม่ดึงรายการสินค้าข้ามเอกสาร</p>
+      {customerId && acceptedQuotations.length > 0 ? (
+        <div className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <div className="min-w-[190px]">
+              <p className="text-xs font-bold text-slate-700">อ้างอิงใบเสนอราคา</p>
+              <p className="text-[11px] text-slate-500">แสดงเฉพาะใบเสนอราคาที่ตอบรับแล้วของลูกค้ารายนี้</p>
+            </div>
+            <select
+              data-testid="sale-source-quotation-select"
+              value={sourceQuotationId}
+              onChange={(event) => setSourceQuotationId(event.target.value)}
+              disabled={checkoutLocked}
+              className="h-9 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-xs outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100"
+            >
+              <option value="">ไม่อ้างอิงใบเสนอราคา</option>
+              {acceptedQuotations.map((quotation) => (
+                <option key={quotation.id} value={quotation.id}>
+                  {quotation.code} · Rev.{Number(quotation.revisionNumber || 0)}
+                </option>
+              ))}
+            </select>
           </div>
-          <select
-            data-testid="sale-source-quotation-select"
-            value={sourceQuotationId}
-            onChange={(event) => setSourceQuotationId(event.target.value)}
-            disabled={checkoutLocked}
-            className="h-9 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-xs outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:bg-slate-100"
-          >
-            <option value="">ไม่อ้างอิงใบเสนอราคา</option>
-            {acceptedQuotations.map((quotation) => (
-              <option key={quotation.id} value={quotation.id}>
-                {quotation.code} · Rev.{Number(quotation.revisionNumber || 0)} · {quotation.customerCompany || quotation.customerName || 'ไม่ระบุลูกค้า'}
-              </option>
-            ))}
-          </select>
         </div>
-      </div>
+      ) : null}
 
       <div className="min-h-[240px] xl:min-h-0 xl:flex-1 xl:overflow-hidden">
         <SaleWorkspacePanel locked={cartLocked} className="h-full min-h-[240px] xl:min-h-0 xl:overflow-hidden">

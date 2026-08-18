@@ -43,6 +43,66 @@ const buildPreservedDraftPayload = (quotation, customerId = quotation?.customerI
   vatRate: Number(quotation?.vatRate ?? 7),
 });
 
+const resolveIdentifier = (item = {}) =>
+  item?.serialNumber || item?.barcodeAuthority?.barcode || item?.barcode || '';
+
+const groupProductSearchResults = (items = []) => {
+  const groups = new Map();
+
+  items.forEach((item) => {
+    const productId = Number(item?.productId ?? item?.product?.id);
+    if (!productId) return;
+
+    if (!groups.has(productId)) {
+      groups.set(productId, {
+        productId,
+        representative: item,
+        product: item?.product || {},
+        prices: item?.prices || {},
+        availableQuantity: 0,
+        hasAvailability: false,
+        stockTypes: new Set(),
+        identifiers: [],
+        seenStockKeys: new Set(),
+      });
+    }
+
+    const group = groups.get(productId);
+    const type = String(item?.type || '').toUpperCase();
+    if (type) group.stockTypes.add(type);
+
+    const identifier = resolveIdentifier(item);
+    const stockKey = type === 'STOCK'
+      ? `STOCK:${item?.stockItemId || identifier}`
+      : type === 'SIMPLE'
+        ? `SIMPLE:${item?.simpleLotId || identifier}`
+        : `${type || 'UNKNOWN'}:${item?.stockItemId || item?.simpleLotId || identifier}`;
+
+    if (stockKey && !group.seenStockKeys.has(stockKey)) {
+      group.seenStockKeys.add(stockKey);
+      if (type === 'STOCK') {
+        group.availableQuantity += 1;
+        group.hasAvailability = true;
+      } else if (type === 'SIMPLE') {
+        const quantityAvailable = Number(item?.quantityAvailable ?? item?.qtyRemaining);
+        if (Number.isFinite(quantityAvailable)) {
+          group.availableQuantity += Math.max(0, quantityAvailable);
+          group.hasAvailability = true;
+        }
+      }
+    }
+
+    if (identifier && !group.identifiers.includes(identifier) && group.identifiers.length < 4) {
+      group.identifiers.push(identifier);
+    }
+  });
+
+  return Array.from(groups.values()).map((group) => ({
+    ...group,
+    stockTypes: Array.from(group.stockTypes),
+  }));
+};
+
 const QuotationEditorPage = () => {
   const { shopSlug, quotationId } = useParams();
   const navigate = useNavigate();
@@ -51,12 +111,10 @@ const QuotationEditorPage = () => {
 
   const [quotation, setQuotation] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [customerQuery, setCustomerQuery] = useState('');
   const [customerResults, setCustomerResults] = useState([]);
   const [customerSearching, setCustomerSearching] = useState(false);
   const [customerSaving, setCustomerSaving] = useState(false);
-
   const [productQuery, setProductQuery] = useState('');
   const [productResults, setProductResults] = useState([]);
   const [productSearching, setProductSearching] = useState(false);
@@ -122,18 +180,13 @@ const QuotationEditorPage = () => {
       setProductResults([]);
       return;
     }
+
     setProductSearching(true);
     try {
       const result = await searchSaleItems(query);
-      const seen = new Set();
-      const deduped = (result?.items || []).filter((item) => {
-        const productId = Number(item?.productId ?? item?.product?.id);
-        if (!productId || seen.has(productId)) return false;
-        seen.add(productId);
-        return true;
-      });
-      setProductResults(deduped);
-      if (!deduped.length) feedback.info('ไม่พบสินค้าที่ตรงกับคำค้นหา');
+      const grouped = groupProductSearchResults(result?.items || []);
+      setProductResults(grouped);
+      if (!grouped.length) feedback.info('ไม่พบสินค้าที่ตรงกับคำค้นหา');
     } catch (error) {
       feedback.actionError(error, 'ค้นหาสินค้าไม่สำเร็จ', `quotation:${quotationId}:product-search:error`);
     } finally {
@@ -141,15 +194,16 @@ const QuotationEditorPage = () => {
     }
   };
 
-  const addProductHelper = async (item) => {
+  const addProductHelper = async (group) => {
     if (!editable || productSavingId) return;
-    const productId = Number(item?.productId ?? item?.product?.id) || null;
+    const item = group?.representative || group;
+    const productId = Number(group?.productId ?? item?.productId ?? item?.product?.id) || null;
     if (!productId) return;
 
-    const title = item?.product?.name || 'สินค้า';
-    const model = item?.product?.codeType || '';
-    const unitName = item?.unit || item?.product?.unit || '';
-    const unitPrice = Number(item?.prices?.retail ?? 0) || 0;
+    const title = item?.product?.name || group?.product?.name || 'สินค้า';
+    const model = item?.product?.codeType || group?.product?.codeType || '';
+    const unitName = item?.unit || item?.product?.unit || group?.product?.unit || '';
+    const unitPrice = Number(item?.prices?.retail ?? group?.prices?.retail ?? 0) || 0;
 
     setProductSavingId(productId);
     try {
@@ -178,6 +232,12 @@ const QuotationEditorPage = () => {
   if (!quotation) return <div className="p-8 text-center text-rose-700">ไม่พบใบเสนอราคา</div>;
 
   const recipientName = quotation.customerCompany || quotation.customerName || 'ยังไม่ระบุลูกค้า';
+  const customerMeta = [
+    quotation.customerContactName ? `ผู้ติดต่อ: ${quotation.customerContactName}` : '',
+    quotation.customerPhone ? `โทร: ${quotation.customerPhone}` : '',
+    quotation.customerTaxId ? `เลขผู้เสียภาษี: ${quotation.customerTaxId}` : '',
+  ].filter(Boolean);
+  const quotationItems = quotation.items || [];
 
   return (
     <div className="mx-auto w-full max-w-[1380px] space-y-4 p-4 text-slate-800">
@@ -194,12 +254,7 @@ const QuotationEditorPage = () => {
             <p className="mt-1 text-sm text-slate-500">หน้านี้ใช้สำหรับเลือกลูกค้าและสินค้าเท่านั้น รายละเอียดทั้งหมดจัดทำต่อบนหน้าเอกสาร</p>
           </div>
         </div>
-
-        <button
-          type="button"
-          onClick={() => navigate(`${prefix}/${quotationId}/print`)}
-          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800"
-        >
+        <button type="button" onClick={() => navigate(`${prefix}/${quotationId}/print`)} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800">
           <FileText className="h-4 w-4" /> เปิดหน้าเอกสาร
         </button>
       </div>
@@ -214,9 +269,11 @@ const QuotationEditorPage = () => {
         <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-4 flex items-start gap-3 border-b border-slate-100 pb-4">
             <div className="rounded-xl bg-amber-50 p-2.5 text-amber-700"><UserRound className="h-5 w-5" /></div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <h2 className="font-bold text-slate-950">เลือกลูกค้า</h2>
-              <p className="mt-1 text-xs text-slate-500">ลูกค้าปัจจุบัน: <strong className="text-slate-800">{recipientName}</strong></p>
+              <p className="mt-1 text-sm font-semibold text-slate-800">{recipientName}</p>
+              {customerMeta.length ? <p className="mt-1 text-xs text-slate-500">{customerMeta.join(' · ')}</p> : null}
+              {quotation.customerAddress ? <p className="mt-1 line-clamp-2 text-xs text-slate-500">ที่อยู่: {quotation.customerAddress}</p> : null}
             </div>
           </div>
 
@@ -225,28 +282,14 @@ const QuotationEditorPage = () => {
               <div className="flex gap-2">
                 <label className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={customerQuery}
-                    onChange={(event) => setCustomerQuery(event.target.value)}
-                    placeholder="ค้นหาชื่อ เบอร์โทร หน่วยงาน หรือเลขผู้เสียภาษี"
-                    className="h-11 w-full rounded-xl border border-slate-300 pl-10 pr-3 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                  />
+                  <input value={customerQuery} onChange={(event) => setCustomerQuery(event.target.value)} placeholder="ค้นหาชื่อ เบอร์โทร หน่วยงาน หรือเลขผู้เสียภาษี" className="h-11 w-full rounded-xl border border-slate-300 pl-10 pr-3 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100" />
                 </label>
-                <button type="submit" disabled={customerSearching || customerSaving} className="rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50">
-                  {customerSearching ? 'กำลังค้นหา...' : 'ค้นหา'}
-                </button>
+                <button type="submit" disabled={customerSearching || customerSaving} className="rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50">{customerSearching ? 'กำลังค้นหา...' : 'ค้นหา'}</button>
               </div>
-
               {customerResults.length ? (
                 <div className="max-h-80 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
                   {customerResults.map((customer) => (
-                    <button
-                      key={customer.id}
-                      type="button"
-                      disabled={customerSaving}
-                      onClick={() => chooseCustomer(customer)}
-                      className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-left hover:border-teal-300 hover:bg-teal-50 disabled:opacity-50"
-                    >
+                    <button key={customer.id} type="button" disabled={customerSaving} onClick={() => chooseCustomer(customer)} className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-left hover:border-teal-300 hover:bg-teal-50 disabled:opacity-50">
                       <p className="font-semibold text-slate-900">{getCustomerDisplayName(customer)}</p>
                       <p className="mt-1 text-xs text-slate-500">{[customer.phone, customer.email, customer.taxId].filter(Boolean).join(' · ') || 'ไม่มีข้อมูลติดต่อเพิ่มเติม'}</p>
                     </button>
@@ -271,66 +314,104 @@ const QuotationEditorPage = () => {
               <div className="flex gap-2">
                 <label className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={productQuery}
-                    onChange={(event) => setProductQuery(event.target.value)}
-                    placeholder="ค้นหาสินค้าเพื่อช่วยสร้างรายการ"
-                    className="h-11 w-full rounded-xl border border-slate-300 pl-10 pr-3 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
-                  />
+                  <input value={productQuery} onChange={(event) => setProductQuery(event.target.value)} placeholder="ค้นหาสินค้าเพื่อช่วยสร้างรายการ" className="h-11 w-full rounded-xl border border-slate-300 pl-10 pr-3 text-sm outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-100" />
                 </label>
-                <button type="submit" disabled={productSearching || Boolean(productSavingId)} className="rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50">
-                  {productSearching ? 'กำลังค้นหา...' : 'ค้นหา'}
-                </button>
+                <button type="submit" disabled={productSearching || Boolean(productSavingId)} className="rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50">{productSearching ? 'กำลังค้นหา...' : 'ค้นหา'}</button>
               </div>
 
               {productResults.length ? (
-                <div className="max-h-80 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
-                  {productResults.map((item) => {
-                    const productId = Number(item?.productId ?? item?.product?.id);
-                    const adding = productSavingId === productId;
+                <div className="max-h-[360px] space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
+                  {productResults.map((group) => {
+                    const product = group.product || group.representative?.product || {};
+                    const brand = product.brandName || product.brand?.name || '';
+                    const model = product.codeType || '';
+                    const retail = Number(group.prices?.retail ?? group.representative?.prices?.retail ?? 0) || 0;
                     return (
-                      <button
-                        key={productId}
-                        type="button"
-                        disabled={Boolean(productSavingId)}
-                        onClick={() => addProductHelper(item)}
-                        className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-left hover:border-teal-300 hover:bg-teal-50 disabled:opacity-50"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold text-slate-900">{item?.product?.name || 'สินค้า'}</p>
-                          <p className="mt-1 text-xs text-slate-500">{[item?.product?.codeType, `ราคาแนะนำ ${money(item?.prices?.retail || 0)} ฿`].filter(Boolean).join(' · ')}</p>
+                      <button key={group.productId} type="button" disabled={Boolean(productSavingId)} onClick={() => addProductHelper(group)} className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-left hover:border-teal-300 hover:bg-teal-50 disabled:opacity-50">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-semibold text-slate-900">{product.name || 'สินค้า'}</p>
+                            <p className="mt-1 text-xs text-slate-500">{[brand, model].filter(Boolean).join(' · ') || 'ไม่มีข้อมูลรุ่น/แบรนด์'}</p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="text-xs text-slate-500">ราคาปลีก</p>
+                            <p className="font-bold text-teal-800">{money(retail)} ฿</p>
+                          </div>
                         </div>
-                        <span className="shrink-0 rounded-lg border border-teal-200 bg-teal-50 px-2.5 py-1.5 text-xs font-bold text-teal-800">
-                          {adding ? 'กำลังเพิ่ม...' : 'เพิ่ม'}
-                        </span>
+                        <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
+                          <span className="rounded-full bg-emerald-50 px-2 py-1 font-semibold text-emerald-800">
+                            พร้อมขาย: {group.hasAvailability ? `${group.availableQuantity} ชิ้น` : 'ไม่พบจำนวนจากผลค้นหา'}
+                          </span>
+                          {group.stockTypes.length ? <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">{group.stockTypes.join(' / ')}</span> : null}
+                        </div>
+                        {group.identifiers.length ? <p className="mt-2 truncate text-[11px] text-slate-500">Barcode/SN: {group.identifiers.join(' · ')}</p> : null}
+                        <p className="mt-2 text-[11px] text-slate-400">คลิกเพื่อเพิ่มเป็นรายการตั้งต้น</p>
                       </button>
                     );
                   })}
                 </div>
               ) : null}
+
+              <p className="rounded-xl border border-teal-100 bg-teal-50/50 px-3 py-2 text-[11px] leading-5 text-teal-900">
+                ข้อมูลสต๊อกเป็นข้อมูลประกอบการเสนอราคา ไม่ใช่การจองสต๊อก
+              </p>
             </form>
           ) : null}
-
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
-            รายการในเอกสารปัจจุบัน <strong className="text-slate-900">{quotation.items?.length || 0}</strong> รายการ — สามารถเพิ่มรายการ Manual ได้จากหน้าเอกสารโดยตรง
-          </div>
         </section>
       </div>
 
-      <section className="rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50 to-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <section data-testid="quotation-intake-overview" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="font-bold text-slate-950">พร้อมจัดทำใบเสนอราคา</h2>
-            <p className="mt-1 text-sm text-slate-600">เพิ่ม/แก้รายการ ราคา จำนวน รายละเอียด และพิมพ์เอกสารจาก Document Workspace โดยตรง</p>
+            <h2 className="font-bold text-slate-950">รายการเบื้องต้นในใบเสนอราคา</h2>
+            <p className="mt-1 text-xs text-slate-500">ดูข้อมูลที่เลือกไว้ก่อนเข้าเอกสาร รายละเอียด ราคา จำนวน และ Manual ได้จากหน้าเอกสารโดยตรง</p>
           </div>
-          <button
-            type="button"
-            onClick={() => navigate(`${prefix}/${quotationId}/print`)}
-            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800"
-          >
-            <FileText className="h-4 w-4" /> ไปที่หน้าเอกสาร
-          </button>
+          <p className="text-xs text-slate-500">ทั้งหมด <strong className="text-slate-800">{quotationItems.length}</strong> รายการ</p>
         </div>
+
+        <div className="mt-3 overflow-x-auto rounded-xl border border-slate-200">
+          <table className="min-w-[820px] w-full text-sm">
+            <thead className="bg-slate-50 text-xs text-slate-500">
+              <tr>
+                <th className="w-12 px-3 py-2.5 text-center">#</th>
+                <th className="px-3 py-2.5 text-left">รายการ / รายละเอียด</th>
+                <th className="w-28 px-3 py-2.5 text-left">แหล่งที่มา</th>
+                <th className="w-20 px-3 py-2.5 text-right">จำนวน</th>
+                <th className="w-20 px-3 py-2.5 text-center">หน่วย</th>
+                <th className="w-28 px-3 py-2.5 text-right">ราคา/หน่วย</th>
+                <th className="w-28 px-3 py-2.5 text-right">จำนวนเงิน</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {!quotationItems.length ? (
+                <tr><td colSpan="7" className="px-3 py-8 text-center text-sm text-slate-500">ยังไม่มีรายการ — จะเลือกสินค้าจากด้านบน หรือเพิ่ม Manual บนหน้าเอกสารก็ได้</td></tr>
+              ) : quotationItems.map((line, index) => (
+                <tr key={line.id} className="align-top">
+                  <td className="px-3 py-3 text-center text-slate-500">{index + 1}</td>
+                  <td className="px-3 py-3">
+                    <p className="font-semibold text-slate-900">{line.title}</p>
+                    {line.description ? <p className="mt-1 line-clamp-2 whitespace-pre-line text-xs text-slate-500">{line.description}</p> : null}
+                  </td>
+                  <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${line.sourceProductId ? 'bg-teal-50 text-teal-800' : 'bg-slate-100 text-slate-600'}`}>{line.sourceProductId ? 'สินค้าในระบบ' : 'Manual'}</span></td>
+                  <td className="px-3 py-3 text-right tabular-nums">{Number(line.quantity || 0)}</td>
+                  <td className="px-3 py-3 text-center">{line.unitName || '-'}</td>
+                  <td className="px-3 py-3 text-right tabular-nums">{money(line.unitPrice)}</td>
+                  <td className="px-3 py-3 text-right font-semibold tabular-nums">{money(line.lineTotal)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="flex flex-col gap-3 rounded-2xl border border-teal-200 bg-teal-50/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="font-bold text-slate-950">พร้อมจัดทำใบเสนอราคา</h2>
+          <p className="mt-1 text-sm text-slate-600">แก้รายการ จำนวน ราคา และรายละเอียดทั้งหมดจาก Document Workspace โดยตรง</p>
+        </div>
+        <button type="button" onClick={() => navigate(`${prefix}/${quotationId}/print`)} className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white hover:bg-teal-800">
+          <FileText className="h-4 w-4" /> ไปหน้าเอกสาร
+        </button>
       </section>
     </div>
   );

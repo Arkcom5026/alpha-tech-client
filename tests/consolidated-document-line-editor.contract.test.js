@@ -12,7 +12,7 @@ const adapter = read('src/features/combinedBilling/adapters/consolidatedDocument
 const controller = read('src/features/combinedBilling/controllers/consolidatedDocumentLineUpdateController.js');
 const source = read('src/features/bill/hooks/useBillDocumentSource.js');
 const editor = read('src/features/bill/hooks/useBillDocumentLineEditor.js');
-const layout = read('src/features/bill/components/BillLayoutFullTax.jsx');
+const document = read('src/features/bill/components/FullTaxA4Document.jsx');
 const page = read('src/features/bill/pages/PrintBillPageFullTax.jsx');
 
 const assert = (condition, message) => {
@@ -53,11 +53,11 @@ assert(
   'Bill line editor state must delegate persistence to a source-aware mutation strategy.'
 );
 assert(
-  layout.includes('placeholder="ข้อความก่อนสินค้า"')
-    && layout.includes('placeholder="ข้อความท้ายสินค้า"')
-    && layout.includes('renderDocumentLineButton(item)')
-    && layout.includes('editableDocumentLines ? ('),
-  'Consolidated documents must reuse the same inline tail-column before/after editor as SALE.'
+  document.includes('placeholder="ข้อความก่อนสินค้า"')
+    && document.includes('placeholder="ข้อความท้ายสินค้า"')
+    && document.includes("onToggleDocumentLineEdit?.(item)")
+    && document.includes("onSaveDocumentLine?.(item)"),
+  'Deterministic full-tax A4 pages must retain the same before/after inline document editor as SALE.'
 );
 assert(
   page.includes('executeSaleDocumentLineUpdate')
@@ -68,34 +68,18 @@ assert(
 assert(
   page.includes('lineId: item?.documentSourceLineId')
     && page.includes('editableDocumentLines={canEditDocumentLines}')
-    && !page.includes('ConsolidatedDocumentLineEditorPanel'),
-  'Consolidated saves must target persisted line ids while sharing the SALE inline edit column.'
+    && page.includes('<FullTaxA4Document')
+    && !page.includes('BillLayoutFullTax'),
+  'Consolidated saves must target persisted line ids while the page uses the deterministic A4 renderer.'
 );
 assert(
-  page.includes('display: block !important;')
-    && page.includes('width: 210mm !important;')
-    && page.includes('min-height: 296mm !important;')
-    && page.includes('height: auto !important;')
-    && page.includes('box-sizing: border-box !important;')
-    && page.includes('useCompactA4Grid')
-    && page.includes('saleItems.length <= 18')
-    && page.includes('.bill-print-compact-a4 .print-a4 tbody tr:nth-last-child(-n+2)')
-    && page.includes("'bill-print-compact-a4'")
-    && page.includes('thead th:nth-child(7)')
-    && page.includes('visibility: hidden !important;')
-    && !page.includes('width: 190mm !important;')
-    && !page.includes('printFillerRowsToHide'),
-  'Short full-tax previews must physically fit A4 before printing by sharing one geometry in screen and print.'
-);
-
-const layoutCloseIndex = page.indexOf('</StoreDocumentHeaderScope>');
-const finalAuthorityIndex = page.indexOf('data-bill-print-final-authority');
-assert(
-  layoutCloseIndex >= 0
-    && finalAuthorityIndex > layoutCloseIndex
-    && page.slice(finalAuthorityIndex).includes('margin: 0 !important;')
-    && page.slice(finalAuthorityIndex).includes('min-height: 296mm !important;'),
-  'The final @page/A4 authority must render after BillLayoutFullTax so its embedded 10mm @page rule cannot win the cascade.'
+  document.includes('const MAX_ROWS_LAST_PAGE = 16;')
+    && document.includes('const MAX_ROWS_NORMAL_PAGE = 24;')
+    && document.includes("@page { size: A4; margin: 0; }")
+    && document.includes('height: 297mm !important;')
+    && document.includes("absolute bottom-[5mm]")
+    && document.includes("absolute bottom-[31mm]"),
+  'Full-tax editor integration must preserve deterministic page capacities and reserved summary/signature zones.'
 );
 
 console.log('Consolidated Document Line Editor Contract: PASS');

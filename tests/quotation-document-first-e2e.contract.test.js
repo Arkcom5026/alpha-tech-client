@@ -48,6 +48,9 @@ excludes(editor, 'เปิดหน้าเอกสาร', 'Duplicate top do
 includes(editor, 'updateQuotationLine(quotationId, line.id', 'Intake quantity and price adjustments must persist through canonical quotation line authority');
 includes(editor, 'saveLineQuickEdit', 'Quotation intake must expose a dedicated quick edit path instead of reusing the document line editor');
 includes(editor, 'data-testid={`quotation-intake-quantity-${line.id}`}', 'Quotation intake must allow draft quantity adjustment per line');
+includes(editor, 'min="1" step="1"', 'Quotation intake quantity control must use whole-number increments');
+includes(editor, 'Number.isInteger(quantity)', 'Quotation intake must reject fractional quantity even when typed manually');
+includes(editor, 'จำนวนต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป', 'Quotation intake must explain whole-number quantity validation');
 includes(editor, 'data-testid={`quotation-intake-adjustment-${line.id}`}', 'Quotation intake must allow relative price adjustment per line');
 includes(editor, 'ปรับราคา (+/-)', 'Quotation intake quick editing should mirror the sales-page price-adjustment mental model');
 includes(editor, 'ราคาหลังปรับ', 'Quotation intake must preview the adjusted price before save');
@@ -90,6 +93,8 @@ includes(printPage, 'updateQuotationLine(quotationId, editingLineId, payload)', 
 includes(printPage, 'พิมพ์เองได้ทั้งหมด ไม่จำเป็นต้องอ้างอิงสินค้า', 'Direct line creation must preserve manual-first quotation semantics');
 includes(printPage, 'รายละเอียดเพิ่มเติม', 'Inline editor must support multiline document details');
 includes(printPage, 'ราคา/หน่วย', 'Inline editor must support the offered unit price');
+includes(printPage, 'min="1" step="1"', 'Document workspace quantity control must use whole-number increments');
+includes(printPage, 'Number.isInteger(quantity)', 'Document workspace must reject fractional quantity even when typed manually');
 includes(printPage, 'ยอดราคาหลังปรับ', 'Quotation print totals must use the adjusted offered price directly');
 excludes(printPage, '<span className="mb-1 block font-semibold text-slate-700">ส่วนลด</span>', 'Document workspace must not expose a discount input');
 excludes(printPage, 'ส่วนลดรายการ', 'Printed quotation must not expose line discounts');

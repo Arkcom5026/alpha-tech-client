@@ -33,9 +33,18 @@ includes(editor, 'รายละเอียดหลายบรรทัด',
 includes(editor, 'ยังไม่มีรายการ', 'Editor must render valid zero-line quotation state');
 includes(editor, 'searchSaleItems', 'Existing product catalog may assist document authoring');
 
-includes(printPage, 'ไม่มีรายการสินค้า — เอกสารนี้อาจใช้ข้อความรายละเอียดทั่วไปแทนรายการสินค้า', 'A4 print must remain valid with zero items');
 includes(printPage, "documentType: 'QUOTATION'", 'Quotation print must use store document-header authority');
 includes(printPage, 'whitespace-pre-wrap', 'A4 document must preserve multiline descriptions');
+includes(printPage, 'items.length === 0', 'A4 print must remain valid with zero document lines');
+includes(printPage, 'h-[24mm]', 'Zero-line quotation must preserve a formal blank document table area');
+includes(printPage, 'quotation-document-header', 'Quotation must expose a dedicated document header boundary');
+includes(printPage, 'quotation-info-panel', 'Customer and document metadata must use consistent information panels');
+includes(printPage, 'quotation-settlement', 'Terms and totals must form a stable settlement section');
+includes(printPage, 'quotation-signatures', 'Quotation must retain a dedicated signature boundary');
+includes(printPage, 'width: 195mm !important', 'Quotation print must follow the established 195mm printable A4 frame');
+includes(printPage, 'height: 280mm !important', 'Quotation print must follow the established 280mm printable A4 height');
+includes(printPage, 'overflow: hidden !important', 'Single-page quotation shell must prevent phantom overflow pages');
+excludes(printPage, 'ไม่มีรายการสินค้า —', 'Formal quotation print must not expose application-style empty-state copy');
 
 includes(routes, "{ path: 'quotations', element: <QuotationListPage /> }", 'Quotation list route is required');
 includes(routes, "{ path: 'quotations/new', element: <CreateQuotationPage /> }", 'Quotation create route is required');

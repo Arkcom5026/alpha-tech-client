@@ -85,7 +85,7 @@ assert(
     && document.includes('full-tax-editor-column')
     && document.includes('display: none !important;')
     && document.includes("absolute bottom-[5mm]")
-    && document.includes("absolute bottom-[31mm]"),
+    && document.includes("absolute bottom-[28mm]"),
   'Full-tax editor integration must preserve the fuller 20-row deterministic grid, rounded print-safe A4 geometry, print-only editor-column removal, and reserved summary/signature zones.'
 );
 

@@ -14,6 +14,7 @@ export const useSalePaymentWorkflow = ({
   onSaleOptionChange,
   includeDeliveryNote,
   onIncludeDeliveryNoteChange,
+  sourceQuotationId,
   onConfirmSale,
   onSaleConfirmed,
   setClearPhoneTrigger,
@@ -158,6 +159,7 @@ export const useSalePaymentWorkflow = ({
         customerType,
         saleOption,
         includeDeliveryNote,
+        sourceQuotationId,
         onConfirmSale,
         onSaleConfirmed,
         confirmContext,
@@ -200,6 +202,7 @@ export const useSalePaymentWorkflow = ({
     saleOption,
     includeDeliveryNote,
     selectedDeposit,
+    sourceQuotationId,
   ]);
 
   return projectSalePaymentWorkflow({

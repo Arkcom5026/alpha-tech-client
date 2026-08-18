@@ -16,6 +16,12 @@ const DeliveryNotePrintShell = ({
   editableDocumentLines = true,
 }) => (
   <main className="a4-standard-delivery-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
+    {sale?.sourceQuotation ? (
+      <div data-testid="delivery-note-source-quotation" className="mx-auto mb-3 max-w-[210mm] rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm text-teal-900 print:hidden">
+        <span className="font-semibold">อ้างอิงใบเสนอราคา:</span>{' '}
+        {sale.sourceQuotation.code} · Rev.{Number(sale.sourceQuotation.revisionNumber || 0)}
+      </div>
+    ) : null}
     <section className="a4-standard-delivery-frame mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
       <DeliveryNoteForm
         sale={sale}

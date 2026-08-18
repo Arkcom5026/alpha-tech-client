@@ -52,6 +52,7 @@ export const buildSaleCompletionPayload = ({
     customerId: customerId ? Number(customerId) : null,
     customerFirstAssociationToken: readSaleCustomerFirstAssociation(customerId) || undefined,
     sourceHeldCartId: activeHeldCart?.id || null,
+    sourceQuotationId: options.sourceQuotationId ? Number(options.sourceQuotationId) : null,
     totalBeforeDiscount,
     totalPriceAdjustment,
     totalDiscount,

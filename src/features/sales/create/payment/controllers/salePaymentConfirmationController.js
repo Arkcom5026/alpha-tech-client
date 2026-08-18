@@ -36,6 +36,7 @@ export const executeSalePaymentConfirmation = async ({
   saleMode,
   saleOption,
   includeDeliveryNote = false,
+  sourceQuotationId = null,
   customerType,
   hasValidCustomerId,
   hasImmediatePayment,
@@ -81,6 +82,7 @@ export const executeSalePaymentConfirmation = async ({
 
     const response = await onConfirmSale({
       deliveryNoteMode,
+      sourceQuotationId: sourceQuotationId || undefined,
       saleType: customerType === 'GOVERNMENT' ? 'GOVERNMENT' : undefined,
       paymentIntent,
     });

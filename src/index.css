@@ -203,6 +203,23 @@
   width: 4% !important;
 }
 
+/* Shared A4 authority for receipt/settlement documents that do not use the
+   full-tax table renderer but must share the same physical paper standard. */
+.credit-collection-a4 {
+  box-sizing: border-box !important;
+  width: 201mm !important;
+  max-width: 201mm !important;
+  min-height: 288mm !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 5mm !important;
+  border: 0.3mm solid #444 !important;
+  border-radius: 2.5mm !important;
+  background: #fff !important;
+  color: #000 !important;
+  font-family: var(--document-font-family) !important;
+}
+
 /* The operational verification control remains available as an internal feature,
    but is intentionally not exposed in the merchant POS header. */
 button[aria-label='ดูสถานะความพร้อมของระบบ'] {
@@ -258,6 +275,27 @@ button[aria-label='ดูสถานะความพร้อมของร�
   .full-tax-a4-page table th:nth-child(6),
   .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(6) {
     width: 14% !important;
+  }
+
+  body .credit-collection-a4 {
+    position: relative !important;
+    box-sizing: border-box !important;
+    width: 201mm !important;
+    max-width: 201mm !important;
+    min-height: 288mm !important;
+    height: 288mm !important;
+    margin: 0 auto !important;
+    padding: 5mm !important;
+    border: 0.3mm solid #444 !important;
+    border-radius: 2.5mm !important;
+    overflow: hidden !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-family: var(--document-font-family) !important;
+  }
+
+  body .credit-collection-a4 .credit-collection-header {
+    display: block !important;
   }
 
   * {

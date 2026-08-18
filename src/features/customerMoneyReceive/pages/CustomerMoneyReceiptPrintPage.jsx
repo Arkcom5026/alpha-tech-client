@@ -75,7 +75,7 @@ const CustomerMoneyReceiptDocument = ({ record, mode, headerConfig }) => {
       : `รับเข้า Customer Money และยังพร้อมใช้ ฿${formatMoney(record.remainingAmount)}`;
 
   return (
-    <article className={`customer-money-receipt-document bg-white text-black ${isShort ? 'w-[80mm] p-4 text-[12px]' : 'credit-collection-a4 min-h-[277mm] w-[190mm] p-8 text-[14px]'}`}>
+    <article className={`customer-money-receipt-document bg-white text-black ${isShort ? 'w-[80mm] p-4 text-[12px]' : 'credit-collection-a4 text-[14px]'}`}>
       {isShort ? (
         <header className="border-b-2 border-black pb-4 text-center">
           <h1 className="text-xl font-bold">{branch.name || 'ร้านค้า'}</h1>
@@ -84,7 +84,7 @@ const CustomerMoneyReceiptDocument = ({ record, mode, headerConfig }) => {
           <div className="text-xs tracking-wide">CUSTOMER MONEY RECEIPT</div>
         </header>
       ) : (
-        <header className="credit-collection-header border-b-2 border-black pb-4">
+        <div role="banner" className="credit-collection-header border-b-2 border-black pb-4">
           <div className="credit-collection-store-header flex items-start gap-4">
             {headerConfig?.logoUrl ? <img className="credit-collection-store-logo shrink-0 object-contain" src={headerConfig.logoUrl} alt="โลโก้ร้าน" /> : null}
             <div className="credit-collection-store-copy min-w-0 flex-1">
@@ -97,7 +97,7 @@ const CustomerMoneyReceiptDocument = ({ record, mode, headerConfig }) => {
           </div>
           <div className="mt-4 text-center text-xl font-bold">ใบรับเงิน</div>
           <div className="text-center text-xs tracking-wide">CUSTOMER MONEY RECEIPT</div>
-        </header>
+        </div>
       )}
 
       {isCancelled && <div className="my-4 border-2 border-black p-2 text-center font-bold">ยกเลิกแล้ว / CANCELLED</div>}
@@ -215,12 +215,12 @@ const CustomerMoneyReceiptPrintPage = () => {
   return (
     <>
       <style>{`
-        @page { size: ${mode === 'SHORT' ? '80mm auto' : 'A4'}; margin: ${mode === 'SHORT' ? '0' : '10mm'}; }
+        @page { size: ${mode === 'SHORT' ? '80mm auto' : 'A4'}; margin: ${mode === 'SHORT' ? '0' : '4mm'}; }
         @media print {
           html, body, #root { margin: 0 !important; padding: 0 !important; background: #fff !important; }
           body * { visibility: hidden !important; }
           .customer-money-receipt-document, .customer-money-receipt-document * { visibility: visible !important; }
-          .customer-money-receipt-document { position: absolute !important; inset: 0 auto auto 0 !important; margin: 0 !important; border: 0 !important; box-shadow: none !important; }
+          .customer-money-receipt-document { margin: 0 auto !important; box-shadow: none !important; }
           .customer-money-receipt-toolbar { display: none !important; }
         }
       `}</style>
@@ -237,7 +237,7 @@ const CustomerMoneyReceiptPrintPage = () => {
           </div>
         </div>
       </div>
-      <main className="min-h-screen bg-slate-100 p-4 print:bg-white print:p-0">
+      <main className="min-h-screen bg-slate-100 p-4 print:min-h-0 print:bg-white print:p-0">
         <div className="mx-auto w-fit shadow print:shadow-none">
           {mode === 'SHORT' ? receiptDocument : <StoreDocumentHeaderScope config={a4HeaderConfig}>{receiptDocument}</StoreDocumentHeaderScope>}
         </div>

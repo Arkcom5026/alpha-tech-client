@@ -75,6 +75,11 @@ export const listQuotations = async ({ status = '', query = '', limit = 50 } = {
   return unwrap(await apiClient.get(`/sales/quotations?${params.toString()}`));
 };
 
+export const listQuotationReferenceCandidates = async (customerId) => {
+  const params = new URLSearchParams({ customerId: String(customerId) });
+  return unwrap(await apiClient.get(`/sales/quotations/reference-candidates?${params.toString()}`));
+};
+
 export const createQuotation = async ({ customerId = null } = {}) =>
   unwrap(await apiClient.post('/sales/quotations', { customerId }));
 

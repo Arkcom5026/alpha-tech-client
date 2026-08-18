@@ -28,6 +28,8 @@ for (const token of [
   'getQuotationDocumentLineage(quotationId)',
   "document.querySelector('.quotation-print-shell')",
   "shell?.querySelector('.quotation-a4')",
+  'new MutationObserver',
+  "observer.observe(document.body, { childList: true, subtree: true })",
   'shell.insertBefore(host, a4)',
   'data-testid="quotation-document-lineage"',
   'เอกสารที่อ้างอิงใบเสนอราคานี้',

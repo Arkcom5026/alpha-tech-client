@@ -253,11 +253,11 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
               className={`grid gap-y-1.5 text-sm sm:grid-cols-2 ${
                 isOrganization
                   ? 'gap-x-5 xl:grid-cols-[minmax(15rem,2.2fr)_minmax(4.5rem,0.45fr)_minmax(6.5rem,0.8fr)_minmax(7rem,0.8fr)]'
-                  : 'gap-x-5 xl:grid-cols-3'
+                  : 'gap-x-8 xl:grid-cols-[minmax(15rem,1.6fr)_minmax(12rem,1fr)]'
               }`}
             >
               {!isOrganization ? (
-                <p className="min-w-0 text-slate-700">
+                <p className="min-w-0 whitespace-nowrap text-slate-700">
                   <span className="font-semibold text-slate-500">ชื่อลูกค้า :</span>{' '}
                   <span className="font-semibold text-slate-950">{customerName}</span>
                 </p>

@@ -25,7 +25,7 @@ const estimateLineHeightMm = (item = {}) => {
 
 const tableFillerHeightMm = (items = []) => {
   const occupied = items.reduce((sum, item) => sum + estimateLineHeightMm(item), 0);
-  return Math.max(0, 82 - occupied);
+  return Math.max(0, 112 - occupied);
 };
 
 const QuotationPrintPage = () => {
@@ -219,7 +219,7 @@ const QuotationPrintPage = () => {
           </table>
         </div>
 
-        <div className="quotation-settlement grid grid-cols-[1.6fr_1fr] break-inside-avoid text-[10px] leading-[1.55]">
+        <div className="quotation-settlement grid min-h-[27mm] grid-cols-[1.6fr_1fr] break-inside-avoid text-[10px] leading-[1.55]">
           <section className="border-x border-b border-slate-500 px-2.5 py-2">
             <p className="font-semibold">เงื่อนไข / หมายเหตุ</p>
             {quotation.closingNote ? <div className="mt-1 whitespace-pre-wrap">{quotation.closingNote}</div> : null}
@@ -232,14 +232,14 @@ const QuotationPrintPage = () => {
             {Number(quotation.lineDiscountTotal || 0) > 0 ? <div className="flex justify-between gap-3"><span>ส่วนลดรายการ</span><span className="tabular-nums">- {money(quotation.lineDiscountTotal)}</span></div> : null}
             {Number(quotation.billDiscount || 0) > 0 ? <div className="flex justify-between gap-3"><span>ส่วนลดท้ายบิล</span><span className="tabular-nums">- {money(quotation.billDiscount)}</span></div> : null}
             {quotation.vatEnabled ? <div className="flex justify-between gap-3"><span>ภาษีมูลค่าเพิ่ม {Number(quotation.vatRate || 0)}%</span><span className="tabular-nums">{money(quotation.vatAmount)}</span></div> : null}
-            <div className="mt-1 flex justify-between gap-3 border-t border-slate-400 pt-1 text-[12px] font-bold">
+            <div className="mt-1 flex justify-between gap-3 border-t border-slate-500 pt-1 text-[12.5px] font-extrabold">
               <span>ยอดสุทธิ</span>
               <span className="tabular-nums">{money(quotation.grandTotal)} บาท</span>
             </div>
           </section>
         </div>
 
-        <footer className="quotation-signatures mt-auto grid grid-cols-2 gap-[20mm] pt-[7mm] text-center text-[10px]">
+        <footer className="quotation-signatures grid grid-cols-2 gap-[20mm] pt-[8mm] text-center text-[10px]">
           <div>
             <div className="mx-auto h-[12mm] w-[86%] border-b border-slate-500" />
             <p className="mt-1 font-semibold">ผู้เสนอราคา / QUOTED BY</p>

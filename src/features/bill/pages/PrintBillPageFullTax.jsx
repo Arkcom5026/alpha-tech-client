@@ -137,9 +137,8 @@ const PrintBillPageFullTax = () => {
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
   // Keep the main-branch 20-row preview unchanged. On paper only, trim the
-  // trailing visual filler rows down to a 15-row grid. This reserves one extra
-  // 28px row for the signature block under Chrome's default A4 margins while
-  // never hiding a real sale row.
+  // trailing visual filler rows down to a 15-row grid. This reserves space for
+  // totals/signatures while never hiding a real sale row.
   const printFillerRowsToHide = useMemo(() => {
     const itemCount = Array.isArray(saleItems) ? saleItems.length : 0
     const printableGridRows = Math.max(15, itemCount)
@@ -184,14 +183,15 @@ const PrintBillPageFullTax = () => {
           }
 
           /*
-           * BillLayoutFullTax owns @page { size:A4; margin:10mm }. Override only
-           * the legacy physical-sheet shell so it fits that printable box. The
-           * screen preview and all document/tax logic remain main-branch baseline.
+           * BillLayoutFullTax owns @page { size:A4; margin:10mm }. Keep its A4
+           * width inside the 190mm printable area, but do NOT impose a paper
+           * height on the flex container. A fixed/minimum page height combines
+           * with the summary's mt-auto and pushes the signature into page 2.
            */
           .bill-print-root .print-a4 {
             width: 190mm !important;
             max-width: 190mm !important;
-            min-height: 277mm !important;
+            min-height: 0 !important;
             height: auto !important;
             box-sizing: border-box !important;
           }

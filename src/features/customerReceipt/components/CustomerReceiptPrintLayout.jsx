@@ -1,6 +1,6 @@
 import React from 'react'
 
-import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
+import FullTaxA4Document from '@/features/bill/components/FullTaxA4Document'
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope'
 import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig'
 import {
@@ -125,7 +125,7 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
 
   return (
     <StoreDocumentHeaderScope config={config}>
-      <BillLayoutFullTax
+      <FullTaxA4Document
         sale={sale}
         saleItems={saleItems}
         payments={payments}

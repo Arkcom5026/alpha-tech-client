@@ -22,10 +22,10 @@ assert(
 assert(
   css.includes('.full-tax-a4-page table {')
     && css.includes('font-size: 13px !important;')
-    && css.includes('width: 39% !important;')
-    && css.includes('width: 43% !important;')
-    && css.includes('width: 17% !important;'),
-  'Full-tax table typography and column balance must favor DESCRIPTION while keeping monetary columns compact.'
+    && css.includes('width: 45% !important;')
+    && css.includes('width: 49% !important;')
+    && css.includes('width: 14% !important;'),
+  'Full-tax table typography and column balance must strongly favor DESCRIPTION while keeping monetary columns compact.'
 );
 
 assert(
@@ -38,7 +38,7 @@ assert(
 assert(
   css.includes('body .full-tax-a4-page')
     && css.includes('border: 0.3mm solid #444 !important;'),
-  'Printed full-tax sheets must restore the large outer document frame inside the print-safe content box.'
+  'Printed full-tax sheets must retain the large outer document frame inside the print-safe content box.'
 );
 
 console.log('Full Tax Document Presentation Polish Contract: PASS');

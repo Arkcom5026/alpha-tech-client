@@ -22,10 +22,10 @@ assert(
 );
 
 assert(
-  document.includes('const MAX_ROWS_LAST_PAGE = 18;')
+  document.includes('const MAX_ROWS_LAST_PAGE = 20;')
     && document.includes('const MAX_ROWS_NORMAL_PAGE = 24;')
     && document.includes('paginateItems(displayItems)'),
-  'Full-tax A4 pagination must use the fuller 18-row last-page grid while retaining deterministic multi-page capacity.'
+  'Full-tax A4 pagination must use the fuller 20-row last-page grid while retaining deterministic multi-page capacity.'
 );
 
 assert(
@@ -38,8 +38,9 @@ assert(
     && document.includes('height: ${PRINT_SHEET_HEIGHT_MM}mm !important;')
     && document.includes('min-height: ${PRINT_SHEET_HEIGHT_MM}mm !important;')
     && document.includes('padding: 5mm !important;')
+    && document.includes('border-radius: 2.5mm !important;')
     && document.includes('overflow: hidden !important;'),
-  'Printed full-tax sheets must live inside an explicit print-safe A4 content box instead of touching physical paper edges.'
+  'Printed full-tax sheets must stay inside the print-safe A4 content box with a rounded outer document frame.'
 );
 
 assert(

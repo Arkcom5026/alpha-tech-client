@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { buildCustomerFullAddress } from '@features/customer/utils/customerAddressFormatter';
 import { buildReceiptItems } from '../utils/receiptGrouping';
 
-const MAX_ROWS_LAST_PAGE = 18;
+const MAX_ROWS_LAST_PAGE = 20;
 const MAX_ROWS_NORMAL_PAGE = 24;
 const PHYSICAL_PAGE_HEIGHT_MM = 296;
 const PRINT_PAGE_MARGIN_MM = 4;
@@ -262,7 +262,7 @@ const FullTaxA4Document = ({
             margin: 0 auto !important;
             padding: 5mm !important;
             border: 0 !important;
-            border-radius: 0 !important;
+            border-radius: 2.5mm !important;
             box-shadow: none !important;
             overflow: hidden !important;
             font-family: ${DOCUMENT_FONT_FAMILY} !important;

@@ -140,9 +140,37 @@ const PrintBillPageFullTax = () => {
     <>
       <style>{`
         @media print {
+          html,
+          body,
+          #root {
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+          }
+
+          /* Mirror Delivery Note's phantom-sheet protection. Chrome paginates the
+             full POS ancestor chain even when navigation/chrome is hidden, so any
+             inherited flex/min-height/transform can manufacture a blank sheet. */
+          body:has(.full-tax-print-shell) #root *:has(.full-tax-print-shell) {
+            box-sizing: border-box !important;
+            display: block !important;
+            position: static !important;
+            width: auto !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            transform: none !important;
+          }
+
           .full-tax-print-shell,
           .full-tax-print-frame {
             display: block !important;
+            position: static !important;
             width: 100% !important;
             max-width: none !important;
             min-height: 0 !important;
@@ -180,10 +208,6 @@ const PrintBillPageFullTax = () => {
 
       <style>{`
         @media print {
-          /* Mirror Delivery Note's hardware-safe contract: let the physical A4 page
-             have no browser-owned margin, then keep the approved 4mm visual inset
-             on the document box itself. This avoids Chromium/printer double-margin
-             rounding that can create a trailing blank sheet. */
           @page { size: A4; margin: 0 !important; }
 
           body .full-tax-a4-page {
@@ -194,6 +218,13 @@ const PrintBillPageFullTax = () => {
             min-height: 288mm !important;
             max-height: 288mm !important;
             margin: 4mm auto 0 !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid-page !important;
+          }
+
+          body .full-tax-a4-page:last-of-type {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
 
           /* Preserve the approved spacing without adding flow height. */

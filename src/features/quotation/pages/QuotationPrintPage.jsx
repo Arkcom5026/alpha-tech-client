@@ -272,6 +272,18 @@ const QuotationPrintPage = () => {
 
       <style>{`
         .quotation-a4 { position: relative; font-family: var(--document-font-family, Tahoma, Arial, sans-serif); }
+        .quotation-document-header > div:first-child > div:last-child { font-size: 12px !important; }
+        .quotation-document-title h1 { font-size: 20px !important; }
+        .quotation-document-title p { font-size: 11px !important; }
+        .quotation-info-panel { font-size: 11.5px !important; }
+        .quotation-message { font-size: 11.5px !important; }
+        .quotation-table-wrap table { font-size: 11px !important; }
+        .quotation-table-wrap thead span { font-size: 9px !important; }
+        .quotation-table-wrap tbody td > div + div { font-size: 10px !important; }
+        .quotation-settlement { font-size: 11px !important; }
+        .quotation-settlement section:last-child > div:last-child { font-size: 14px !important; }
+        .quotation-signatures { font-size: 11px !important; }
+        .quotation-signatures p:last-child { font-size: 10px !important; }
         @media print {
           @page { size: A4; margin: 6mm !important; }
           html, body, #root { margin: 0 !important; padding: 0 !important; min-height: 0 !important; height: auto !important; }

@@ -11,6 +11,18 @@ const CUSTOMER_TYPES = [
 const fieldClass =
   'h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-teal-500 focus:ring-2 focus:ring-teal-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:opacity-70';
 
+const workflowOverrideValue = (value) => {
+  if (value === true) return 'ENABLED';
+  if (value === false) return 'DISABLED';
+  return 'DEFAULT';
+};
+
+const workflowOverrideFromValue = (value) => {
+  if (value === 'ENABLED') return true;
+  if (value === 'DISABLED') return false;
+  return null;
+};
+
 const SaleCustomerDetailsForm = ({
   editor,
   selectedCustomer,
@@ -35,6 +47,7 @@ const SaleCustomerDetailsForm = ({
 
   const isOrganization =
     editor.customerType === 'ORGANIZATION' || editor.customerType === 'GOVERNMENT';
+  const quotationDefaultEnabled = editor.customerType === 'GOVERNMENT';
 
   return (
     <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-3 md:p-4">
@@ -63,6 +76,23 @@ const SaleCustomerDetailsForm = ({
             );
           })}
         </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <label className="mb-1.5 block text-xs font-semibold text-slate-700">กระบวนการใบเสนอราคา</label>
+        <select
+          value={workflowOverrideValue(editor.quotationWorkflowOverride)}
+          disabled={disabled}
+          onChange={(event) => onPatch({ quotationWorkflowOverride: workflowOverrideFromValue(event.target.value) })}
+          className={fieldClass}
+        >
+          <option value="DEFAULT">ตามประเภทลูกค้า</option>
+          <option value="ENABLED">ใช้ใบเสนอราคา</option>
+          <option value="DISABLED">ไม่ใช้ใบเสนอราคา</option>
+        </select>
+        <p className="mt-1.5 text-[11px] leading-5 text-slate-500">
+          ค่าเริ่มต้นของประเภทนี้: {quotationDefaultEnabled ? 'ใช้ใบเสนอราคา' : 'ไม่ใช้ใบเสนอราคา'} · ตั้งค่าเฉพาะรายเมื่อกระบวนการจริงต่างจากค่าเริ่มต้น
+        </p>
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">

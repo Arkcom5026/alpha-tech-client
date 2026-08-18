@@ -10,6 +10,7 @@ const includes = (source, token) => { if (!source.includes(token)) throw new Err
 
 const quotationApi = read('src/features/quotation/api/quotationApi.js');
 const salePage = read('src/features/sales/create/pages/CreateSalePage.jsx');
+const hydration = read('src/features/sales/create/customer/hooks/useSaleCustomerHydration.js');
 const payload = read('src/features/sales/create/completion/services/saleCompletionPayload.js');
 const paymentSection = read('src/features/sales/create/components/PaymentSection.jsx');
 const paymentHook = read('src/features/sales/create/payment/hooks/useSalePaymentWorkflow.js');
@@ -21,10 +22,13 @@ includes(quotationApi, 'export const getQuotationDocumentLineage');
 includes(quotationApi, 'export const listQuotationReferenceCandidates');
 includes(quotationApi, '/sales/quotations/reference-candidates?');
 for (const token of [
-  'if (!customerId) return () => { alive = false; };',
+  'const quotationWorkflowEnabled = Boolean(',
+  'selectedCustomer?.quotationWorkflowEnabled === true',
+  'if (!quotationWorkflowEnabled) return () => { alive = false; };',
   'listQuotationReferenceCandidates(customerId)',
+  'Array.isArray(result?.candidates) ? result.candidates : []',
   "setSourceQuotationId('');",
-  'customerId && acceptedQuotations.length > 0',
+  'quotationWorkflowEnabled && acceptedQuotations.length > 0',
   'data-testid="sale-source-quotation-select"',
   'แสดงเฉพาะใบเสนอราคาที่ตอบรับแล้วของลูกค้ารายนี้',
   'sourceQuotationId={sourceQuotationId}',
@@ -32,6 +36,13 @@ for (const token of [
 if (salePage.includes("listQuotations({ status: 'ACCEPTED'")) {
   throw new Error('Sale workspace must not preload accepted quotations across all customers');
 }
+if (salePage.indexOf('if (!quotationWorkflowEnabled)') > salePage.indexOf('listQuotationReferenceCandidates(customerId)')) {
+  throw new Error('Quotation candidate lookup must be gated before the request is made');
+}
+for (const token of [
+  '...baseCustomer,',
+  'useCustomerDepositStore.getState().setSelectedCustomer(fullCustomer)',
+]) includes(hydration, token);
 includes(payload, 'sourceQuotationId: options.sourceQuotationId ? Number(options.sourceQuotationId) : null');
 includes(paymentSection, 'sourceQuotationId = null');
 includes(paymentHook, 'sourceQuotationId,');

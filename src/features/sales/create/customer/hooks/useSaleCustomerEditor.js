@@ -5,6 +5,7 @@ const EMPTY_EDITOR = {
   phone: '',
   email: '',
   customerType: 'INDIVIDUAL',
+  quotationWorkflowOverride: null,
   companyName: '',
   departmentName: '',
   taxId: '',
@@ -30,6 +31,10 @@ export const useSaleCustomerEditor = () => {
       phone: customer.phone || '',
       email: customer.email || '',
       customerType: customer.type || 'INDIVIDUAL',
+      quotationWorkflowOverride:
+        customer.quotationWorkflowOverride === true || customer.quotationWorkflowOverride === false
+          ? customer.quotationWorkflowOverride
+          : null,
       companyName: customer.companyName || '',
       departmentName: customer.departmentName || '',
       taxId: customer.taxId || '',
@@ -55,6 +60,7 @@ export const useSaleCustomerEditor = () => {
     postcode: editor.postalCode || undefined,
     addressDetail: editor.addressDetail,
     type: editor.customerType,
+    quotationWorkflowOverride: editor.quotationWorkflowOverride,
     companyName: editor.companyName,
     departmentName: editor.customerType === 'INDIVIDUAL' ? '' : editor.departmentName,
     taxId: editor.taxId,

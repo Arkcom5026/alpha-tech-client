@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import {
   clearSaleCustomerFirstAssociation,
   storeSaleCustomerFirstAssociation,
@@ -24,7 +25,8 @@ export const useSaleCustomerHydration = ({
       try {
         const payload = await searchByCustomerId(baseCustomer.id);
         fullCustomer = {
-          ...(normalizeCustomer(payload) || baseCustomer),
+          ...baseCustomer,
+          ...(normalizeCustomer(payload) || {}),
           firstAssociationToken:
             baseCustomer.firstAssociationToken ||
             normalizeCustomer(payload)?.firstAssociationToken ||
@@ -36,6 +38,7 @@ export const useSaleCustomerHydration = ({
     }
 
     setCustomerId(fullCustomer.id);
+    useCustomerDepositStore.getState().setSelectedCustomer(fullCustomer);
     if (fullCustomer.firstAssociationToken) {
       storeSaleCustomerFirstAssociation({
         customerId: fullCustomer.id,

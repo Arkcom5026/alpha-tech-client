@@ -125,6 +125,23 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
         }
       `}</style>
       {children}
+      <style>{`
+        /* Full Tax / Customer Receipt A4 shell normalization.
+           This style is intentionally rendered after the document so it wins over
+           legacy page-shell rules without changing the pagination implementation. */
+        @media print {
+          @page { size: A4; margin: 0; }
+          .store-document-header-scope .print-a4 {
+            box-sizing: border-box !important;
+            width: 210mm !important;
+            min-height: 297mm !important;
+            height: auto !important;
+            padding: 6mm !important;
+            border-radius: 0 !important;
+            overflow: visible !important;
+          }
+        }
+      `}</style>
     </div>
   )
 }

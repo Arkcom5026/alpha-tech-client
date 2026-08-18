@@ -180,10 +180,11 @@ const PrintBillPageFullTax = () => {
 
       <style>{`
         @media print {
-          /* FullTaxA4Document owns the deterministic A4 geometry. Keep the page
-             wrapper on exactly the same authority instead of introducing a second
-             210mm/6mm print box that can create a trailing Chromium sheet. */
-          @page { size: A4; margin: 4mm !important; }
+          /* Mirror Delivery Note's hardware-safe contract: let the physical A4 page
+             have no browser-owned margin, then keep the approved 4mm visual inset
+             on the document box itself. This avoids Chromium/printer double-margin
+             rounding that can create a trailing blank sheet. */
+          @page { size: A4; margin: 0 !important; }
 
           body .full-tax-a4-page {
             box-sizing: border-box !important;
@@ -192,11 +193,10 @@ const PrintBillPageFullTax = () => {
             height: 288mm !important;
             min-height: 288mm !important;
             max-height: 288mm !important;
-            margin: 0 auto !important;
+            margin: 4mm auto 0 !important;
           }
 
-          /* The summary is the third child from the end: summary, signatures,
-             page marker. Move it down visually without adding document-flow height. */
+          /* Preserve the approved spacing without adding flow height. */
           body .full-tax-a4-page > div:nth-last-child(3) {
             transform: translateY(4mm) !important;
           }

@@ -13,6 +13,7 @@ import {
   rejectQuotation,
   updateQuotationLine,
 } from '../api/quotationApi';
+import { calculateQuotationTotals, isVatInclusiveQuotation } from '../utils/quotationPricing';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -277,8 +278,13 @@ const QuotationPrintPage = () => {
     0,
   );
   const vatRate = quotation.vatEnabled === false ? 0 : Number(quotation.vatRate || 0);
-  const vatAmount = adjustedSubtotal * vatRate / 100;
-  const grandTotal = adjustedSubtotal + vatAmount;
+  const vatInclusive = isVatInclusiveQuotation(quotation);
+  const { taxableBase, vatAmount, grandTotal } = calculateQuotationTotals({
+    grossTotal: adjustedSubtotal,
+    vatEnabled: quotation.vatEnabled !== false,
+    vatRate,
+    vatInclusive,
+  });
   const configuredLogoSize = Number(header?.headerStyle?.logoSize || 72);
   const deliveryAlignedLogoSize = Math.min(92, Math.max(72, configuredLogoSize));
 
@@ -351,7 +357,7 @@ const QuotationPrintPage = () => {
 
         <div className="quotation-settlement grid min-h-[19mm] grid-cols-[1.6fr_1fr] break-inside-avoid text-[10px] leading-[1.45]">
           <section className="border-x border-b border-slate-500 px-2.5 py-1.5"><p className="font-semibold">เงื่อนไข / หมายเหตุ</p>{quotation.closingNote ? <div className="mt-0.5 whitespace-pre-wrap">{quotation.closingNote}</div> : null}{quotation.notes ? <div className={`${quotation.closingNote ? 'mt-0.5' : ''} whitespace-pre-wrap`}>{quotation.notes}</div> : null}{!hasTerms ? <p className="mt-0.5">-</p> : null}</section>
-          <section className="border-b border-r border-slate-500"><div className="flex justify-between gap-3 border-b border-slate-400 px-2.5 py-1"><span>ยอดราคาหลังปรับ</span><span className="tabular-nums">{money(adjustedSubtotal)}</span></div>{quotation.vatEnabled ? <div className="flex justify-between gap-3 border-b border-slate-400 px-2.5 py-1"><span>ภาษีมูลค่าเพิ่ม {Number(quotation.vatRate || 0)}%</span><span className="tabular-nums">{money(vatAmount)}</span></div> : null}<div className="flex justify-between gap-3 bg-slate-50 px-2.5 py-1.5 text-[13px] font-extrabold print:bg-white"><span>ยอดสุทธิ</span><span className="tabular-nums">{money(grandTotal)} บาท</span></div></section>
+          <section className="border-b border-r border-slate-500"><div className="flex justify-between gap-3 border-b border-slate-400 px-2.5 py-1"><span>มูลค่าก่อนภาษี</span><span className="tabular-nums">{money(taxableBase)}</span></div>{quotation.vatEnabled ? <div className="flex justify-between gap-3 border-b border-slate-400 px-2.5 py-1"><span>ภาษีมูลค่าเพิ่ม {Number(quotation.vatRate || 0)}%{vatInclusive ? ' (รวมในราคา)' : ''}</span><span className="tabular-nums">{money(vatAmount)}</span></div> : null}<div className="flex justify-between gap-3 bg-slate-50 px-2.5 py-1.5 text-[13px] font-extrabold print:bg-white"><span>ยอดสุทธิ</span><span className="tabular-nums">{money(grandTotal)} บาท</span></div></section>
         </div>
 
         <footer className="quotation-signatures absolute bottom-[5mm] left-[8mm] right-[8mm] grid grid-cols-2 gap-[20mm] text-center text-[10px]"><div><div className="mx-auto h-[11mm] w-[86%] border-b border-slate-500" /><p className="mt-1 font-semibold">ผู้เสนอราคา / QUOTED BY</p><p className="mt-1 text-[9px]">วันที่ ______ / ______ / ______</p></div><div><div className="mx-auto h-[11mm] w-[86%] border-b border-slate-500" /><p className="mt-1 font-semibold">ผู้ตอบรับใบเสนอราคา / ACCEPTED BY</p><p className="mt-1 text-[9px]">วันที่ ______ / ______ / ______</p></div></footer>

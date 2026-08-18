@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Printer } from 'lucide-react';
+import { ArrowLeft, Pencil, Printer, Save, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getBranchById } from '@/features/branch/api/branchApi';
 import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig';
 import { feedback } from '@/design-system';
-import { getQuotation } from '../api/quotationApi';
+import { getQuotation, updateQuotationLine } from '../api/quotationApi';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -25,8 +25,20 @@ const estimateLineHeightMm = (item = {}) => {
 
 const tableFillerHeightMm = (items = []) => {
   const occupied = items.reduce((sum, item) => sum + estimateLineHeightMm(item), 0);
-  return Math.max(0, 112 - occupied);
+  return Math.max(0, 108 - occupied);
 };
+
+const buildLineDraft = (item = {}) => ({
+  id: item.id || null,
+  sourceProductId: item.sourceProductId || null,
+  title: item.title || '',
+  description: item.description || '',
+  quantity: Number(item.quantity || 1),
+  unitName: item.unitName || '',
+  unitPrice: Number(item.unitPrice || 0),
+  discountAmount: Number(item.discountAmount || 0),
+  sortOrder: Number(item.sortOrder || 0),
+});
 
 const QuotationPrintPage = () => {
   const { shopSlug, quotationId } = useParams();
@@ -35,6 +47,9 @@ const QuotationPrintPage = () => {
   const [quotation, setQuotation] = useState(null);
   const [draftBranch, setDraftBranch] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [editingLineId, setEditingLineId] = useState(null);
+  const [lineDraft, setLineDraft] = useState(null);
+  const [savingLine, setSavingLine] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -73,6 +88,51 @@ const QuotationPrintPage = () => {
       taxId: branch?.taxId || '-',
     },
   }), [branch]);
+
+  const editable = quotation?.status === 'DRAFT';
+
+  const beginLineEdit = (item) => {
+    if (!editable) return;
+    if (editingLineId === item.id) {
+      setEditingLineId(null);
+      setLineDraft(null);
+      return;
+    }
+    setEditingLineId(item.id);
+    setLineDraft(buildLineDraft(item));
+  };
+
+  const cancelLineEdit = () => {
+    if (savingLine) return;
+    setEditingLineId(null);
+    setLineDraft(null);
+  };
+
+  const patchLineDraft = (key, value) => {
+    setLineDraft((current) => current ? { ...current, [key]: value } : current);
+  };
+
+  const saveLineEdit = async () => {
+    if (!editable || savingLine || !editingLineId || !lineDraft) return;
+    if (!String(lineDraft.title || '').trim()) {
+      feedback.info('กรุณาระบุชื่อรายการ');
+      return;
+    }
+
+    setSavingLine(true);
+    try {
+      await updateQuotationLine(quotationId, editingLineId, lineDraft);
+      const refreshed = await getQuotation(quotationId);
+      setQuotation(refreshed);
+      setEditingLineId(null);
+      setLineDraft(null);
+      feedback.actionSuccess('บันทึกรายการบนใบเสนอราคาแล้ว', `quotation:${quotationId}:print-line:${editingLineId}:save:success`);
+    } catch (error) {
+      feedback.actionError(error, 'บันทึกรายการไม่สำเร็จ', `quotation:${quotationId}:print-line:${editingLineId}:save:error`);
+    } finally {
+      setSavingLine(false);
+    }
+  };
 
   if (loading) return <div className="p-8 text-center text-slate-500">กำลังจัดเตรียมใบเสนอราคา...</div>;
   if (!quotation) return <div className="p-8 text-center text-rose-700">ไม่พบใบเสนอราคา</div>;
@@ -184,27 +244,139 @@ const QuotationPrintPage = () => {
             <thead>
               <tr>
                 <th className="w-[7%] border border-slate-600 px-1 py-1.5 font-bold">ลำดับ<br/><span className="text-[8px] font-semibold">ITEM</span></th>
-                <th className="w-[45%] border border-slate-600 px-2 py-1.5 font-bold">รายการ / รายละเอียด<br/><span className="text-[8px] font-semibold">DESCRIPTION</span></th>
+                <th className="w-[40%] border border-slate-600 px-2 py-1.5 font-bold print:w-[45%]">รายการ / รายละเอียด<br/><span className="text-[8px] font-semibold">DESCRIPTION</span></th>
                 <th className="w-[8%] border border-slate-600 px-1 py-1.5 font-bold">จำนวน<br/><span className="text-[8px] font-semibold">QTY</span></th>
                 <th className="w-[8%] border border-slate-600 px-1 py-1.5 font-bold">หน่วย<br/><span className="text-[8px] font-semibold">UNIT</span></th>
                 <th className="w-[14%] border border-slate-600 px-1 py-1.5 font-bold">ราคา/หน่วย<br/><span className="text-[8px] font-semibold">UNIT PRICE</span></th>
                 <th className="w-[18%] border border-slate-600 px-1 py-1.5 font-bold">จำนวนเงิน<br/><span className="text-[8px] font-semibold">AMOUNT</span></th>
+                {editable ? <th className="w-[5%] border border-slate-600 px-1 py-1.5 print:hidden">&nbsp;</th> : null}
               </tr>
             </thead>
             <tbody>
-              {items.map((item, index) => (
-                <tr key={item.id} className="align-top break-inside-avoid">
-                  <td className="border border-slate-500 px-1 py-1.5 text-center">{index + 1}</td>
-                  <td className="border border-slate-500 px-2 py-1.5">
-                    <div className="font-semibold">{item.title}</div>
-                    {item.description ? <div className="mt-0.5 whitespace-pre-wrap text-[9px] leading-[1.5]">{item.description}</div> : null}
-                  </td>
-                  <td className="border border-slate-500 px-1 py-1.5 text-right">{Number(item.quantity || 0)}</td>
-                  <td className="border border-slate-500 px-1 py-1.5 text-center">{item.unitName || '-'}</td>
-                  <td className="border border-slate-500 px-1 py-1.5 text-right tabular-nums">{money(item.unitPrice)}</td>
-                  <td className="border border-slate-500 px-1 py-1.5 text-right font-semibold tabular-nums">{money(item.lineTotal)}</td>
-                </tr>
-              ))}
+              {items.map((item, index) => {
+                const isEditing = editable && editingLineId === item.id;
+                return (
+                  <React.Fragment key={item.id}>
+                    <tr className={`align-top break-inside-avoid ${isEditing ? 'bg-slate-50 print:bg-white' : ''}`}>
+                      <td className="border border-slate-500 px-1 py-1.5 text-center">{index + 1}</td>
+                      <td className="border border-slate-500 px-2 py-1.5">
+                        <div className="font-semibold">{item.title}</div>
+                        {item.description ? <div className="mt-0.5 whitespace-pre-wrap text-[9px] leading-[1.5]">{item.description}</div> : null}
+                      </td>
+                      <td className="border border-slate-500 px-1 py-1.5 text-right">{Number(item.quantity || 0)}</td>
+                      <td className="border border-slate-500 px-1 py-1.5 text-center">{item.unitName || '-'}</td>
+                      <td className="border border-slate-500 px-1 py-1.5 text-right tabular-nums">{money(item.unitPrice)}</td>
+                      <td className="border border-slate-500 px-1 py-1.5 text-right font-semibold tabular-nums">{money(item.lineTotal)}</td>
+                      {editable ? (
+                        <td className="border border-slate-500 px-1 py-1 text-center align-top print:hidden">
+                          <button
+                            type="button"
+                            onClick={() => beginLineEdit(item)}
+                            className={`inline-flex h-7 w-7 items-center justify-center rounded border ${isEditing ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}`}
+                            aria-label="แก้ไขรายการนี้บนใบเสนอราคา"
+                            title="แก้ไขรายการ"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      ) : null}
+                    </tr>
+
+                    {isEditing && lineDraft ? (
+                      <tr className="quotation-line-editor print:hidden">
+                        <td colSpan="7" className="border border-slate-500 bg-slate-50 p-2.5">
+                          <div className="grid gap-2 text-xs md:grid-cols-12">
+                            <label className="md:col-span-12">
+                              <span className="mb-1 block font-semibold text-slate-700">ชื่อรายการ</span>
+                              <input
+                                value={lineDraft.title}
+                                onChange={(event) => patchLineDraft('title', event.target.value)}
+                                className="h-9 w-full rounded border border-slate-300 bg-white px-2.5 outline-none focus:border-teal-500"
+                              />
+                            </label>
+
+                            <label className="md:col-span-12">
+                              <span className="mb-1 block font-semibold text-slate-700">รายละเอียดเพิ่มเติม</span>
+                              <textarea
+                                rows="3"
+                                value={lineDraft.description}
+                                onChange={(event) => patchLineDraft('description', event.target.value)}
+                                className="w-full resize-y rounded border border-slate-300 bg-white px-2.5 py-2 leading-5 outline-none focus:border-teal-500"
+                                placeholder="พิมพ์รายละเอียดหลายบรรทัดได้"
+                              />
+                            </label>
+
+                            <label className="md:col-span-2">
+                              <span className="mb-1 block font-semibold text-slate-700">จำนวน</span>
+                              <input
+                                type="number"
+                                min="0.01"
+                                step="0.01"
+                                value={lineDraft.quantity}
+                                onChange={(event) => patchLineDraft('quantity', event.target.value)}
+                                className="h-9 w-full rounded border border-slate-300 bg-white px-2.5 text-right outline-none focus:border-teal-500"
+                              />
+                            </label>
+
+                            <label className="md:col-span-2">
+                              <span className="mb-1 block font-semibold text-slate-700">หน่วย</span>
+                              <input
+                                value={lineDraft.unitName}
+                                onChange={(event) => patchLineDraft('unitName', event.target.value)}
+                                className="h-9 w-full rounded border border-slate-300 bg-white px-2.5 outline-none focus:border-teal-500"
+                              />
+                            </label>
+
+                            <label className="md:col-span-3">
+                              <span className="mb-1 block font-semibold text-slate-700">ราคา/หน่วย</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={lineDraft.unitPrice}
+                                onChange={(event) => patchLineDraft('unitPrice', event.target.value)}
+                                className="h-9 w-full rounded border border-slate-300 bg-white px-2.5 text-right outline-none focus:border-teal-500"
+                              />
+                            </label>
+
+                            <label className="md:col-span-3">
+                              <span className="mb-1 block font-semibold text-slate-700">ส่วนลด</span>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={lineDraft.discountAmount}
+                                onChange={(event) => patchLineDraft('discountAmount', event.target.value)}
+                                className="h-9 w-full rounded border border-slate-300 bg-white px-2.5 text-right outline-none focus:border-teal-500"
+                              />
+                            </label>
+
+                            <div className="flex items-end justify-end gap-2 md:col-span-2">
+                              <button
+                                type="button"
+                                onClick={cancelLineEdit}
+                                disabled={savingLine}
+                                className="inline-flex h-9 items-center gap-1 rounded border border-slate-300 bg-white px-3 font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                              >
+                                <X className="h-3.5 w-3.5" /> ยกเลิก
+                              </button>
+                              <button
+                                type="button"
+                                onClick={saveLineEdit}
+                                disabled={savingLine}
+                                className="inline-flex h-9 items-center gap-1 rounded bg-teal-700 px-3 font-semibold text-white hover:bg-teal-800 disabled:opacity-50"
+                              >
+                                <Save className="h-3.5 w-3.5" /> {savingLine ? 'กำลังบันทึก' : 'บันทึก'}
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </React.Fragment>
+                );
+              })}
+
               {fillerHeight > 0 ? (
                 <tr className="quotation-table-filler" aria-hidden="true">
                   <td className="border border-slate-500" style={{ height: `${fillerHeight}mm` }}>&nbsp;</td>
@@ -213,13 +385,14 @@ const QuotationPrintPage = () => {
                   <td className="border border-slate-500">&nbsp;</td>
                   <td className="border border-slate-500">&nbsp;</td>
                   <td className="border border-slate-500">&nbsp;</td>
+                  {editable ? <td className="border border-slate-500 print:hidden">&nbsp;</td> : null}
                 </tr>
               ) : null}
             </tbody>
           </table>
         </div>
 
-        <div className="quotation-settlement grid min-h-[27mm] grid-cols-[1.6fr_1fr] break-inside-avoid text-[10px] leading-[1.55]">
+        <div className="quotation-settlement grid h-[34mm] grid-cols-[1.6fr_1fr] break-inside-avoid text-[10px] leading-[1.55]">
           <section className="border-x border-b border-slate-500 px-2.5 py-2">
             <p className="font-semibold">เงื่อนไข / หมายเหตุ</p>
             {quotation.closingNote ? <div className="mt-1 whitespace-pre-wrap">{quotation.closingNote}</div> : null}
@@ -232,21 +405,21 @@ const QuotationPrintPage = () => {
             {Number(quotation.lineDiscountTotal || 0) > 0 ? <div className="flex justify-between gap-3"><span>ส่วนลดรายการ</span><span className="tabular-nums">- {money(quotation.lineDiscountTotal)}</span></div> : null}
             {Number(quotation.billDiscount || 0) > 0 ? <div className="flex justify-between gap-3"><span>ส่วนลดท้ายบิล</span><span className="tabular-nums">- {money(quotation.billDiscount)}</span></div> : null}
             {quotation.vatEnabled ? <div className="flex justify-between gap-3"><span>ภาษีมูลค่าเพิ่ม {Number(quotation.vatRate || 0)}%</span><span className="tabular-nums">{money(quotation.vatAmount)}</span></div> : null}
-            <div className="mt-1 flex justify-between gap-3 border-t border-slate-500 pt-1 text-[12.5px] font-extrabold">
+            <div className="mt-1 flex justify-between gap-3 border-t border-slate-400 pt-1 text-[13px] font-bold">
               <span>ยอดสุทธิ</span>
               <span className="tabular-nums">{money(quotation.grandTotal)} บาท</span>
             </div>
           </section>
         </div>
 
-        <footer className="quotation-signatures grid grid-cols-2 gap-[20mm] pt-[8mm] text-center text-[10px]">
+        <footer className="quotation-signatures grid grid-cols-2 gap-[20mm] pt-[6mm] text-center text-[10px]">
           <div>
-            <div className="mx-auto h-[12mm] w-[86%] border-b border-slate-500" />
+            <div className="mx-auto h-[11mm] w-[86%] border-b border-slate-500" />
             <p className="mt-1 font-semibold">ผู้เสนอราคา / QUOTED BY</p>
             <p className="mt-1 text-[9px]">วันที่ ______ / ______ / ______</p>
           </div>
           <div>
-            <div className="mx-auto h-[12mm] w-[86%] border-b border-slate-500" />
+            <div className="mx-auto h-[11mm] w-[86%] border-b border-slate-500" />
             <p className="mt-1 font-semibold">ผู้ตอบรับใบเสนอราคา / ACCEPTED BY</p>
             <p className="mt-1 text-[9px]">วันที่ ______ / ______ / ______</p>
           </div>

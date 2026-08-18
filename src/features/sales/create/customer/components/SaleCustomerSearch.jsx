@@ -26,8 +26,10 @@ const SaleCustomerSearch = ({
           onChange={(event) => onQueryChange(event.target.value)}
           placeholder="ชื่อ เบอร์โทร บริษัท หน่วยงาน อีเมล หรือเลขผู้เสียภาษี"
           aria-label="ค้นหาลูกค้า"
+          aria-describedby="sale-customer-search-boundary"
           className="h-10 w-full rounded-lg border border-teal-200 bg-teal-50/60 pl-9 pr-3 text-xs font-medium text-slate-900 outline-none transition focus:border-teal-500 focus:bg-white focus:ring-2 focus:ring-teal-100"
         />
+        <span id="sale-customer-search-boundary" className="sr-only">ไม่ค้นหาสินค้า บาร์โค้ด หรือหมายเลขอุปกรณ์</span>
       </div>
       <button
         type="submit"

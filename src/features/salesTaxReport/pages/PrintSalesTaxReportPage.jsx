@@ -1,6 +1,6 @@
 // 🧾 เพิ่มสรุปรายงานท้ายหน้า
 // 🔁 ปรับใหม่ให้โหลดข้อมูลเองผ่าน useSalesTaxReportStore() และแสดงผลตามช่วงวันจาก query string
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import { useSalesTaxReportStore } from '../store/salesTaxReportStore';
@@ -52,49 +52,68 @@ const PrintSalesTaxReportPage = () => {
   const totalAmount = sales.reduce((sum, i) => sum + i.totalAmount, 0) - returns.reduce((sum, i) => sum + i.totalAmount, 0);
 
   return (
-    <div className="flex flex-col items-center p-4 bg-gray-200">
-      <div className="w-[210mm] flex justify-end gap-2 mb-2 print-hidden">
+    <div className="sales-tax-report-print-shell flex min-h-screen flex-col items-center bg-gray-200 p-4 print:min-h-0 print:bg-white print:p-0">
+      <div className="mb-2 flex w-[210mm] justify-end gap-2 print-hidden">
         <button
           onClick={() => {
             if (componentRef.current) handlePrint();
             else console.warn('⚠️ ยังโหลด component ไม่เสร็จ ไม่สามารถพิมพ์ได้');
           }}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded text-sm"
+          className="rounded bg-green-600 px-4 py-1 text-sm text-white hover:bg-green-700"
         >
           PDF
         </button>
 
         <button
           onClick={() => window.print()}
-           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-sm"
+          className="rounded bg-blue-600 px-4 py-1 text-sm text-white hover:bg-blue-700"
         >
           พิมพ์
         </button>
       </div>
 
       <style>{`
+        @page { size: A4 portrait; margin: 4mm; }
+
+        .sales-tax-report-a4-page {
+          box-sizing: border-box;
+          width: 210mm;
+          min-height: 296mm;
+          margin: 0 auto;
+          padding: 6mm;
+          font-family: var(--document-font-family, "TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif);
+        }
+
         @media print {
-          .print-hidden {
-            display: none !important;
-          }
-          html, body {
-            font-size: 16px;
+          .print-hidden { display: none !important; }
+          html,
+          body,
+          #root,
+          .sales-tax-report-print-shell,
+          .sales-tax-report-print-container {
+            width: auto !important;
+            min-height: 0 !important;
+            height: auto !important;
             margin: 0 !important;
             padding: 0 !important;
+            overflow: visible !important;
             background: white !important;
           }
-          @page {
-            size: A4 portrait;
-            margin: 0;
-          }
-          .printable-area-container {
-            padding: 0 !important;
-            background: white !important;
-          }
-          .printable-area {
-            border: none !important;
+          .sales-tax-report-a4-page {
+            box-sizing: border-box !important;
+            width: 201mm !important;
+            min-height: 288mm !important;
+            height: 288mm !important;
+            margin: 0 auto !important;
+            padding: 5mm !important;
+            overflow: hidden !important;
+            border: 0.3mm solid #444 !important;
+            border-radius: 2.5mm !important;
             box-shadow: none !important;
-            margin: 0 !important;
+            background: white !important;
+            font-family: var(--document-font-family, "TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif) !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           thead tr {
             background-color: #d1d5db !important;
@@ -108,35 +127,26 @@ const PrintSalesTaxReportPage = () => {
         }
       `}</style>
 
-      <div className="printable-area-container w-full">
-        <div
+      <div className="sales-tax-report-print-container w-full">
+        <article
           ref={componentRef}
-          className="w-full mx-auto flex flex-col text-[10px] p-[10mm] bg-white justify-between"
-          style={{
-            width: '210mm',
-            height: '297mm',
-            fontFamily: 'TH Sarabun New, sans-serif',
-            boxSizing: 'border-box',
-            overflow: 'hidden',
-          }}
+          className="sales-tax-report-a4-page relative flex flex-col justify-between bg-white text-[12px] text-black shadow-sm"
         >
           <div className="flex flex-col gap-1">
-            <div className="text-center">
-              <div className="font-bold underline text-base mb-1">รายงานภาษีขาย</div>
-              <div className="text-xs mb-1">
+            <div role="banner" className="border-b border-slate-300 pb-2 text-center">
+              <div className="mb-1 text-[20px] font-bold leading-tight underline">รายงานภาษีขาย</div>
+              <div className="mb-1 text-[14px] leading-tight">
                 ระหว่างวันที่ {formatDate(startDate)} ถึง {formatDate(endDate)}
               </div>
             </div>
 
-            <div className="mb-1 text-xs">
+            <div className="mb-1 mt-2 text-[14px] leading-tight">
               <div className="font-bold">{currentBranch?.name || '-'}</div>
               <div>ที่อยู่: {currentBranch?.address || '-'} {currentBranch?.province || ''}</div>
               <div>เบอร์โทร: {currentBranch?.phone || '-'}</div>
             </div>
 
-            <br />
-
-            <div>
+            <div className="mt-2">
               <SalesTaxTable title="รายการขาย (ใบกำกับภาษี)" items={sales} type="sales" />
             </div>
 
@@ -147,32 +157,29 @@ const PrintSalesTaxReportPage = () => {
             )}
           </div>
 
-          <div className="mt-2 flex justify-between items-start">
-            <div className="w-[35%] border border-black p-1.5 text-center text-xs">
-              <div className="font-bold mb-4 ">ผู้จัดทำ/ผู้ตรวจสอบ</div>
+          <div className="mt-3 flex items-end justify-between gap-6">
+            <div className="w-[35%] rounded-[2mm] border border-black p-2 text-center text-[13px] leading-tight">
+              <div className="mb-4 font-bold">ผู้จัดทำ/ผู้ตรวจสอบ</div>
               <div>.......................................................</div>
               <div className="mt-1">วันที่: ......../......../........</div>
             </div>
 
-
-            <div className="w-[50%] text-sm  p-2">
-              <div className="flex justify-between mb-1">
+            <div className="w-[50%] p-2 text-[14px] leading-tight">
+              <div className="mb-1 flex justify-between">
                 <span>รวมมูลค่าสินค้า / SUB TOTAL</span>
                 <span>{formatCurrency(totalBase)} ฿</span>
               </div>
-              <div className="flex justify-between mb-1 pt-2 ">
+              <div className="flex justify-between pt-2">
                 <span>ภาษีมูลค่าเพิ่ม / VAT</span>
                 <span>{formatCurrency(totalVat)} ฿</span>
               </div>
-              <div className="flex justify-between font-bold pt-2 ">
+              <div className="mt-1 flex justify-between border-t border-black pt-2 font-bold">
                 <span>จำนวนเงินรวมทั้งสิ้น / GRAND TOTAL</span>
                 <span>{formatCurrency(totalAmount)} ฿</span>
               </div>
             </div>
-
-
           </div>
-        </div>
+        </article>
       </div>
     </div>
   );

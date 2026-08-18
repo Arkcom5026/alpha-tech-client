@@ -13,7 +13,6 @@ import { useBranchStore } from '@/features/branch/store/branchStore';
 import { useAuthStore } from '@/features/auth/store/authStore';
 
 const parseLocalDateInput = (value) => {
-  // value: 'YYYY-MM-DD'
   if (!value) return null;
 
   const m = /^([0-9]{4})-([0-9]{2})-([0-9]{2})$/.exec(String(value));
@@ -67,7 +66,6 @@ const PrintInputTaxReportPage = () => {
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
 
-  // อ่าน query จาก URL ครั้งแรก
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const s = params.get('startDate');
@@ -107,7 +105,6 @@ const PrintInputTaxReportPage = () => {
     };
   }, [startDate, endDate]);
 
-  // ยิง fetch เมื่อ branch และช่วงวันที่พร้อม
   useEffect(() => {
     if (!branchId) return;
     if (!rangeParams) return;
@@ -116,15 +113,15 @@ const PrintInputTaxReportPage = () => {
   }, [branchId, rangeParams, fetchInputTaxReportAction]);
 
   return (
-    <div className="flex flex-col items-center p-4 bg-gray-200">
-      <div className="w-[210mm] flex justify-end gap-2 mb-2 print-hidden">
+    <div className="input-tax-report-print-shell flex min-h-screen flex-col items-center bg-gray-200 p-4 print:min-h-0 print:bg-white print:p-0">
+      <div className="mb-2 flex w-[210mm] justify-end gap-2 print-hidden">
         <button
           type="button"
           onClick={() => {
             if (printRef.current) handlePrint();
             else console.warn('⚠️ ยังโหลด component ไม่เสร็จ ไม่สามารถพิมพ์ได้');
           }}
-          className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded text-sm"
+          className="rounded bg-green-600 px-4 py-1 text-sm text-white hover:bg-green-700"
         >
           PDF
         </button>
@@ -132,70 +129,106 @@ const PrintInputTaxReportPage = () => {
         <button
           type="button"
           onClick={() => window.print()}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded text-sm"
+          className="rounded bg-blue-600 px-4 py-1 text-sm text-white hover:bg-blue-700"
         >
           พิมพ์
         </button>
       </div>
 
       <style>{`
+        @page { size: A4 portrait; margin: 4mm; }
+
+        .input-tax-report-a4-page {
+          box-sizing: border-box;
+          width: 210mm;
+          min-height: 296mm;
+          margin: 0 auto;
+          padding: 6mm;
+          font-family: var(--document-font-family, "TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif);
+        }
+
         @media print {
           .print-hidden { display: none !important; }
-          html, body { font-size: 12px; margin: 0 !important; padding: 0 !important; background: white !important; }
-          @page { size: A4 portrait; margin: 0; }
-          .printable-area-container { padding: 0 !important; background: white !important; }
-          .printable-area { border: none !important; box-shadow: none !important; margin: 0 !important; }
-          thead tr { background-color: #d1d5db !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          table, th, td { border: 1px solid black; border-collapse: collapse; }
+          html,
+          body,
+          #root,
+          .input-tax-report-print-shell,
+          .input-tax-report-print-container {
+            width: auto !important;
+            min-height: 0 !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            background: white !important;
+          }
+          .input-tax-report-a4-page {
+            box-sizing: border-box !important;
+            width: 201mm !important;
+            min-height: 288mm !important;
+            height: 288mm !important;
+            margin: 0 auto !important;
+            padding: 5mm !important;
+            overflow: hidden !important;
+            border: 0.3mm solid #444 !important;
+            border-radius: 2.5mm !important;
+            box-shadow: none !important;
+            background: white !important;
+            font-family: var(--document-font-family, "TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif) !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          thead tr {
+            background-color: #d1d5db !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+          }
         }
       `}</style>
 
-      <div className="printable-area-container w-full">
-        <div
+      <div className="input-tax-report-print-container w-full">
+        <article
           ref={printRef}
-          className="printable-area w-full mx-auto flex flex-col text-[12px] p-[10mm] bg-white"
-          style={{
-            width: '210mm',
-            height: '297mm',
-            fontFamily: 'TH Sarabun New, sans-serif',
-            boxSizing: 'border-box',
-            overflow: 'hidden',
-          }}
+          className="input-tax-report-a4-page relative flex flex-col bg-white text-[12px] text-black shadow-sm"
         >
-          <div className="text-center">
-            <div className="font-bold underline text-base mb-1">รายงานภาษีซื้อ</div>
-            <div className="text-xs mb-1">
+          <div role="banner" className="border-b border-slate-300 pb-2 text-center">
+            <div className="mb-1 text-[20px] font-bold leading-tight underline">รายงานภาษีซื้อ</div>
+            <div className="mb-1 text-[14px] leading-tight">
               ช่วงวันที่: {formatDateThai(startDate)} - {formatDateThai(endDate)}
             </div>
           </div>
 
-          <div className="mb-1 text-sm">
+          <div className="mb-1 mt-2 text-[14px] leading-tight">
             <div className="font-bold">{companyInfo.name}</div>
             <div>ที่อยู่: {companyInfo.address}</div>
             <div>เลขประจำตัวผู้เสียภาษีอากร: {companyInfo.taxId}</div>
           </div>
 
-          <br />
+          <div className="mt-2">
+            {!branchId ? (
+              <div className="py-4 text-center text-red-600">
+                ไม่พบ branchId กรุณาเข้าสู่ระบบใหม่ หรือเลือกสาขาก่อนพิมพ์รายงาน
+              </div>
+            ) : isLoading ? (
+              <div className="py-4 text-center">กำลังโหลดข้อมูล...</div>
+            ) : (
+              <InputTaxReportTable items={reportData} type="normal" />
+            )}
+          </div>
 
-          {!branchId ? (
-            <div className="text-center py-4 text-red-600">
-              ไม่พบ branchId กรุณาเข้าสู่ระบบใหม่ หรือเลือกสาขาก่อนพิมพ์รายงาน
-            </div>
-          ) : isLoading ? (
-            <div className="text-center py-4">กำลังโหลดข้อมูล...</div>
-          ) : (
-            <InputTaxReportTable items={reportData} type="normal" />
-          )}
-
-          <div className="flex justify-between items-end text-[12px] mt-auto">
-            <div className="w-[35%] border border-black p-1.5 text-center text-xs">
-              <div className="font-bold mb-4">ผู้จัดทำ/ผู้ตรวจสอบ</div>
+          <div className="mt-auto flex items-end justify-between gap-6 pt-3 text-[13px]">
+            <div className="w-[35%] rounded-[2mm] border border-black p-2 text-center leading-tight">
+              <div className="mb-4 font-bold">ผู้จัดทำ/ผู้ตรวจสอบ</div>
               <div>.......................................................</div>
               <div className="mt-1">วันที่: ......../......../........</div>
             </div>
 
             {summary && (
-              <div className="w-[50%]">
+              <div className="w-[50%] text-[14px] leading-tight">
                 <div className="flex justify-between">
                   <span>รวมเงิน / SUB TOTAL</span>
                   <span className="font-bold">{formatNumber(summary.totalAmount)} ฿</span>
@@ -206,14 +239,14 @@ const PrintInputTaxReportPage = () => {
                   <span className="font-bold">{formatNumber(summary.vatAmount)} ฿</span>
                 </div>
 
-                <div className="flex justify-between border-t-2 border-b-4 border-double border-black pt-2 mt-1 font-bold">
+                <div className="mt-1 flex justify-between border-t border-black pt-2 font-bold">
                   <span>จำนวนเงินรวมทั้งสิ้น / GRAND TOTAL</span>
                   <span>{formatNumber(summary.grandTotal)} ฿</span>
                 </div>
               </div>
             )}
           </div>
-        </div>
+        </article>
       </div>
     </div>
   );

@@ -20,6 +20,7 @@ const routes = read('src/routes/partner/salesRoutes.jsx');
 const sidebar = read('src/config/sidebarSalesItems.js');
 
 includes(api, "apiClient.post('/sales/quotations', { customerId })", 'Quotation draft creation endpoint is required');
+includes(api, 'addQuotationLine', 'Quotation API must expose direct line creation authority');
 includes(api, 'updateQuotationLine', 'Quotation API must expose line mutation authority for document workspace editing');
 includes(createPage, 'data-testid="quotation-create-empty-draft"', 'Zero-item draft creation must stay an explicit tested action');
 includes(createPage, "customerId: selectedCustomer?.id || null", 'Customer lookup must remain optional');
@@ -49,8 +50,13 @@ includes(printPage, 'quotation-signatures grid', 'Quotation signatures must foll
 excludes(printPage, 'quotation-signatures mt-auto', 'Quotation signatures must not be forced to the physical page bottom independently of settlement');
 includes(printPage, 'editingLineId', 'Quotation A4 workspace must track the document line being edited');
 includes(printPage, 'beginLineEdit', 'Quotation A4 workspace must expose direct per-line editing');
+includes(printPage, 'beginNewLine', 'Quotation A4 workspace must expose direct line creation');
+includes(printPage, "editingLineId === 'NEW'", 'New-line authoring must have an explicit document workspace state');
+includes(printPage, 'addQuotationLine(quotationId, lineDraft)', 'New document lines must persist through canonical quotation line authority');
+includes(printPage, '> เพิ่มรายการ</button>', 'Draft A4 workspace must expose an add-line action directly below the table');
 includes(printPage, 'quotation-line-editor print:hidden', 'Inline line editor must remain screen-only and never print');
 includes(printPage, 'updateQuotationLine(quotationId, editingLineId, lineDraft)', 'Inline document editing must persist through canonical quotation line authority');
+includes(printPage, 'พิมพ์เองได้ทั้งหมด ไม่จำเป็นต้องอ้างอิงสินค้า', 'Direct line creation must preserve manual-first quotation semantics');
 includes(printPage, 'รายละเอียดเพิ่มเติม', 'Inline editor must support multiline document details');
 includes(printPage, 'ราคา/หน่วย', 'Inline editor must support commercial price editing');
 includes(printPage, 'ส่วนลด', 'Inline editor must support line discount editing');

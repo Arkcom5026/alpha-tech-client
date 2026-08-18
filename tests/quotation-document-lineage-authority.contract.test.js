@@ -18,13 +18,20 @@ const documentApi = read('src/features/sales/documents/workspace/api/saleDocumen
 const deliveryShell = read('src/features/deliveryNote/print/workspace/components/DeliveryNotePrintShell.jsx');
 
 includes(quotationApi, 'export const getQuotationDocumentLineage');
+includes(quotationApi, 'export const listQuotationReferenceCandidates');
+includes(quotationApi, '/sales/quotations/reference-candidates?');
 for (const token of [
-  "listQuotations({ status: 'ACCEPTED', limit: 100 })",
-  '.filter((row) => !row.revisedTo)',
+  'if (!customerId) return () => { alive = false; };',
+  'listQuotationReferenceCandidates(customerId)',
+  "setSourceQuotationId('');",
+  'customerId && acceptedQuotations.length > 0',
   'data-testid="sale-source-quotation-select"',
-  'ไม่บังคับ และไม่ดึงรายการสินค้าข้ามเอกสาร',
+  'แสดงเฉพาะใบเสนอราคาที่ตอบรับแล้วของลูกค้ารายนี้',
   'sourceQuotationId={sourceQuotationId}',
 ]) includes(salePage, token);
+if (salePage.includes("listQuotations({ status: 'ACCEPTED'")) {
+  throw new Error('Sale workspace must not preload accepted quotations across all customers');
+}
 includes(payload, 'sourceQuotationId: options.sourceQuotationId ? Number(options.sourceQuotationId) : null');
 includes(paymentSection, 'sourceQuotationId = null');
 includes(paymentHook, 'sourceQuotationId,');

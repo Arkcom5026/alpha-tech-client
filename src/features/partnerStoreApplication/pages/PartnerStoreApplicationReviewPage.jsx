@@ -12,6 +12,7 @@ import { issuePartnerStoreActivationInvitation } from '../api/partnerStoreActiva
 
 const statuses = ['', 'PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'WITHDRAWN'];
 const messageFrom = (error) => error?.response?.data?.error?.message || error?.response?.data?.message || error?.message || 'ดำเนินการไม่สำเร็จ';
+const codeFrom = (error) => error?.response?.data?.error?.code || error?.response?.data?.code || '';
 
 const ACTION_META = {
   approve: { title: 'อนุมัติใบสมัครร้านพาร์ตเนอร์', confirmLabel: 'อนุมัติใบสมัคร', intent: 'primary' },
@@ -65,7 +66,7 @@ export default function PartnerStoreApplicationReviewPage() {
 
   useEffect(() => { load({ statusSnapshot: status }); }, [status]);
 
-  const run = async (item, action, successMessage, eventKey) => {
+  const run = async (item, action, successMessage, eventKey, { recoverProvisioningConflict = false } = {}) => {
     if (!item || mutationLockRef.current) return null;
     const applicationIdSnapshot = item.id;
     const statusSnapshot = status;
@@ -79,6 +80,25 @@ export default function PartnerStoreApplicationReviewPage() {
     try {
       result = await action();
     } catch (requestError) {
+      const statusCode = requestError?.response?.status;
+      const errorCode = codeFrom(requestError);
+      if (recoverProvisioningConflict && statusCode === 409) {
+        const refreshResult = await load({ reportError: false, statusSnapshot });
+        pendingActionLockRef.current = false;
+        setPendingAction(null);
+        mutationLockRef.current = false;
+        setActingId(null);
+
+        if (refreshResult?.ok || refreshResult?.stale) {
+          const recoveryMessage = errorCode === 'PARTNER_STORE_PROVISIONING_STATE_CHANGED'
+            ? 'สถานะการสร้างร้านมีการเปลี่ยนแปลง ระบบรีเฟรชข้อมูลล่าสุดแล้ว'
+            : 'ข้อมูลการสร้างร้านเปลี่ยนแปลง ระบบรีเฟรชสถานะล่าสุดแล้ว';
+          setError(recoveryMessage);
+          feedback.info(recoveryMessage);
+          return null;
+        }
+      }
+
       const message = messageFrom(requestError);
       setError(message);
       feedback.actionError(requestError, `${successMessage.replace('เรียบร้อยแล้ว', '')}ไม่สำเร็จ`, `${authorityKey}:error`);
@@ -173,6 +193,7 @@ export default function PartnerStoreApplicationReviewPage() {
         () => provisionPartnerStoreApplication(applicationIdSnapshot),
         'สร้างร้านพาร์ตเนอร์เรียบร้อยแล้ว',
         'partner-store-review:provision',
+        { recoverProvisioningConflict: true },
       );
     }
 
@@ -212,6 +233,9 @@ export default function PartnerStoreApplicationReviewPage() {
 
   const pendingMeta = pendingAction ? ACTION_META[pendingAction.type] : null;
   const pendingName = pendingAction?.item?.businessName || 'ร้านพาร์ตเนอร์นี้';
+  const pendingHasLinkedBranch = Boolean(pendingAction?.item?.provisionedBranchId);
+  const pendingTitle = pendingAction?.type === 'provision' && pendingHasLinkedBranch ? 'ซิงก์สถานะร้านพาร์ตเนอร์' : pendingMeta?.title;
+  const pendingConfirmLabel = pendingAction?.type === 'provision' && pendingHasLinkedBranch ? 'ซิงก์สถานะ' : pendingMeta?.confirmLabel;
 
   return (
     <>
@@ -235,7 +259,8 @@ export default function PartnerStoreApplicationReviewPage() {
           const approved = item.status === 'APPROVED';
           const provisioningStatus = item.provisioningStatus || 'NOT_STARTED';
           const activationStatus = item.activationStatus || 'NOT_STARTED';
-          const canProvision = approved && ['NOT_STARTED', 'FAILED'].includes(provisioningStatus);
+          const requiresProvisioningReconciliation = approved && Boolean(item.provisionedBranchId) && provisioningStatus !== 'PROVISIONED';
+          const canProvision = approved && (requiresProvisioningReconciliation || ['NOT_STARTED', 'FAILED'].includes(provisioningStatus));
           const canIssueActivation = approved && provisioningStatus === 'PROVISIONED' && activationStatus !== 'ACTIVE';
           const acting = actingId === item.id;
           const activationLink = activationLinks[item.id];
@@ -281,12 +306,14 @@ export default function PartnerStoreApplicationReviewPage() {
                         ? activationStatus === 'ACTIVE'
                           ? 'ร้านและบัญชีเจ้าของร้านเปิดใช้งานแล้ว'
                           : 'ร้านถูกสร้างแล้ว สามารถออกลิงก์ให้เจ้าของร้านตั้งรหัสผ่านได้'
-                        : provisioningStatus === 'IN_PROGRESS'
-                          ? 'กำลังสร้างร้าน ระบบป้องกันการสร้างซ้ำ'
-                          : 'Provisioning จะสร้าง Branch และ Capability เท่านั้น ไม่เปิดบัญชีเจ้าของร้าน'}
+                        : requiresProvisioningReconciliation
+                          ? 'พบ Branch เดิมที่ผูกกับใบสมัคร ระบบจะตรวจสอบและซิงก์สถานะโดยไม่สร้างร้านซ้ำ'
+                          : provisioningStatus === 'IN_PROGRESS'
+                            ? 'กำลังสร้างร้าน ระบบป้องกันการสร้างซ้ำ'
+                            : 'Provisioning จะสร้าง Branch และ Capability เท่านั้น ไม่เปิดบัญชีเจ้าของร้าน'}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                      {canProvision && <button disabled={interactionLocked} onClick={() => requestProvision(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{provisioningStatus === 'FAILED' ? 'ลองสร้างร้านอีกครั้ง' : 'สร้างร้าน'}</button>}
+                      {canProvision && <button disabled={interactionLocked} onClick={() => requestProvision(item)} className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{requiresProvisioningReconciliation ? 'ซิงก์สถานะร้าน' : provisioningStatus === 'FAILED' ? 'ลองสร้างร้านอีกครั้ง' : 'สร้างร้าน'}</button>}
                       {canIssueActivation && <button disabled={interactionLocked} onClick={() => issueActivation(item)} className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{activationStatus === 'INVITED' ? 'ออกลิงก์ใหม่' : 'ออกลิงก์เปิดใช้งาน'}</button>}
                     </div>
                   </div>
@@ -309,9 +336,9 @@ export default function PartnerStoreApplicationReviewPage() {
 
       <ConfirmActionDialog
         open={Boolean(pendingAction)}
-        title={pendingMeta?.title || 'ยืนยันการดำเนินการ'}
-        description={`${pendingMeta?.title || 'ดำเนินการ'}สำหรับ ${pendingName} หรือไม่?`}
-        confirmLabel={pendingMeta?.confirmLabel || 'ยืนยัน'}
+        title={pendingTitle || 'ยืนยันการดำเนินการ'}
+        description={`${pendingTitle || 'ดำเนินการ'}สำหรับ ${pendingName} หรือไม่?`}
+        confirmLabel={pendingConfirmLabel || 'ยืนยัน'}
         intent={pendingMeta?.intent || 'primary'}
         loading={Boolean(actingId)}
         loadingLabel="กำลังดำเนินการ..."

@@ -25,7 +25,7 @@ const estimateLineHeightMm = (item = {}) => {
 
 const tableFillerHeightMm = (items = []) => {
   const occupied = items.reduce((sum, item) => sum + estimateLineHeightMm(item), 0);
-  return Math.max(0, 118 - occupied);
+  return Math.max(0, 130 - occupied);
 };
 
 const buildLineDraft = (item = {}, sortOrder = 0) => ({

@@ -25,7 +25,7 @@ const estimateLineHeightMm = (item = {}) => {
 
 const tableFillerHeightMm = (items = []) => {
   const occupied = items.reduce((sum, item) => sum + estimateLineHeightMm(item), 0);
-  return Math.max(0, 108 - occupied);
+  return Math.max(0, 118 - occupied);
 };
 
 const buildLineDraft = (item = {}, sortOrder = 0) => ({
@@ -208,8 +208,8 @@ const QuotationPrintPage = () => {
   const vatRate = quotation.vatEnabled === false ? 0 : Number(quotation.vatRate || 0);
   const vatAmount = adjustedSubtotal * vatRate / 100;
   const grandTotal = adjustedSubtotal + vatAmount;
-  const configuredLogoSize = Number(header?.headerStyle?.logoSize || 0);
-  const documentLogoSize = Math.min(92, Math.max(68, configuredLogoSize || 82));
+  const configuredLogoSize = Number(header?.headerStyle?.logoSize || 72);
+  const deliveryAlignedLogoSize = Math.min(92, Math.max(72, configuredLogoSize));
 
   return (
     <main className="quotation-print-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
@@ -219,21 +219,18 @@ const QuotationPrintPage = () => {
       </div>
 
       <section className="quotation-a4 mx-auto box-border flex w-[195mm] min-h-[280mm] flex-col rounded-[2.5mm] border border-slate-500 bg-white p-[5mm] shadow-sm print:rounded-[2.5mm] print:shadow-none">
-        <div className="quotation-document-header flex min-h-[31mm] items-center justify-between gap-4 border-b border-slate-300 pb-2.5">
-          <div className={`flex min-w-0 flex-1 items-center gap-4 ${header?.headerStyle?.logoPosition === 'right' ? 'flex-row-reverse justify-end' : header?.headerStyle?.logoPosition === 'center' ? 'flex-col justify-center gap-2' : ''}`}>
-            {header.logoUrl ? <img src={header.logoUrl} alt="โลโก้ร้าน" className="quotation-document-logo shrink-0 object-contain" style={{ width: `${documentLogoSize}px`, height: `${documentLogoSize}px` }} /> : null}
-            <div className={`min-w-0 text-[11px] leading-[1.38] ${header?.headerStyle?.textAlign === 'center' ? 'text-center' : header?.headerStyle?.textAlign === 'right' ? 'text-right' : 'text-left'}`}>
-              {header.branchName ? <h2 className="font-bold leading-tight text-slate-950" style={{ fontSize: header?.headerStyle?.storeNameSize === 'xl' ? 20 : header?.headerStyle?.storeNameSize === 'lg' ? 18 : header?.headerStyle?.storeNameSize === 'sm' ? 13 : 16 }}>{header.branchName}</h2> : null}
+        <div className="quotation-document-header flex min-h-[31mm] items-center justify-between gap-5 border-b border-slate-300 pb-2 mb-1.5">
+          <div className={`flex min-w-0 flex-1 items-center gap-4 ${header?.headerStyle?.logoPosition === 'right' ? 'flex-row-reverse' : header?.headerStyle?.logoPosition === 'center' ? 'flex-col items-center' : ''}`}>
+            {header.logoUrl ? <img src={header.logoUrl} alt="โลโก้ร้าน" className="shrink-0 object-contain" style={{ width: `${deliveryAlignedLogoSize}px`, height: `${deliveryAlignedLogoSize}px` }} /> : null}
+            <div className={`min-w-0 text-[11px] leading-[1.35] ${header?.headerStyle?.textAlign === 'center' ? 'text-center' : header?.headerStyle?.textAlign === 'right' ? 'text-right' : 'text-left'}`}>
+              {header.branchName ? <h2 className="font-bold leading-tight text-slate-950" style={{ fontSize: header?.headerStyle?.storeNameSize === 'xl' ? 22 : header?.headerStyle?.storeNameSize === 'lg' ? 19 : header?.headerStyle?.storeNameSize === 'sm' ? 13 : 16 }}>{header.branchName}</h2> : null}
               {header.address ? <p className="mt-0.5">ที่อยู่: {header.address}</p> : null}
-              {header.phone ? <p>โทร: {header.phone}</p> : null}
-              {header.taxId ? <p>เลขประจำตัวผู้เสียภาษี: {header.taxId}</p> : null}
+              <div className="flex flex-wrap gap-x-4">{header.phone ? <p>โทร: {header.phone}</p> : null}{header.taxId ? <p>เลขประจำตัวผู้เสียภาษี: {header.taxId}</p> : null}</div>
               {header?.headerStyle?.headerNote ? <p className="mt-0.5 whitespace-pre-wrap">{header.headerStyle.headerNote}</p> : null}
             </div>
           </div>
-          <div className="w-[36mm] shrink-0 self-center text-right">
-            {quotation.status === 'DRAFT'
-              ? <div className="inline-flex min-w-[27mm] flex-col items-center rounded-[1.5mm] border border-amber-400 px-2.5 py-1.5 text-center"><span className="text-[9.5px] font-bold text-amber-800">ฉบับร่าง</span><span className="text-[7.5px] font-semibold tracking-wide text-amber-700">DRAFT</span></div>
-              : <div className="inline-flex min-w-[27mm] flex-col items-center rounded-[1.5mm] border border-slate-400 px-2.5 py-1.5 text-center"><span className="text-[9.5px] font-bold">ต้นฉบับลูกค้า</span><span className="text-[7.5px] font-semibold tracking-wide">CUSTOMER ORIGINAL</span></div>}
+          <div className="w-[36mm] shrink-0 text-right">
+            {quotation.status === 'DRAFT' ? <div className="inline-flex min-w-[25mm] flex-col items-center rounded-[1.5mm] border border-amber-400 px-2 py-1.5 text-center"><span className="text-[9px] font-bold text-amber-800">ฉบับร่าง</span><span className="text-[7.5px] font-semibold tracking-wide text-amber-700">DRAFT</span></div> : <div className="inline-flex min-w-[25mm] flex-col items-center rounded-[1.5mm] border border-slate-400 px-2 py-1.5 text-center"><span className="text-[9px] font-bold">ต้นฉบับลูกค้า</span><span className="text-[7.5px] font-semibold tracking-wide">CUSTOMER ORIGINAL</span></div>}
           </div>
         </div>
 
@@ -265,12 +262,12 @@ const QuotationPrintPage = () => {
           </table>
         </div>
 
-        <div className="quotation-settlement grid h-[34mm] grid-cols-[1.6fr_1fr] break-inside-avoid text-[10px] leading-[1.55]">
-          <section className="border-x border-b border-slate-500 px-2.5 py-2"><p className="font-semibold">เงื่อนไข / หมายเหตุ</p>{quotation.closingNote ? <div className="mt-1 whitespace-pre-wrap">{quotation.closingNote}</div> : null}{quotation.notes ? <div className={`${quotation.closingNote ? 'mt-1' : ''} whitespace-pre-wrap`}>{quotation.notes}</div> : null}{!hasTerms ? <p className="mt-1">-</p> : null}</section>
-          <section className="border-b border-r border-slate-500 px-2.5 py-2"><div className="flex justify-between gap-3"><span>ยอดราคาหลังปรับ</span><span className="tabular-nums">{money(adjustedSubtotal)}</span></div>{quotation.vatEnabled ? <div className="flex justify-between gap-3"><span>ภาษีมูลค่าเพิ่ม {Number(quotation.vatRate || 0)}%</span><span className="tabular-nums">{money(vatAmount)}</span></div> : null}<div className="mt-1 flex justify-between gap-3 border-t border-slate-400 pt-1 text-[13px] font-bold"><span>ยอดสุทธิ</span><span className="tabular-nums">{money(grandTotal)} บาท</span></div></section>
+        <div className="quotation-settlement grid min-h-[19mm] grid-cols-[1.6fr_1fr] break-inside-avoid text-[10px] leading-[1.45]">
+          <section className="border-x border-b border-slate-500 px-2.5 py-1.5"><p className="font-semibold">เงื่อนไข / หมายเหตุ</p>{quotation.closingNote ? <div className="mt-0.5 whitespace-pre-wrap">{quotation.closingNote}</div> : null}{quotation.notes ? <div className={`${quotation.closingNote ? 'mt-0.5' : ''} whitespace-pre-wrap`}>{quotation.notes}</div> : null}{!hasTerms ? <p className="mt-0.5">-</p> : null}</section>
+          <section className="border-b border-r border-slate-500"><div className="flex justify-between gap-3 border-b border-slate-400 px-2.5 py-1"><span>ยอดราคาหลังปรับ</span><span className="tabular-nums">{money(adjustedSubtotal)}</span></div>{quotation.vatEnabled ? <div className="flex justify-between gap-3 border-b border-slate-400 px-2.5 py-1"><span>ภาษีมูลค่าเพิ่ม {Number(quotation.vatRate || 0)}%</span><span className="tabular-nums">{money(vatAmount)}</span></div> : null}<div className="flex justify-between gap-3 bg-slate-50 px-2.5 py-1.5 text-[13px] font-extrabold print:bg-white"><span>ยอดสุทธิ</span><span className="tabular-nums">{money(grandTotal)} บาท</span></div></section>
         </div>
 
-        <footer className="quotation-signatures grid grid-cols-2 gap-[20mm] pt-[6mm] text-center text-[10px]"><div><div className="mx-auto h-[11mm] w-[86%] border-b border-slate-500" /><p className="mt-1 font-semibold">ผู้เสนอราคา / QUOTED BY</p><p className="mt-1 text-[9px]">วันที่ ______ / ______ / ______</p></div><div><div className="mx-auto h-[11mm] w-[86%] border-b border-slate-500" /><p className="mt-1 font-semibold">ผู้ตอบรับใบเสนอราคา / ACCEPTED BY</p><p className="mt-1 text-[9px]">วันที่ ______ / ______ / ______</p></div></footer>
+        <footer className="quotation-signatures absolute bottom-[5mm] left-[8mm] right-[8mm] grid grid-cols-2 gap-[20mm] text-center text-[10px]"><div><div className="mx-auto h-[11mm] w-[86%] border-b border-slate-500" /><p className="mt-1 font-semibold">ผู้เสนอราคา / QUOTED BY</p><p className="mt-1 text-[9px]">วันที่ ______ / ______ / ______</p></div><div><div className="mx-auto h-[11mm] w-[86%] border-b border-slate-500" /><p className="mt-1 font-semibold">ผู้ตอบรับใบเสนอราคา / ACCEPTED BY</p><p className="mt-1 text-[9px]">วันที่ ______ / ______ / ______</p></div></footer>
       </section>
 
       <style>{`
@@ -283,6 +280,7 @@ const QuotationPrintPage = () => {
           .quotation-print-shell { display: block !important; width: auto !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; background: white !important; }
           body .quotation-a4 { box-sizing: border-box !important; display: flex !important; flex-direction: column !important; position: relative !important; width: 195mm !important; max-width: 195mm !important; height: 280mm !important; min-height: 280mm !important; max-height: 280mm !important; margin: 0 auto !important; padding: 5mm !important; border: 0.3mm solid #444 !important; border-radius: 2.5mm !important; box-shadow: none !important; overflow: hidden !important; page-break-inside: avoid !important; break-inside: avoid-page !important; }
           .quotation-document-header, .quotation-document-title, .quotation-info-panel, .quotation-message, .quotation-table-wrap, .quotation-settlement, .quotation-signatures, tr, td, th { page-break-inside: avoid !important; break-inside: avoid-page !important; }
+          body .quotation-signatures { position: absolute !important; left: 8mm !important; right: 8mm !important; bottom: 5mm !important; }
         }
       `}</style>
     </main>

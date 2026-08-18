@@ -138,7 +138,16 @@ const PrintBillPageFullTax = () => {
             position: relative !important;
             min-height: 297mm !important;
             height: 297mm !important;
-            padding-bottom: 30mm !important;
+            padding-bottom: 24mm !important;
+          }
+
+          /* Delivery Note uses a denser 24px row rhythm. Full Tax adopts the same
+             print-only table rhythm so the summary/footer remain inside one A4 page.
+             Screen/editor geometry is intentionally unchanged. */
+          .bill-print-root .store-document-header-scope .print-a4 table thead th,
+          .bill-print-root .store-document-header-scope .print-a4 table tbody td {
+            height: 24px !important;
+            min-height: 24px !important;
           }
 
           .bill-print-root .store-document-header-scope .print-a4 > div:last-child {

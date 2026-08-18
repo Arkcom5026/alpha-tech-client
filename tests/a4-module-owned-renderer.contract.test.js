@@ -11,6 +11,8 @@ const combinedRenderer = read('src/features/combinedBilling/bill/components/Full
 const customerReceiptLayout = read('src/features/customerReceipt/components/CustomerReceiptPrintLayout.jsx')
 const customerReceiptRenderer = read('src/features/customerReceipt/components/CustomerReceiptA4Document.jsx')
 const purchaseOrderShell = read('src/features/purchaseOrder/print/workspace/components/PurchaseOrderPrintShell.jsx')
+const salesTaxReport = read('src/features/salesTaxReport/pages/PrintSalesTaxReportPage.jsx')
+const inputTaxReport = read('src/features/inputTaxReport/pages/PrintInputTaxReportPage.jsx')
 
 assert(!consolidatedBill.includes("@/features/bill/components/FullTaxA4Document"), 'Consolidated Bill A4 must not import the bill module document renderer.')
 assert(!consolidatedTax.includes("@/features/bill/components/FullTaxA4Document"), 'Consolidated Tax A4 must not import the bill module document renderer.')
@@ -30,5 +32,15 @@ assert(purchaseOrderShell.includes('@page { size: A4; margin: 4mm; }'), 'Purchas
 assert(!purchaseOrderShell.includes('@/features/bill/'), 'Purchase Order must not import document renderers from the bill module.')
 assert(!purchaseOrderShell.includes('@/features/customerReceipt/'), 'Purchase Order must not import document renderers from the customerReceipt module.')
 assert(!purchaseOrderShell.includes('@/features/combinedBilling/'), 'Purchase Order must not import document renderers from the combinedBilling module.')
+
+assert(salesTaxReport.includes('sales-tax-report-a4-page'), 'Sales Tax Report must own a namespaced A4 presentation surface.')
+assert(salesTaxReport.includes('@page { size: A4 portrait; margin: 4mm; }'), 'Sales Tax Report must own its print-safe A4 geometry.')
+assert(!salesTaxReport.includes('@/features/bill/'), 'Sales Tax Report must not import document renderers from the bill module.')
+assert(!salesTaxReport.includes('@/features/inputTaxReport/'), 'Sales Tax Report must not import the input-tax report renderer.')
+
+assert(inputTaxReport.includes('input-tax-report-a4-page'), 'Input Tax Report must own a namespaced A4 presentation surface.')
+assert(inputTaxReport.includes('@page { size: A4 portrait; margin: 4mm; }'), 'Input Tax Report must own its print-safe A4 geometry.')
+assert(!inputTaxReport.includes('@/features/bill/'), 'Input Tax Report must not import document renderers from the bill module.')
+assert(!inputTaxReport.includes('@/features/salesTaxReport/'), 'Input Tax Report must not import the sales-tax report renderer.')
 
 console.log('A4 Module-Owned Renderer Contract: PASS')

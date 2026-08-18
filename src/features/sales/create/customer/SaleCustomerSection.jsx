@@ -178,6 +178,14 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     }
   };
 
+  const handleCancelUpdate = () => {
+    if (!selectedCustomer || customerMutationRef.current) return;
+    editor.hydrateCustomer(selectedCustomer);
+    setEditingSelectedCustomer(false);
+    setFormInfo('');
+    setFormError('');
+  };
+
   const handleCancelCreate = () => {
     if (customerMutationRef.current) return;
     setPendingCreate(false);
@@ -315,6 +323,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
           onPatch={view.editor.patchEditor}
           onCreate={handleCreate}
           onUpdate={handleUpdate}
+          onCancelUpdate={handleCancelUpdate}
           onCancelCreate={handleCancelCreate}
         />
       ) : null}

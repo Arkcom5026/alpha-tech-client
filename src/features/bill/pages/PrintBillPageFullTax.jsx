@@ -140,11 +140,40 @@ const PrintBillPageFullTax = () => {
     <>
       <style>{`
         @media print {
+          @page { size: A4; margin: 6mm !important; }
+
+          html,
+          body,
+          #root {
+            margin: 0 !important;
+            padding: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+          }
+
+          /* Mirror the delivery-note isolation pattern so Chrome lays out the
+             full-tax sheet against the same printable ancestor geometry. */
+          body:has(.full-tax-print-shell) #root *:has(.full-tax-print-shell) {
+            box-sizing: border-box !important;
+            display: block !important;
+            position: static !important;
+            width: auto !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            transform: none !important;
+          }
+
           .full-tax-print-shell,
           .full-tax-print-frame {
             display: block !important;
-            width: 210mm !important;
-            max-width: 210mm !important;
+            position: static !important;
+            width: auto !important;
+            max-width: none !important;
             min-height: 0 !important;
             height: auto !important;
             margin: 0 !important;
@@ -154,6 +183,27 @@ const PrintBillPageFullTax = () => {
             box-shadow: none !important;
             overflow: visible !important;
             background: #fff !important;
+          }
+
+          body .full-tax-a4-page {
+            display: block !important;
+            position: relative !important;
+            box-sizing: border-box !important;
+            width: 195mm !important;
+            max-width: 195mm !important;
+            height: 280mm !important;
+            min-height: 280mm !important;
+            max-height: 280mm !important;
+            margin: 0 auto !important;
+            padding: 5mm !important;
+            overflow: hidden !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid-page !important;
+          }
+
+          body .full-tax-a4-page:last-of-type {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
         }
       `}</style>
@@ -177,22 +227,6 @@ const PrintBillPageFullTax = () => {
           </StoreDocumentHeaderScope>
         </section>
       </main>
-
-      <style>{`
-        @media print {
-          @page { size: A4; margin: 6mm !important; }
-
-          body .full-tax-a4-page {
-            box-sizing: border-box !important;
-            width: 195mm !important;
-            max-width: 195mm !important;
-            height: 280mm !important;
-            min-height: 280mm !important;
-            max-height: 280mm !important;
-            margin: 0 auto !important;
-          }
-        }
-      `}</style>
     </>
   )
 }

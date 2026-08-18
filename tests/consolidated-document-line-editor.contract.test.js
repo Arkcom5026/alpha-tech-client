@@ -72,13 +72,18 @@ assert(
   'Consolidated saves must target persisted line ids while sharing the SALE inline edit column.'
 );
 assert(
-  page.includes('width: 190mm !important;')
-    && page.includes('Math.max(15, itemCount)')
-    && page.includes('bill-print-page-shell')
-    && page.includes('min-height: 0 !important;')
-    && !page.includes('min-height: 277mm !important;')
-    && page.includes('overflow: visible !important;'),
-  'Full-tax print must use natural content height so mt-auto cannot push signatures into a second page.'
+  page.includes('width: 210mm !important;')
+    && page.includes('min-height: 297mm !important;')
+    && page.includes('height: 297mm !important;')
+    && page.includes('margin: 0 !important;')
+    && page.includes('box-sizing: border-box !important;')
+    && page.includes('thead th:nth-child(7)')
+    && page.includes('visibility: hidden !important;')
+    && !page.includes('width: 190mm !important;')
+    && !page.includes('printFillerRowsToHide')
+    && !page.includes('Math.max(15, itemCount)')
+    && !page.includes('Math.max(16, itemCount)'),
+  'Full-tax preview and native print must share one physical A4 geometry without print-only row reflow.'
 );
 
 console.log('Consolidated Document Line Editor Contract: PASS');

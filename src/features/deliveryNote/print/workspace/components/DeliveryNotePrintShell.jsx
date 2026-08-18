@@ -38,8 +38,17 @@ const DeliveryNotePrintShell = ({
         }
         @media print {
           @page { size: A4; margin: 4mm !important; }
+
+          html,
+          body,
+          #root {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+
           .a4-standard-delivery-shell,
           .a4-standard-delivery-frame {
+            display: block !important;
             width: auto !important;
             max-width: none !important;
             min-height: 0 !important;
@@ -50,17 +59,29 @@ const DeliveryNotePrintShell = ({
             box-shadow: none !important;
             overflow: visible !important;
           }
+
           body .a4-standard-delivery-frame .dn-print-page {
+            display: block !important;
+            position: relative !important;
             box-sizing: border-box !important;
             width: 201mm !important;
-            height: 288mm !important;
-            min-height: 288mm !important;
+            max-width: 201mm !important;
+            height: 286mm !important;
+            min-height: 286mm !important;
+            max-height: 286mm !important;
             margin: 0 auto !important;
             padding: 5mm !important;
             border: 0.3mm solid #444 !important;
             border-radius: 2.5mm !important;
             overflow: hidden !important;
             font-family: var(--document-font-family) !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid-page !important;
+          }
+
+          body .a4-standard-delivery-frame .dn-print-page:last-of-type {
+            page-break-after: auto !important;
+            break-after: auto !important;
           }
         }
       `}</style>

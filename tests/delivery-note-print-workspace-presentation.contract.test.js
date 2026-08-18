@@ -28,14 +28,20 @@ describe('delivery note print workspace presentation contract', () => {
     expect(shell).toContain('config={config}');
   });
 
-  it('uses the shared print-safe A4 presentation standard', () => {
+  it('uses the print-safe A4 presentation standard without a trailing blank sheet', () => {
     expect(shell).toContain('@page { size: A4; margin: 4mm !important; }');
     expect(shell).toContain('width: 201mm !important;');
-    expect(shell).toContain('height: 288mm !important;');
-    expect(shell).toContain('min-height: 288mm !important;');
+    expect(shell).toContain('height: 286mm !important;');
+    expect(shell).toContain('min-height: 286mm !important;');
+    expect(shell).toContain('max-height: 286mm !important;');
     expect(shell).toContain('border: 0.3mm solid #444 !important;');
     expect(shell).toContain('border-radius: 2.5mm !important;');
     expect(shell).toContain('font-family: var(--document-font-family) !important;');
+    expect(shell).toContain('page-break-inside: avoid !important;');
+    expect(shell).toContain('break-inside: avoid-page !important;');
+    expect(shell).toContain('.dn-print-page:last-of-type');
+    expect(shell).toContain('page-break-after: auto !important;');
+    expect(shell).toContain('break-after: auto !important;');
     expect(shell).toContain('min-height: 0 !important;');
     expect(shell).toContain('height: auto !important;');
   });

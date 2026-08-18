@@ -28,7 +28,9 @@ assert.match(fullTaxPage, /documentType:\s*'FULL_TAX_INVOICE'/, 'Full Tax must r
 assert.match(scope, /\.print-a4 > div:first-child > div:first-child \{ align-items: center; \}/, 'Full Tax store header row must vertically center logo and store copy');
 assert.match(fullTaxPage, /@page \{ size: A4; margin: 0 !important; \}/, 'Full Tax must use the hardware-safe zero-margin physical page contract');
 assert.match(fullTaxPage, /body \.full-tax-a4-page \{[\s\S]*width: 201mm !important;[\s\S]*height: 288mm !important;[\s\S]*margin: 4mm auto 0 !important;/, 'Full Tax must preserve the approved visual inset inside the physical A4 page');
-assert.match(fullTaxPage, /\.full-tax-print-shell,[\s\S]*\.full-tax-print-frame \{[\s\S]*width: 100% !important;[\s\S]*max-width: none !important;/, 'Full Tax outer wrappers must not exceed the printable page box');
+assert.match(fullTaxPage, /body:has\(\.full-tax-print-shell\) #root \*:has\(\.full-tax-print-shell\) \{[\s\S]*min-height: 0 !important;[\s\S]*height: auto !important;[\s\S]*transform: none !important;/, 'Full Tax must neutralize POS ancestor geometry so Chrome cannot create a phantom sheet');
+assert.match(fullTaxPage, /\.full-tax-print-shell,[\s\S]*\.full-tax-print-frame \{[\s\S]*position: static !important;[\s\S]*width: 100% !important;[\s\S]*max-width: none !important;/, 'Full Tax outer wrappers must not exceed the printable page box');
+assert.match(fullTaxPage, /\.full-tax-a4-page:last-of-type \{[\s\S]*page-break-after: auto !important;[\s\S]*break-after: auto !important;/, 'Full Tax last page must not force a trailing blank sheet');
 assert.match(fullTaxPage, /\.full-tax-a4-page > div:nth-last-child\(3\) \{[\s\S]*transform: translateY\(4mm\) !important;/, 'Full Tax summary spacing must move visually without increasing page flow');
 
 // Customer Receipt may use the historical Full Tax renderer or the newer dedicated A4 document,

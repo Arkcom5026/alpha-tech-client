@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import BillLayoutShortTax from '@/features/bill/components/BillLayoutShortTax';
-import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax';
+import FullTaxA4Document from '../bill/components/FullTaxA4Document';
 import { getConsolidatedTaxPrintable } from '../api/combinedBillingApi';
 
 const PrintConsolidatedTaxPage = () => {
@@ -19,6 +19,6 @@ const PrintConsolidatedTaxPage = () => {
   if (error) return <main className="p-6 text-red-700">{error}</main>;
   if (!view) return <main className="p-6">กำลังเตรียมเอกสาร...</main>;
   if (data.document.type === 'SHORT_TAX_INVOICE') return <div className="bill-print-root mx-auto w-[80mm] bg-white p-4 print:p-0"><BillLayoutShortTax sale={view.sale} saleItems={view.items} payments={[view.payment]} config={view.config} hideContactName /></div>;
-  return <div className="w-full min-h-screen bg-white py-8 px-4 print:p-0"><div className="bill-print-root mx-auto max-w-[210mm] bg-white print:p-0"><BillLayoutFullTax sale={view.sale} saleItems={view.items} payments={[view.payment]} config={view.config} /></div></div>;
+  return <FullTaxA4Document sale={view.sale} saleItems={view.items} payments={[view.payment]} config={view.config} />;
 };
 export default PrintConsolidatedTaxPage;

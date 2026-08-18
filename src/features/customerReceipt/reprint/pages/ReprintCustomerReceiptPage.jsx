@@ -174,12 +174,12 @@ const ReprintCustomerReceiptPage = () => {
     <>
       <style>{`
         .customer-receipt-reprint-root {
-          font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif;
+          font-family: var(--document-font-family, 'TH Sarabun New', 'Sarabun', system-ui, sans-serif);
         }
 
         @page {
           size: ${printMode === 'SHORT' ? '80mm auto' : 'A4'};
-          margin: ${printMode === 'SHORT' ? '0' : '10mm'};
+          margin: ${printMode === 'SHORT' ? '0' : '4mm'};
         }
 
         @media print {
@@ -213,11 +213,11 @@ const ReprintCustomerReceiptPage = () => {
           }
 
           .customer-receipt-reprint-root {
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
+            position: ${printMode === 'SHORT' ? 'absolute' : 'static'} !important;
+            top: ${printMode === 'SHORT' ? '0' : 'auto'} !important;
+            left: ${printMode === 'SHORT' ? '0' : 'auto'} !important;
             display: block !important;
-            width: ${printMode === 'SHORT' ? '80mm' : '100%'} !important;
+            width: ${printMode === 'SHORT' ? '80mm' : 'auto'} !important;
             max-width: ${printMode === 'SHORT' ? '80mm' : 'none'} !important;
             height: auto !important;
             min-height: 0 !important;
@@ -283,7 +283,7 @@ const ReprintCustomerReceiptPage = () => {
         className={`w-full bg-white text-black dark:bg-white dark:text-black ${
           printMode === 'SHORT'
             ? 'px-4 py-6 print:m-0 print:h-auto print:min-h-0 print:w-auto print:p-0'
-            : 'px-4 py-8 print:p-0'
+            : 'px-4 py-8 print:min-h-0 print:p-0'
         }`}
       >
         <div

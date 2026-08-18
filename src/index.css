@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap');
 @import "./design-system/styles/tokens.css";
 @import "./design-system/styles/buttons.css";
 
@@ -33,6 +33,7 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    --document-font-family: "TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif;
   }
 
   .dark {
@@ -161,6 +162,62 @@
     line-height: var(--ads-type-label-line-height);
     font-weight: var(--ads-font-weight-medium);
   }
+
+  .document-print-font {
+    font-family: var(--document-font-family);
+  }
+}
+
+/* Full-tax document presentation authority. Keep the editor column on-screen,
+   then give its paper-only width back to DESCRIPTION. */
+.full-tax-a4-page table {
+  font-size: 13px !important;
+  line-height: 1.15;
+}
+
+.full-tax-a4-page table th:nth-child(1),
+.full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(1) {
+  width: 7% !important;
+}
+
+.full-tax-a4-page table th:nth-child(2),
+.full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(2) {
+  width: 45% !important;
+}
+
+.full-tax-a4-page table th:nth-child(3),
+.full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(3),
+.full-tax-a4-page table th:nth-child(4),
+.full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(4) {
+  width: 8% !important;
+}
+
+.full-tax-a4-page table th:nth-child(5),
+.full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(5),
+.full-tax-a4-page table th:nth-child(6),
+.full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(6) {
+  width: 14% !important;
+}
+
+.full-tax-a4-page table .full-tax-editor-column {
+  width: 4% !important;
+}
+
+/* Shared A4 authority for receipt/settlement documents that do not use the
+   full-tax table renderer but must share the same physical paper standard. */
+.credit-collection-a4 {
+  box-sizing: border-box !important;
+  width: 201mm !important;
+  max-width: 201mm !important;
+  min-height: 288mm !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  padding: 5mm !important;
+  border: 0.3mm solid #444 !important;
+  border-radius: 2.5mm !important;
+  background: #fff !important;
+  color: #000 !important;
+  font-family: var(--document-font-family) !important;
 }
 
 /* The operational verification control remains available as an internal feature,
@@ -185,6 +242,60 @@ button[aria-label='ดูสถานะความพร้อมของร�
     margin: 0;
     padding: 0;
     overflow: visible !important;
+  }
+
+  body,
+  body * {
+    font-family: var(--document-font-family) !important;
+  }
+
+  body .full-tax-a4-page {
+    border: 0.3mm solid #444 !important;
+  }
+
+  .full-tax-a4-page table th:nth-child(2),
+  .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(2) {
+    width: 49% !important;
+  }
+
+  .full-tax-a4-page table th:nth-child(1),
+  .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(1) {
+    width: 7% !important;
+  }
+
+  .full-tax-a4-page table th:nth-child(3),
+  .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(3),
+  .full-tax-a4-page table th:nth-child(4),
+  .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(4) {
+    width: 8% !important;
+  }
+
+  .full-tax-a4-page table th:nth-child(5),
+  .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(5),
+  .full-tax-a4-page table th:nth-child(6),
+  .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(6) {
+    width: 14% !important;
+  }
+
+  body .credit-collection-a4 {
+    position: relative !important;
+    box-sizing: border-box !important;
+    width: 201mm !important;
+    max-width: 201mm !important;
+    min-height: 288mm !important;
+    height: 288mm !important;
+    margin: 0 auto !important;
+    padding: 5mm !important;
+    border: 0.3mm solid #444 !important;
+    border-radius: 2.5mm !important;
+    overflow: hidden !important;
+    background: #fff !important;
+    color: #000 !important;
+    font-family: var(--document-font-family) !important;
+  }
+
+  body .credit-collection-a4 .credit-collection-header {
+    display: block !important;
   }
 
   * {

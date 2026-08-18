@@ -18,6 +18,8 @@ import PurchaseOrderPrintState from '../workspace/components/PurchaseOrderPrintS
 import PurchaseOrderPrintToolbar from '../workspace/components/PurchaseOrderPrintToolbar';
 import PurchaseOrderPrintShell from '../workspace/components/PurchaseOrderPrintShell';
 
+const A4_SAFE_MARGIN_IN = 4 / 25.4;
+
 const PrintPurchaseOrderPage = () => {
   const { id } = useParams();
 
@@ -76,7 +78,7 @@ const PrintPurchaseOrderPage = () => {
     if (!printRef.current || !window.html2pdf || !po) return;
 
     const opt = {
-      margin: 0.5,
+      margin: A4_SAFE_MARGIN_IN,
       filename: `purchase-order-${po.code || po.id || id}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2 },

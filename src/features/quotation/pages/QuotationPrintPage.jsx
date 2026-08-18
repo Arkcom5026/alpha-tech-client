@@ -8,7 +8,9 @@ import {
   acceptQuotation,
   addQuotationLine,
   cancelQuotation,
+  createQuotationRevision,
   getQuotation,
+  getQuotationRevisionHistory,
   issueQuotation,
   rejectQuotation,
   updateQuotationLine,
@@ -53,12 +55,19 @@ const QuotationPrintPage = () => {
   const navigate = useNavigate();
   const prefix = `/${shopSlug || 'advancetech'}/pos/sales/quotations`;
   const [quotation, setQuotation] = useState(null);
+  const [revisionHistory, setRevisionHistory] = useState([]);
   const [draftBranch, setDraftBranch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editingLineId, setEditingLineId] = useState(null);
   const [lineDraft, setLineDraft] = useState(null);
   const [savingLine, setSavingLine] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+
+  const refreshRevisionHistory = async () => {
+    const rows = await getQuotationRevisionHistory(quotationId);
+    setRevisionHistory(Array.isArray(rows) ? rows : []);
+    return rows;
+  };
 
   const refreshQuotation = async () => {
     const refreshed = await getQuotation(quotationId);
@@ -71,9 +80,13 @@ const QuotationPrintPage = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const document = await getQuotation(quotationId);
+        const [document, history] = await Promise.all([
+          getQuotation(quotationId),
+          getQuotationRevisionHistory(quotationId).catch(() => []),
+        ]);
         if (!alive) return;
         setQuotation(document);
+        setRevisionHistory(Array.isArray(history) ? history : []);
         if (!document?.documentHeaderSnapshot && document?.branchId) {
           try {
             const currentBranch = unwrapBranch(await getBranchById(document.branchId));
@@ -183,22 +196,27 @@ const QuotationPrintPage = () => {
     const config = {
       issue: {
         execute: () => issueQuotation(quotationId),
-        confirm: 'ยืนยันออกใบเสนอราคา? หลังออกเอกสารแล้วข้อมูลและรายการจะถูกล็อกเป็น snapshot และแก้ไขไม่ได้',
+        confirm: 'ยืนยันออกใบเสนอราคา? หลังออกเอกสารแล้วฉบับนี้จะถูกล็อก และหากต้องแก้ไขให้สร้าง Revision ใหม่',
         success: 'ออกใบเสนอราคาและล็อก snapshot เรียบร้อยแล้ว',
+      },
+      revision: {
+        execute: () => createQuotationRevision(quotationId),
+        confirm: `สร้าง Rev.${Number(quotation.revisionNumber || 0) + 1} จากเอกสารฉบับนี้? ฉบับเดิมจะไม่ถูกแก้ไข`,
+        success: 'สร้างฉบับแก้ไขใหม่จาก issued snapshot เรียบร้อยแล้ว',
       },
       accept: {
         execute: () => acceptQuotation(quotationId),
-        confirm: 'ยืนยันว่าลูกค้าตอบรับใบเสนอราคานี้แล้ว?',
-        success: 'บันทึกการตอบรับใบเสนอราคาแล้ว',
+        confirm: 'ยืนยันว่าลูกค้าตอบรับใบเสนอราคาฉบับนี้แล้ว?',
+        success: 'บันทึกการตอบรับใบเสนอราคาฉบับนี้แล้ว',
       },
       reject: {
         execute: () => rejectQuotation(quotationId),
-        confirm: 'ยืนยันว่าลูกค้าปฏิเสธใบเสนอราคานี้?',
+        confirm: 'ยืนยันว่าลูกค้าปฏิเสธใบเสนอราคาฉบับนี้?',
         success: 'บันทึกการปฏิเสธใบเสนอราคาแล้ว',
       },
       cancel: {
         execute: () => cancelQuotation(quotationId),
-        confirm: 'ยืนยันยกเลิกใบเสนอราคานี้?',
+        confirm: 'ยืนยันยกเลิกใบเสนอราคาฉบับนี้?',
         success: 'ยกเลิกใบเสนอราคาแล้ว',
       },
     }[action];
@@ -208,13 +226,23 @@ const QuotationPrintPage = () => {
     setTransitioning(true);
     try {
       const updated = await config.execute();
-      setQuotation(updated);
       setEditingLineId(null);
       setLineDraft(null);
+      if (action === 'revision') {
+        feedback.actionSuccess(config.success, `quotation:${quotationId}:revision:create:success`);
+        navigate(`${prefix}/${updated.id}/print`);
+        return;
+      }
+      setQuotation(updated);
       if (action === 'issue') setDraftBranch(null);
+      await refreshRevisionHistory().catch(() => null);
       feedback.actionSuccess(config.success, `quotation:${quotationId}:lifecycle:${action}:success`);
     } catch (error) {
-      feedback.actionError(error, 'เปลี่ยนสถานะใบเสนอราคาไม่สำเร็จ', `quotation:${quotationId}:lifecycle:${action}:error`);
+      feedback.actionError(
+        error,
+        action === 'revision' ? 'สร้างฉบับแก้ไขไม่สำเร็จ' : 'เปลี่ยนสถานะใบเสนอราคาไม่สำเร็จ',
+        `quotation:${quotationId}:${action === 'revision' ? 'revision:create' : `lifecycle:${action}`}:error`,
+      );
     } finally {
       setTransitioning(false);
     }
@@ -287,10 +315,12 @@ const QuotationPrintPage = () => {
   });
   const configuredLogoSize = Number(header?.headerStyle?.logoSize || 72);
   const deliveryAlignedLogoSize = Math.min(92, Math.max(72, configuredLogoSize));
+  const revisionNumber = Number(quotation.revisionNumber || 0);
+  const canCreateRevision = ['ISSUED', 'ACCEPTED'].includes(quotation.status) && !quotation.revisedTo;
 
   return (
     <main className="quotation-print-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
-      <div className="quotation-print-toolbar mx-auto mb-4 flex max-w-[195mm] items-center justify-between gap-3 print:hidden">
+      <div className="quotation-print-toolbar mx-auto mb-3 flex max-w-[195mm] items-center justify-between gap-3 print:hidden">
         <button type="button" onClick={() => navigate(`${prefix}/${quotationId}`)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50"><ArrowLeft className="h-4 w-4" /> กลับไปแก้ไข</button>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {quotation.status === 'DRAFT' ? <>
@@ -298,14 +328,27 @@ const QuotationPrintPage = () => {
             <button type="button" disabled={transitioning || savingLine} onClick={() => runLifecycle('issue')} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50">{transitioning ? 'กำลังดำเนินการ...' : 'ออกใบเสนอราคา'}</button>
           </> : null}
           {quotation.status === 'ISSUED' ? <>
+            {canCreateRevision ? <button type="button" disabled={transitioning} onClick={() => runLifecycle('revision')} className="rounded-xl border border-teal-300 bg-white px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50">สร้างฉบับแก้ไข</button> : null}
+            {quotation.revisedTo ? <button type="button" onClick={() => navigate(`${prefix}/${quotation.revisedTo.id}/print`)} className="rounded-xl border border-teal-300 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800">ไป Rev.{quotation.revisedTo.revisionNumber}</button> : null}
             <button type="button" disabled={transitioning} onClick={() => runLifecycle('reject')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ปฏิเสธ</button>
             <button type="button" disabled={transitioning} onClick={() => runLifecycle('cancel')} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">ยกเลิก</button>
             <button type="button" disabled={transitioning} onClick={() => runLifecycle('accept')} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">ตอบรับ</button>
           </> : null}
-          {quotation.status === 'ACCEPTED' ? <button type="button" disabled={transitioning} onClick={() => runLifecycle('cancel')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ยกเลิก</button> : null}
+          {quotation.status === 'ACCEPTED' ? <>
+            {canCreateRevision ? <button type="button" disabled={transitioning} onClick={() => runLifecycle('revision')} className="rounded-xl border border-teal-300 bg-white px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50">สร้างฉบับแก้ไข</button> : null}
+            {quotation.revisedTo ? <button type="button" onClick={() => navigate(`${prefix}/${quotation.revisedTo.id}/print`)} className="rounded-xl border border-teal-300 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800">ไป Rev.{quotation.revisedTo.revisionNumber}</button> : null}
+            <button type="button" disabled={transitioning} onClick={() => runLifecycle('cancel')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ยกเลิก</button>
+          </> : null}
           <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Printer className="h-4 w-4" /> พิมพ์ใบเสนอราคา</button>
         </div>
       </div>
+
+      {revisionHistory.length > 1 ? <div data-testid="quotation-revision-history" className="mx-auto mb-3 max-w-[195mm] rounded-xl border border-slate-200 bg-white px-3 py-2 print:hidden">
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-bold text-slate-700">ประวัติ Revision:</span>
+          {revisionHistory.map((revision) => <button key={revision.id} type="button" onClick={() => navigate(`${prefix}/${revision.id}/print`)} className={`rounded-full border px-2.5 py-1 font-semibold ${revision.id === quotation.id ? 'border-teal-400 bg-teal-50 text-teal-800' : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'}`}>Rev.{revision.revisionNumber} · {revision.status}</button>)}
+        </div>
+      </div> : null}
 
       <section className="quotation-a4 relative mx-auto box-border flex w-[195mm] min-h-[280mm] flex-col rounded-[2.5mm] border border-slate-500 bg-white p-[5mm] shadow-sm print:rounded-[2.5mm] print:shadow-none">
         <div className="quotation-document-header flex min-h-[31mm] items-center justify-between gap-5 border-b border-slate-300 pb-2 mb-1.5">
@@ -319,7 +362,7 @@ const QuotationPrintPage = () => {
             </div>
           </div>
           <div className="w-[36mm] shrink-0 text-right">
-            {quotation.status === 'DRAFT' ? <div className="inline-flex min-w-[25mm] flex-col items-center rounded-[1.5mm] border border-amber-400 px-2 py-1.5 text-center"><span className="text-[9px] font-bold text-amber-800">ฉบับร่าง</span><span className="text-[7.5px] font-semibold tracking-wide text-amber-700">DRAFT</span></div> : <div className="inline-flex min-w-[25mm] flex-col items-center rounded-[1.5mm] border border-slate-400 px-2 py-1.5 text-center"><span className="text-[9px] font-bold">ต้นฉบับลูกค้า</span><span className="text-[7.5px] font-semibold tracking-wide">CUSTOMER ORIGINAL</span></div>}
+            {quotation.status === 'DRAFT' ? <div className="inline-flex min-w-[25mm] flex-col items-center rounded-[1.5mm] border border-amber-400 px-2 py-1.5 text-center"><span className="text-[9px] font-bold text-amber-800">ฉบับร่าง</span><span className="text-[7.5px] font-semibold tracking-wide text-amber-700">DRAFT · REV.{revisionNumber}</span></div> : <div className="inline-flex min-w-[25mm] flex-col items-center rounded-[1.5mm] border border-slate-400 px-2 py-1.5 text-center"><span className="text-[9px] font-bold">ต้นฉบับลูกค้า</span><span className="text-[7.5px] font-semibold tracking-wide">CUSTOMER ORIGINAL · REV.{revisionNumber}</span></div>}
           </div>
         </div>
 
@@ -333,7 +376,7 @@ const QuotationPrintPage = () => {
             <p><strong>โทร:</strong> {quotation.customerPhone || '-'}</p>
             <p><strong>เลขประจำตัวผู้เสียภาษี:</strong> {quotation.customerTaxId || '-'}</p>
           </section>
-          <section className="quotation-info-panel rounded-[2mm] border border-slate-500 px-2.5 py-2"><div className="grid grid-cols-[28mm_1fr] gap-x-1"><span className="font-semibold">วันที่:</span><span>{date(quotation.issueDate || quotation.createdAt)}</span><span className="font-semibold">เลขที่:</span><span className="font-semibold">{quotation.code}</span><span className="font-semibold">ยืนราคาถึง:</span><span>{date(quotation.validUntil)}</span><span className="font-semibold">เงื่อนไขชำระเงิน:</span><span>{quotation.paymentTerms || '-'}</span></div></section>
+          <section className="quotation-info-panel rounded-[2mm] border border-slate-500 px-2.5 py-2"><div className="grid grid-cols-[28mm_1fr] gap-x-1"><span className="font-semibold">วันที่:</span><span>{date(quotation.issueDate || quotation.createdAt)}</span><span className="font-semibold">เลขที่:</span><span className="font-semibold">{quotation.code}</span><span className="font-semibold">Revision:</span><span className="font-semibold">Rev.{revisionNumber}</span><span className="font-semibold">ยืนราคาถึง:</span><span>{date(quotation.validUntil)}</span><span className="font-semibold">เงื่อนไขชำระเงิน:</span><span>{quotation.paymentTerms || '-'}</span></div></section>
         </div>
 
         {(quotation.subject || quotation.introduction) ? <section className="quotation-message mt-2.5 text-[10.5px] leading-[1.55]">{quotation.subject ? <p><strong>เรื่อง:</strong> {quotation.subject}</p> : null}{quotation.introduction ? <p className={`${quotation.subject ? 'mt-1' : ''} whitespace-pre-wrap`}>{quotation.introduction}</p> : null}</section> : null}

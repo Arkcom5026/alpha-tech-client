@@ -20,8 +20,15 @@ const hydrateIssuedSnapshot = (quotation) => {
 
   const customer = snapshot.customer || {};
   const totals = snapshot.totals || {};
+  const superseded = Boolean(quotation.revisedTo);
   return {
     ...quotation,
+    lifecycleStatus: quotation.status,
+    status: superseded ? 'SUPERSEDED' : quotation.status,
+    isSuperseded: superseded,
+    revisionNumber: snapshot.revisionNumber ?? quotation.revisionNumber ?? 0,
+    revisionRootId: snapshot.revisionRootId ?? quotation.revisionRootId ?? null,
+    revisedFromId: snapshot.revisedFromId ?? quotation.revisedFromId ?? null,
     issueDate: snapshot.issueDate ?? quotation.issueDate,
     validUntil: snapshot.validUntil ?? quotation.validUntil,
     subject: snapshot.subject ?? quotation.subject,
@@ -73,6 +80,12 @@ export const createQuotation = async ({ customerId = null } = {}) =>
 
 export const getQuotation = async (quotationId) =>
   sanitizeQuotation(unwrap(await apiClient.get(`/sales/quotations/${quotationId}`)));
+
+export const getQuotationRevisionHistory = async (quotationId) =>
+  unwrap(await apiClient.get(`/sales/quotations/${quotationId}/revisions`));
+
+export const createQuotationRevision = async (quotationId, note = null) =>
+  sanitizeQuotation(unwrap(await apiClient.post(`/sales/quotations/${quotationId}/revisions`, { note })));
 
 export const updateQuotation = async (quotationId, payload) =>
   sanitizeQuotation(unwrap(await apiClient.put(`/sales/quotations/${quotationId}`, payload)));

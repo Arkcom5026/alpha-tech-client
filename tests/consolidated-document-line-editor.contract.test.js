@@ -73,8 +73,11 @@ assert(
 );
 assert(
   page.includes('width: 190mm !important;')
-    && page.includes('Math.max(16, itemCount)'),
-  'Consolidated editor integration must retain the accepted A4 print-baseline geometry.'
+    && page.includes('Math.max(15, itemCount)')
+    && page.includes('bill-print-page-shell')
+    && page.includes('min-height: 0 !important;')
+    && page.includes('overflow: visible !important;'),
+  'Full-tax print must reserve signature space and prevent wrapper boxes from creating a blank second page.'
 );
 
 console.log('Consolidated Document Line Editor Contract: PASS');

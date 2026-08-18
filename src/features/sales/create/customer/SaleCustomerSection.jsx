@@ -249,7 +249,13 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
       {view.selection.selectedCustomer && !editingSelectedCustomer ? (
         <div className="flex items-start justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50/70 px-3 py-2.5">
           <div className="min-w-0 flex-1">
-            <div className="grid gap-x-5 gap-y-1.5 text-sm sm:grid-cols-2 xl:grid-cols-3">
+            <div
+              className={`grid gap-y-1.5 text-sm sm:grid-cols-2 ${
+                isOrganization
+                  ? 'gap-x-8 xl:grid-cols-[minmax(0,1.5fr)_minmax(5.5rem,0.55fr)_minmax(0,1fr)_minmax(7.5rem,0.9fr)]'
+                  : 'gap-x-5 xl:grid-cols-3'
+              }`}
+            >
               {!isOrganization ? (
                 <p className="min-w-0 text-slate-700">
                   <span className="font-semibold text-slate-500">ชื่อลูกค้า :</span>{' '}

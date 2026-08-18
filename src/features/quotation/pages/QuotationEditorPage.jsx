@@ -281,10 +281,16 @@ const QuotationEditorPage = () => {
     quotation.customerTaxId ? `เลขผู้เสียภาษี: ${quotation.customerTaxId}` : '',
   ].filter(Boolean);
   const quotationItems = quotation.items || [];
-  const adjustedTotal = quotationItems.reduce(
-    (sum, line) => sum + Math.max(0, Number(line.quantity || 0)) * Math.max(0, Number(line.unitPrice || 0)),
-    0,
-  );
+  const adjustedTotal = quotationItems.reduce((sum, line) => {
+    const draft = getLineDraft(line);
+    const quantity = Math.max(0, Number(draft.quantity || 0));
+    const adjustment = Number(draft.adjustment || 0);
+    const adjustedPrice = Math.max(
+      0,
+      Number(line.unitPrice || 0) + (Number.isFinite(adjustment) ? adjustment : 0),
+    );
+    return sum + (quantity * adjustedPrice);
+  }, 0);
   const taxableBase = adjustedTotal;
   const vatRate = quotation.vatEnabled === false ? 0 : Math.max(0, Number(quotation.vatRate ?? 7));
   const vatAmount = taxableBase * vatRate / 100;

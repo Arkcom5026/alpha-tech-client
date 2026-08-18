@@ -13,19 +13,37 @@ const QuotationDocumentLineagePanel = ({ quotationId, shopSlug }) => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    let frame = null;
+    let observer = null;
     let host = null;
-    frame = window.requestAnimationFrame(() => {
+
+    const mountHost = () => {
       const shell = document.querySelector('.quotation-print-shell');
       const a4 = shell?.querySelector('.quotation-a4');
-      if (!shell || !a4) return;
+      if (!shell || !a4) return false;
+
+      const existingHost = shell.querySelector('[data-quotation-lineage-host="true"]');
+      if (existingHost) {
+        host = existingHost;
+        setPortalHost(existingHost);
+        return true;
+      }
+
       host = document.createElement('div');
       host.dataset.quotationLineageHost = 'true';
       shell.insertBefore(host, a4);
       setPortalHost(host);
-    });
+      return true;
+    };
+
+    if (!mountHost()) {
+      observer = new MutationObserver(() => {
+        if (mountHost()) observer?.disconnect();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    }
+
     return () => {
-      if (frame) window.cancelAnimationFrame(frame);
+      observer?.disconnect();
       host?.remove?.();
     };
   }, [quotationId]);

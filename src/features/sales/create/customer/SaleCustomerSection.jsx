@@ -157,6 +157,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
       const nextCustomer = updated || { ...selectedCustomerSnapshot, ...payloadSnapshot };
       editor.hydrateCustomer(nextCustomer);
       setSelectedCustomer(nextCustomer);
+      useCustomerDepositStore.getState().setSelectedCustomer(nextCustomer);
       setEditingSelectedCustomer(false);
       setFormInfo('อัปเดตข้อมูลลูกค้าสำเร็จ');
       setFormError('');

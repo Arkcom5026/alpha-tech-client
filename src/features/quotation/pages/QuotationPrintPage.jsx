@@ -243,11 +243,36 @@ const QuotationPrintPage = () => {
                 const isEditing = editable && editingLineId === item.id;
                 return <React.Fragment key={item.id}><tr className={`align-top break-inside-avoid ${isEditing ? 'bg-slate-50 print:bg-white' : ''}`}><td className="border border-slate-500 px-1 py-1.5 text-center">{index + 1}</td><td className="border border-slate-500 px-2 py-1.5"><div className="font-semibold">{item.title}</div>{item.description ? <div className="mt-0.5 whitespace-pre-wrap text-[9px] leading-[1.5]">{item.description}</div> : null}</td><td className="border border-slate-500 px-1 py-1.5 text-right">{Number(item.quantity || 0)}</td><td className="border border-slate-500 px-1 py-1.5 text-center">{item.unitName || '-'}</td><td className="border border-slate-500 px-1 py-1.5 text-right tabular-nums">{money(item.unitPrice)}</td><td className="border border-slate-500 px-1 py-1.5 text-right font-semibold tabular-nums">{money(item.lineTotal)}</td>{editable ? <td className="border border-slate-500 px-1 py-1 text-center align-top print:hidden"><button type="button" onClick={() => beginLineEdit(item)} className={`inline-flex h-7 w-7 items-center justify-center rounded border ${isEditing ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}`} aria-label="แก้ไขรายการนี้บนใบเสนอราคา" title="แก้ไขรายการ"><Pencil className="h-3.5 w-3.5" /></button></td> : null}</tr>{isEditing ? <tr className="print:hidden"><td colSpan="7" className="p-0">{renderLineEditor()}</td></tr> : null}</React.Fragment>;
               })}
+
+              {editable ? (
+                <React.Fragment>
+                  <tr className="quotation-add-line-row print:hidden">
+                    <td className="h-9 border border-slate-500 text-center text-slate-400">{items.length + 1}</td>
+                    <td className="border border-slate-500 px-2 text-[9px] text-slate-400">เพิ่มรายการถัดไป</td>
+                    <td className="border border-slate-500">&nbsp;</td>
+                    <td className="border border-slate-500">&nbsp;</td>
+                    <td className="border border-slate-500">&nbsp;</td>
+                    <td className="border border-slate-500">&nbsp;</td>
+                    <td className="border border-slate-500 p-1 text-center">
+                      <button
+                        type="button"
+                        onClick={beginNewLine}
+                        disabled={savingLine || editingLineId === 'NEW'}
+                        className="inline-flex h-7 w-7 items-center justify-center rounded border border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
+                        aria-label="เพิ่มรายการถัดไปบนใบเสนอราคา"
+                        title="เพิ่มรายการ"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                  {editingLineId === 'NEW' ? <tr className="print:hidden"><td colSpan="7" className="p-0">{renderLineEditor()}</td></tr> : null}
+                </React.Fragment>
+              ) : null}
+
               {fillerHeight > 0 ? <tr className="quotation-table-filler" aria-hidden="true"><td className="border border-slate-500" style={{ height: `${fillerHeight}mm` }}>&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td>{editable ? <td className="border border-slate-500 print:hidden">&nbsp;</td> : null}</tr> : null}
             </tbody>
           </table>
-
-          {editable ? <div className="print:hidden border-x border-b border-slate-500 bg-white p-2">{editingLineId === 'NEW' ? renderLineEditor() : <button type="button" onClick={beginNewLine} className="inline-flex h-9 items-center gap-2 rounded border border-teal-300 bg-teal-50 px-3 text-xs font-bold text-teal-800 hover:bg-teal-100"><Plus className="h-4 w-4" /> เพิ่มรายการ</button>}</div> : null}
         </div>
 
         <div className="quotation-settlement grid h-[34mm] grid-cols-[1.6fr_1fr] break-inside-avoid text-[10px] leading-[1.55]">

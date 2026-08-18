@@ -28,12 +28,22 @@ includes(createPage, 'เริ่มจากเอกสารเปล่า�
 excludes(createPage, 'items.length', 'Create action must never depend on quotation item count');
 excludes(createPage, 'productId', 'Create surface must not require or own product selection');
 
-includes(editor, 'หน้าเอกสารนี้เป็นพื้นที่ทำงานหลัก', 'Document editor must remain the primary quotation workspace');
-includes(editor, 'พิมพ์เองได้ทั้งหมด หรือค้นหาสินค้าเพื่อช่วยเติมชื่อ/ราคา', 'Product catalog must remain helper-only');
-includes(editor, 'sourceProductId: null', 'Manual line state must support no product reference');
-includes(editor, 'รายละเอียดหลายบรรทัด', 'Document lines must support detailed multiline authoring');
-includes(editor, 'ยังไม่มีรายการ', 'Editor must render valid zero-line quotation state');
-includes(editor, 'searchSaleItems', 'Existing product catalog may assist document authoring');
+includes(editor, 'หน้านี้ใช้สำหรับเลือกลูกค้าและสินค้าเท่านั้น', 'Quotation intake must explain its deliberately narrow responsibility');
+includes(editor, 'searchStoreCustomersAction', 'Quotation intake must provide canonical store-scoped customer search');
+includes(editor, 'chooseCustomer', 'Quotation intake must allow selecting or changing the quotation customer');
+includes(editor, 'buildPreservedDraftPayload', 'Customer selection must preserve existing draft document fields while changing customer authority');
+includes(editor, 'searchSaleItems', 'Quotation intake must keep product catalog discovery as an optional helper');
+includes(editor, 'addProductHelper', 'Product helper selection must create a starter quotation line');
+includes(editor, 'addQuotationLine(quotationId', 'Product-assisted starter lines must persist through canonical quotation line authority');
+includes(editor, 'เป็นตัวช่วยเท่านั้น — เพิ่มแล้วสามารถแก้รายละเอียดทั้งหมดต่อบนหน้าเอกสาร', 'Product helper must remain subordinate to the document workspace');
+includes(editor, 'Manual ได้จากหน้าเอกสารโดยตรง', 'Manual-first authoring must remain explicit after simplifying intake');
+includes(editor, 'เปิดหน้าเอกสาร', 'Quotation intake must route users directly to the document workspace');
+excludes(editor, 'เนื้อหาเอกสาร', 'Quotation intake must not own document subject/introduction authoring');
+excludes(editor, 'ข้อความท้ายเอกสาร', 'Quotation intake must not own closing-note authoring');
+excludes(editor, 'เงื่อนไขเอกสาร', 'Quotation intake must not own document terms controls');
+excludes(editor, 'สรุปยอด', 'Quotation intake must not duplicate document totals workspace');
+excludes(editor, 'handleSaveLine', 'Quotation intake must not retain the old manual line editor');
+excludes(editor, 'issueQuotation', 'Quotation lifecycle issue action must not remain mixed into customer/product intake');
 
 includes(printPage, "documentType: 'QUOTATION'", 'Quotation print must use store document-header authority');
 includes(printPage, 'whitespace-pre-wrap', 'A4 document must preserve multiline descriptions');
@@ -73,7 +83,7 @@ excludes(printPage, 'ไม่มีรายการสินค้า —', '
 
 includes(routes, "{ path: 'quotations', element: <QuotationListPage /> }", 'Quotation list route is required');
 includes(routes, "{ path: 'quotations/new', element: <CreateQuotationPage /> }", 'Quotation create route is required');
-includes(routes, "{ path: 'quotations/:quotationId', element: <QuotationEditorPage /> }", 'Quotation editor route is required');
+includes(routes, "{ path: 'quotations/:quotationId', element: <QuotationEditorPage /> }", 'Quotation intake route is required');
 includes(routes, "{ path: 'quotations/:quotationId/print', element: <QuotationPrintPage /> }", 'Quotation A4 print route is required');
 includes(sidebar, "label: 'ใบเสนอราคา'", 'Sales navigation must expose quotation workspace');
 

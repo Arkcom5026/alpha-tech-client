@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import DeliveryNoteForm from '../../../components/DeliveryNoteForm';
 
 const DeliveryNotePrintShell = ({
@@ -14,112 +15,133 @@ const DeliveryNotePrintShell = ({
   onChangeDocumentLineDraft,
   onSaveDocumentLine,
   editableDocumentLines = true,
-}) => (
-  <main className="a4-standard-delivery-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
-    {sale?.sourceQuotation ? (
-      <div data-testid="delivery-note-source-quotation" className="mx-auto mb-3 max-w-[210mm] rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm text-teal-900 print:hidden">
-        <span className="font-semibold">อ้างอิงใบเสนอราคา:</span>{' '}
-        {sale.sourceQuotation.code} · Rev.{Number(sale.sourceQuotation.revisionNumber || 0)}
-      </div>
-    ) : null}
-    <section className="a4-standard-delivery-frame mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
-      <DeliveryNoteForm
-        sale={sale}
-        hideDate={hideDate}
-        setHideDate={setHideDate}
-        saleItems={saleItems}
-        config={config}
-        editableDocumentLines={editableDocumentLines}
-        editingLineKey={editingLineKey}
-        lineDrafts={lineDrafts}
-        savingLineKey={savingLineKey}
-        onToggleDocumentLineEdit={onToggleDocumentLineEdit}
-        onChangeDocumentLineDraft={onChangeDocumentLineDraft}
-        onSaveDocumentLine={onSaveDocumentLine}
-      />
-      <style>{`
-        .a4-standard-delivery-frame .dn-print-page {
-          font-family: var(--document-font-family) !important;
-          border-radius: 2.5mm !important;
-        }
-        @media print {
-          @page { size: A4; margin: 6mm !important; }
+}) => {
+  const navigate = useNavigate();
+  const { shopSlug } = useParams();
+  const sourceQuotationId = sale?.sourceQuotation?.id || sale?.sourceQuotation?.quotationId || null;
+  const quotationPath = sourceQuotationId
+    ? `/${shopSlug || 'advancetech'}/pos/sales/quotations/${sourceQuotationId}/print`
+    : null;
 
-          html,
-          body,
-          #root {
-            margin: 0 !important;
-            padding: 0 !important;
-            min-height: 0 !important;
-            height: auto !important;
-          }
-
-          /* Chrome paginates the entire POS layout, even when aside/nav/header are
-             hidden. Normalize only the ancestor chain that owns this document so
-             app-shell min-height/flex constraints cannot create a phantom sheet. */
-          body:has(.a4-standard-delivery-shell) #root *:has(.a4-standard-delivery-shell) {
-            box-sizing: border-box !important;
-            display: block !important;
-            position: static !important;
-            width: auto !important;
-            max-width: none !important;
-            min-width: 0 !important;
-            min-height: 0 !important;
-            height: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-            transform: none !important;
-          }
-
-          .a4-standard-delivery-shell,
-          .a4-standard-delivery-frame {
-            display: block !important;
-            position: static !important;
-            width: auto !important;
-            max-width: none !important;
-            min-height: 0 !important;
-            height: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-            box-shadow: none !important;
-            overflow: visible !important;
-          }
-
-          body .a4-standard-delivery-frame .dn-print-page {
-            display: block !important;
-            position: relative !important;
-            box-sizing: border-box !important;
-            width: 195mm !important;
-            max-width: 195mm !important;
-            height: 280mm !important;
-            min-height: 280mm !important;
-            max-height: 280mm !important;
-            margin: 0 auto !important;
-            padding: 5mm !important;
-            border: 0.3mm solid #444 !important;
-            border-radius: 2.5mm !important;
-            overflow: hidden !important;
+  return (
+    <main className="a4-standard-delivery-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
+      {sale?.sourceQuotation ? (
+        <div data-testid="delivery-note-source-quotation" className="mx-auto mb-3 flex max-w-[210mm] items-center justify-between gap-3 rounded-xl border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm text-teal-900 print:hidden">
+          <div>
+            <span className="font-semibold">อ้างอิงใบเสนอราคา:</span>{' '}
+            {sale.sourceQuotation.code} · Rev.{Number(sale.sourceQuotation.revisionNumber || 0)}
+          </div>
+          {quotationPath ? (
+            <button
+              type="button"
+              data-testid="delivery-note-source-quotation-link"
+              onClick={() => navigate(quotationPath)}
+              className="shrink-0 rounded-lg border border-teal-300 bg-white px-3 py-1.5 text-xs font-semibold text-teal-800 hover:bg-teal-100"
+            >
+              เปิดใบเสนอราคา
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+      <section className="a4-standard-delivery-frame mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
+        <DeliveryNoteForm
+          sale={sale}
+          hideDate={hideDate}
+          setHideDate={setHideDate}
+          saleItems={saleItems}
+          config={config}
+          editableDocumentLines={editableDocumentLines}
+          editingLineKey={editingLineKey}
+          lineDrafts={lineDrafts}
+          savingLineKey={savingLineKey}
+          onToggleDocumentLineEdit={onToggleDocumentLineEdit}
+          onChangeDocumentLineDraft={onChangeDocumentLineDraft}
+          onSaveDocumentLine={onSaveDocumentLine}
+        />
+        <style>{`
+          .a4-standard-delivery-frame .dn-print-page {
             font-family: var(--document-font-family) !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid-page !important;
+            border-radius: 2.5mm !important;
           }
+          @media print {
+            @page { size: A4; margin: 6mm !important; }
 
-          /* Keep the signature baselines close to the physical page edge so the
-             blank area above them remains usable for handwritten signatures. */
-          body .a4-standard-delivery-frame .dn-signatures {
-            bottom: 1mm !important;
-          }
+            html,
+            body,
+            #root {
+              margin: 0 !important;
+              padding: 0 !important;
+              min-height: 0 !important;
+              height: auto !important;
+            }
 
-          body .a4-standard-delivery-frame .dn-print-page:last-of-type {
-            page-break-after: auto !important;
-            break-after: auto !important;
+            /* Chrome paginates the entire POS layout, even when aside/nav/header are
+               hidden. Normalize only the ancestor chain that owns this document so
+               app-shell min-height/flex constraints cannot create a phantom sheet. */
+            body:has(.a4-standard-delivery-shell) #root *:has(.a4-standard-delivery-shell) {
+              box-sizing: border-box !important;
+              display: block !important;
+              position: static !important;
+              width: auto !important;
+              max-width: none !important;
+              min-width: 0 !important;
+              min-height: 0 !important;
+              height: auto !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: visible !important;
+              transform: none !important;
+            }
+
+            .a4-standard-delivery-shell,
+            .a4-standard-delivery-frame {
+              display: block !important;
+              position: static !important;
+              width: auto !important;
+              max-width: none !important;
+              min-height: 0 !important;
+              height: auto !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: white !important;
+              box-shadow: none !important;
+              overflow: visible !important;
+            }
+
+            body .a4-standard-delivery-frame .dn-print-page {
+              display: block !important;
+              position: relative !important;
+              box-sizing: border-box !important;
+              width: 195mm !important;
+              max-width: 195mm !important;
+              height: 280mm !important;
+              min-height: 280mm !important;
+              max-height: 280mm !important;
+              margin: 0 auto !important;
+              padding: 5mm !important;
+              border: 0.3mm solid #444 !important;
+              border-radius: 2.5mm !important;
+              overflow: hidden !important;
+              font-family: var(--document-font-family) !important;
+              page-break-inside: avoid !important;
+              break-inside: avoid-page !important;
+            }
+
+            /* Keep the signature baselines close to the physical page edge so the
+               blank area above them remains usable for handwritten signatures. */
+            body .a4-standard-delivery-frame .dn-signatures {
+              bottom: 1mm !important;
+            }
+
+            body .a4-standard-delivery-frame .dn-print-page:last-of-type {
+              page-break-after: auto !important;
+              break-after: auto !important;
+            }
           }
-        }
-      `}</style>
-    </section>
-  </main>
-);
+        `}</style>
+      </section>
+    </main>
+  );
+};
 
 export default DeliveryNotePrintShell;

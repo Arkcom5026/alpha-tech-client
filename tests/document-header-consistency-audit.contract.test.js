@@ -27,8 +27,9 @@ assert.match(fullTaxPage, /StoreDocumentHeaderScope/, 'Full Tax must use the sha
 assert.match(fullTaxPage, /documentType:\s*'FULL_TAX_INVOICE'/, 'Full Tax must resolve its dedicated document header profile');
 assert.match(scope, /\.print-a4 > div:first-child > div:first-child \{ align-items: center; \}/, 'Full Tax store header row must vertically center logo and store copy');
 
-// Customer receipt deliberately reuses the Full Tax renderer, so it inherits the exact same geometry.
-assert.match(customerReceipt, /BillLayoutFullTax/, 'Customer Receipt must reuse the Full Tax A4 layout');
+// Customer Receipt may use the historical Full Tax renderer or the newer dedicated A4 document,
+// but it must remain inside the shared store-document-header authority.
+assert.match(customerReceipt, /BillLayoutFullTax|CustomerReceiptA4Document/, 'Customer Receipt must use a canonical A4 document surface');
 assert.match(customerReceipt, /StoreDocumentHeaderScope/, 'Customer Receipt must use the shared document header scope');
 assert.match(customerReceipt, /documentType:\s*'CUSTOMER_RECEIPT'/, 'Customer Receipt must resolve its dedicated document header profile');
 

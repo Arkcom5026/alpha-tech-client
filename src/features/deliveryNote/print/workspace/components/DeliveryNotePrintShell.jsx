@@ -54,6 +54,9 @@ const DeliveryNotePrintShell = ({
             height: auto !important;
           }
 
+          /* Chrome paginates the entire POS layout, even when aside/nav/header are
+             hidden. Normalize only the ancestor chain that owns this document so
+             app-shell min-height/flex constraints cannot create a phantom sheet. */
           body:has(.a4-standard-delivery-shell) #root *:has(.a4-standard-delivery-shell) {
             box-sizing: border-box !important;
             display: block !important;
@@ -103,6 +106,8 @@ const DeliveryNotePrintShell = ({
             break-inside: avoid-page !important;
           }
 
+          /* Keep the signature baselines close to the physical page edge so the
+             blank area above them remains usable for handwritten signatures. */
           body .a4-standard-delivery-frame .dn-signatures {
             bottom: 1mm !important;
           }

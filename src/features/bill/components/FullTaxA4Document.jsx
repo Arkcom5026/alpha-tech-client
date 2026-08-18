@@ -5,6 +5,9 @@ import { buildReceiptItems } from '../utils/receiptGrouping';
 const MAX_ROWS_LAST_PAGE = 16;
 const MAX_ROWS_NORMAL_PAGE = 24;
 const PHYSICAL_PAGE_HEIGHT_MM = 296;
+const PRINT_PAGE_MARGIN_MM = 4;
+const PRINT_SHEET_WIDTH_MM = 201;
+const PRINT_SHEET_HEIGHT_MM = 288;
 
 const round2 = (value) => Number((Number(value || 0)).toFixed(2));
 const formatCurrency = (value) => (Number(value) || 0).toLocaleString('th-TH', {
@@ -239,7 +242,7 @@ const FullTaxA4Document = ({
   return (
     <>
       <style>{`
-        @page { size: A4; margin: 0; }
+        @page { size: A4; margin: ${PRINT_PAGE_MARGIN_MM}mm; }
         .full-tax-a4-page {
           box-sizing: border-box;
           width: 210mm;
@@ -251,10 +254,11 @@ const FullTaxA4Document = ({
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .full-tax-a4-page {
             box-sizing: border-box !important;
-            width: 210mm !important;
-            height: ${PHYSICAL_PAGE_HEIGHT_MM}mm !important;
-            min-height: ${PHYSICAL_PAGE_HEIGHT_MM}mm !important;
-            padding: 6mm !important;
+            width: ${PRINT_SHEET_WIDTH_MM}mm !important;
+            height: ${PRINT_SHEET_HEIGHT_MM}mm !important;
+            min-height: ${PRINT_SHEET_HEIGHT_MM}mm !important;
+            margin: 0 auto !important;
+            padding: 5mm !important;
             border: 0 !important;
             border-radius: 0 !important;
             box-shadow: none !important;
@@ -303,7 +307,7 @@ const FullTaxA4Document = ({
               breakAfter: page.isLast ? 'auto' : 'page',
             }}
           >
-            <header className="mb-2 flex items-start justify-between gap-3 border-b pb-2">
+            <div role="banner" className="mb-2 flex items-start justify-between gap-3 border-b pb-2">
               <div className="flex items-start gap-3">
                 {config.logoUrl ? <img src={config.logoUrl} alt="logo" className="h-16 w-16 object-contain" /> : null}
                 <div>
@@ -316,7 +320,7 @@ const FullTaxA4Document = ({
               <p className="rounded-md border border-gray-400 px-3 py-2 text-right text-[13px] font-bold leading-tight">
                 ต้นฉบับลูกค้า<br />CUSTOMER ORIGINAL
               </p>
-            </header>
+            </div>
 
             <h3 className="mb-3 text-center text-[20px] font-bold leading-tight underline">
               ใบเสร็จรับเงิน / ใบกำกับภาษี<br />TAX INVOICE ORIGINAL / DELIVERY ORDER

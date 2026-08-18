@@ -143,8 +143,8 @@ const PrintBillPageFullTax = () => {
           .full-tax-print-shell,
           .full-tax-print-frame {
             display: block !important;
-            width: 210mm !important;
-            max-width: 210mm !important;
+            width: 100% !important;
+            max-width: none !important;
             min-height: 0 !important;
             height: auto !important;
             margin: 0 !important;
@@ -180,16 +180,25 @@ const PrintBillPageFullTax = () => {
 
       <style>{`
         @media print {
-          @page { size: A4; margin: 6mm !important; }
+          /* FullTaxA4Document owns the deterministic A4 geometry. Keep the page
+             wrapper on exactly the same authority instead of introducing a second
+             210mm/6mm print box that can create a trailing Chromium sheet. */
+          @page { size: A4; margin: 4mm !important; }
 
           body .full-tax-a4-page {
             box-sizing: border-box !important;
-            width: 195mm !important;
-            max-width: 195mm !important;
-            height: 280mm !important;
-            min-height: 280mm !important;
-            max-height: 280mm !important;
+            width: 201mm !important;
+            max-width: 201mm !important;
+            height: 288mm !important;
+            min-height: 288mm !important;
+            max-height: 288mm !important;
             margin: 0 auto !important;
+          }
+
+          /* The summary is the third child from the end: summary, signatures,
+             page marker. Move it down visually without adding document-flow height. */
+          body .full-tax-a4-page > div:nth-last-child(3) {
+            transform: translateY(4mm) !important;
           }
         }
       `}</style>

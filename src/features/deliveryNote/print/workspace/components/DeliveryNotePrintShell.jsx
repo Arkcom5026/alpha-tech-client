@@ -37,7 +37,7 @@ const DeliveryNotePrintShell = ({
           border-radius: 2.5mm !important;
         }
         @media print {
-          @page { size: A4; margin: 4mm !important; }
+          @page { size: A4; margin: 6mm !important; }
 
           html,
           body,
@@ -64,11 +64,11 @@ const DeliveryNotePrintShell = ({
             display: block !important;
             position: relative !important;
             box-sizing: border-box !important;
-            width: 201mm !important;
-            max-width: 201mm !important;
-            height: 286mm !important;
-            min-height: 286mm !important;
-            max-height: 286mm !important;
+            width: 195mm !important;
+            max-width: 195mm !important;
+            height: 280mm !important;
+            min-height: 280mm !important;
+            max-height: 280mm !important;
             margin: 0 auto !important;
             padding: 5mm !important;
             border: 0.3mm solid #444 !important;

@@ -199,6 +199,14 @@ const QuotationPrintPage = () => {
   if (!quotation) return <div className="p-8 text-center text-rose-700">ไม่พบใบเสนอราคา</div>;
 
   const recipientName = quotation.customerCompany || quotation.customerName || '-';
+  const normalizedRecipientName = String(recipientName || '').trim();
+  const normalizedCustomerName = String(quotation.customerName || '').trim();
+  const normalizedContactName = String(quotation.customerContactName || '').trim();
+  const showContactName = Boolean(
+    normalizedContactName
+    && normalizedContactName !== normalizedRecipientName
+    && normalizedContactName !== normalizedCustomerName,
+  );
   const fillerHeight = tableFillerHeightMm(items);
   const hasTerms = Boolean(quotation.closingNote || quotation.notes || quotation.paymentTerms);
   const adjustedSubtotal = items.reduce(
@@ -238,7 +246,11 @@ const QuotationPrintPage = () => {
 
         <div className="grid grid-cols-[1.6fr_1fr] gap-3 text-[10.5px] leading-[1.5]">
           <section className="quotation-info-panel rounded-[2mm] border border-slate-500 px-2.5 py-2">
-            <p><strong>ลูกค้า:</strong> {recipientName}</p>{quotation.customerDepartment ? <p><strong>แผนก:</strong> {quotation.customerDepartment}</p> : null}{quotation.customerContactName ? <p><strong>ผู้ติดต่อ:</strong> {quotation.customerContactName}</p> : null}{quotation.customerAddress ? <p className="whitespace-pre-wrap"><strong>ที่อยู่:</strong> {quotation.customerAddress}</p> : null}<div className="flex flex-wrap gap-x-4">{quotation.customerPhone ? <p><strong>โทร:</strong> {quotation.customerPhone}</p> : null}{quotation.customerTaxId ? <p><strong>เลขประจำตัวผู้เสียภาษี:</strong> {quotation.customerTaxId}</p> : null}</div>
+            <p><strong>ลูกค้า:</strong> {recipientName}</p>
+            {showContactName ? <p><strong>ผู้ติดต่อ:</strong> {normalizedContactName}</p> : null}
+            <p className="whitespace-pre-wrap"><strong>ที่อยู่:</strong> {quotation.customerAddress || '-'}</p>
+            <p><strong>โทร:</strong> {quotation.customerPhone || '-'}</p>
+            <p><strong>เลขประจำตัวผู้เสียภาษี:</strong> {quotation.customerTaxId || '-'}</p>
           </section>
           <section className="quotation-info-panel rounded-[2mm] border border-slate-500 px-2.5 py-2"><div className="grid grid-cols-[28mm_1fr] gap-x-1"><span className="font-semibold">วันที่:</span><span>{date(quotation.issueDate || quotation.createdAt)}</span><span className="font-semibold">เลขที่:</span><span className="font-semibold">{quotation.code}</span><span className="font-semibold">ยืนราคาถึง:</span><span>{date(quotation.validUntil)}</span><span className="font-semibold">เงื่อนไขชำระเงิน:</span><span>{quotation.paymentTerms || '-'}</span></div></section>
         </div>

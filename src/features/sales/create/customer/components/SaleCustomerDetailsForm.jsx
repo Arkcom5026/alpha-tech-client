@@ -22,6 +22,7 @@ const SaleCustomerDetailsForm = ({
   onPatch,
   onCreate,
   onUpdate,
+  onCancelUpdate,
   onCancelCreate,
 }) => {
   const addressValue = {
@@ -176,14 +177,24 @@ const SaleCustomerDetailsForm = ({
 
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         {selectedCustomer ? (
-          <button
-            type="button"
-            onClick={onUpdate}
-            disabled={!isModified || disabled}
-            className="h-11 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            {mutationAction === 'update' ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={onCancelUpdate}
+              disabled={disabled}
+              className="h-11 rounded-xl border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="button"
+              onClick={onUpdate}
+              disabled={!isModified || disabled}
+              className="h-11 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              {mutationAction === 'update' ? 'กำลังบันทึก...' : 'บันทึกการแก้ไข'}
+            </button>
+          </>
         ) : pendingCreate ? (
           <>
             <button

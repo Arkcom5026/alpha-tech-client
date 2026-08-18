@@ -71,10 +71,16 @@ includes(paymentController, 'sourceQuotationId: sourceQuotationId || undefined')
 includes(documentApi, '`/sales/${saleId}/quotation-reference`');
 includes(documentApi, 'sourceQuotation: sourceQuotation || null');
 for (const token of [
+  "import { useNavigate, useParams } from 'react-router-dom';",
   'data-testid="delivery-note-source-quotation"',
+  'data-testid="delivery-note-source-quotation-link"',
   'อ้างอิงใบเสนอราคา:',
   'sale.sourceQuotation.code',
   'sale.sourceQuotation.revisionNumber',
+  'sale?.sourceQuotation?.id || sale?.sourceQuotation?.quotationId || null',
+  "`/${shopSlug || 'advancetech'}/pos/sales/quotations/${sourceQuotationId}/print`",
+  'onClick={() => navigate(quotationPath)}',
+  'เปิดใบเสนอราคา',
 ]) includes(deliveryShell, token);
 
 if (/quotation.*items|items.*quotation/i.test(payload)) {

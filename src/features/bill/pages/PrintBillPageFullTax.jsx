@@ -131,17 +131,14 @@ const PrintBillPageFullTax = () => {
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
         @media print {
-          /* Match Delivery Note footer geometry: keep the physical A4 page as the
-             containing block, reserve footer clearance, and pin signatures 3mm
-             from the page bottom. These rules are intentionally Full-Tax-only. */
+          /* Match Delivery Note footer geometry without growing the document flow.
+             The A4 page stays fixed at 297mm; footer clearance is reserved inside
+             the page box, while signatures remain pinned 3mm from the bottom. */
           .bill-print-root .store-document-header-scope .print-a4 {
             position: relative !important;
             min-height: 297mm !important;
-            height: auto !important;
-          }
-
-          .bill-print-root .store-document-header-scope .print-a4 > div:nth-last-child(2) {
-            margin-bottom: 28mm !important;
+            height: 297mm !important;
+            padding-bottom: 30mm !important;
           }
 
           .bill-print-root .store-document-header-scope .print-a4 > div:last-child {

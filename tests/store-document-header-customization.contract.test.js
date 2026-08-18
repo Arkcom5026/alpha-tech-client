@@ -31,6 +31,7 @@ assert.match(resolver, /DOCUMENT_LOGO_SIZE_DEFAULT = 56/, 'client logo size must
 assert.match(resolver, /LEGACY_LOGO_SIZE_PIXELS/, 'legacy logo size presets must remain supported');
 assert.match(resolver, /sm: 40, md: 56, lg: 72, xl: 88/, 'legacy presets must preserve their original pixel sizes');
 assert.match(resolver, /headerLogoSize: normalizeLogoSize\(profile\.logoSize\)/, 'settings projection must expose normalized pixel sizing');
+assert.match(resolver, /logoSize: base\.logoSize/, 'visible store-wide logo size must remain authoritative over hidden document overrides');
 
 assert.match(routes, /path: 'document-format'/, 'document format must have a dedicated settings route');
 assert.match(routes, /path: 'tax-issuer'/, 'tax issuer settings must remain a separate route');

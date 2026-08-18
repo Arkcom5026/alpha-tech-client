@@ -18,7 +18,8 @@ test('identity page resumes a verified proof after refresh before requesting ano
   assert.match(page, /useState\(\(\) => getCommerceIdentityProof\(shopSlug\)\)/);
   assert.match(page, /proofToken \? \(/);
   assert.match(page, /ดำเนินการจองต่อ/);
-  assert.match(page, /await createReservation\(proofToken\)/);
+  assert.match(page, /const proofTokenSnapshot = proofToken/);
+  assert.match(page, /await createReservation\(proofTokenSnapshot\)/);
 });
 
 test('expired or consumed proof returns customer to a replaceable OTP path', () => {

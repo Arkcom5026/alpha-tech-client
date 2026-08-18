@@ -132,10 +132,6 @@ const PrintBillPageFullTax = () => {
 
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
-  // The legacy layout reserves 20 rows. For short documents there are always at
-  // least two trailing visual filler rows. Hide exactly those two fillers in
-  // BOTH screen preview and print, so the preview itself is a physically valid
-  // one-page A4 document rather than relying on print-only reflow.
   const useCompactA4Grid = useMemo(
     () => Array.isArray(saleItems) && saleItems.length > 0 && saleItems.length <= 18,
     [saleItems]
@@ -158,7 +154,6 @@ const PrintBillPageFullTax = () => {
       <style>{`
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
-        /* One physical/layout authority for screen and native print. */
         .bill-print-root .print-a4 {
           display: block !important;
           width: 210mm !important;
@@ -168,17 +163,11 @@ const PrintBillPageFullTax = () => {
           box-sizing: border-box !important;
         }
 
-        /* These are guaranteed trailing fillers when raw item count <= 18. */
         .bill-print-compact-a4 .print-a4 tbody tr:nth-last-child(-n+2) {
           display: none !important;
         }
 
         @media print {
-          @page {
-            size: A4;
-            margin: 0 !important;
-          }
-
           html,
           body,
           #root,
@@ -210,14 +199,12 @@ const PrintBillPageFullTax = () => {
             border-radius: 0 !important;
           }
 
-          /* Keep the editor column's 4% width so printable columns do not reflow. */
           .bill-print-root .print-a4 thead th:nth-child(7),
           .bill-print-root .print-a4 tbody tr > td:nth-child(7) {
             display: table-cell !important;
             visibility: hidden !important;
           }
 
-          /* Expanded editor rows are workspace UI and never belong on paper. */
           .bill-print-root .print-a4 tbody tr.print\\:hidden {
             display: none !important;
           }
@@ -243,6 +230,35 @@ const PrintBillPageFullTax = () => {
               onSaveDocumentLine={canEditDocumentLines ? documentLineEditor.actions.save : undefined}
             />
           </StoreDocumentHeaderScope>
+
+          {/* Must render after BillLayoutFullTax because that component injects its own @page rule. */}
+          <style data-bill-print-final-authority>{`
+            @media print {
+              @page {
+                size: A4;
+                margin: 0 !important;
+              }
+
+              html,
+              body,
+              #root,
+              .bill-print-page-shell,
+              .bill-print-root {
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+
+              .bill-print-root .print-a4 {
+                display: block !important;
+                width: 210mm !important;
+                max-width: 210mm !important;
+                min-height: 296mm !important;
+                height: auto !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+              }
+            }
+          `}</style>
         </div>
       </div>
     </>

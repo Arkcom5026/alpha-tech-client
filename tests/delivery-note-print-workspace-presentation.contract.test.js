@@ -42,8 +42,14 @@ describe('delivery note print workspace presentation contract', () => {
     expect(shell).toContain('.dn-print-page:last-of-type');
     expect(shell).toContain('page-break-after: auto !important;');
     expect(shell).toContain('break-after: auto !important;');
+  });
+
+  it('isolates the document from POS layout pagination', () => {
+    expect(shell).toContain('body:has(.a4-standard-delivery-shell) #root *:has(.a4-standard-delivery-shell)');
     expect(shell).toContain('min-height: 0 !important;');
     expect(shell).toContain('height: auto !important;');
+    expect(shell).toContain('transform: none !important;');
+    expect(shell).toContain('position: static !important;');
   });
 
   it('preserves editable-line presentation through explicit intents', () => {

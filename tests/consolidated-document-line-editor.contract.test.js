@@ -76,15 +76,18 @@ assert(
     && page.includes('width: 210mm !important;')
     && page.includes('min-height: 296mm !important;')
     && page.includes('height: auto !important;')
-    && page.includes('margin: 0 !important;')
     && page.includes('box-sizing: border-box !important;')
+    && page.includes('useCompactA4Grid')
+    && page.includes("saleItems.length <= 18")
+    && page.includes('.bill-print-compact-a4 .print-a4 tbody tr:nth-last-child(-n+2)')
+    && page.includes("'bill-print-compact-a4'")
     && page.includes('thead th:nth-child(7)')
     && page.includes('visibility: hidden !important;')
     && !page.includes('width: 190mm !important;')
     && !page.includes('printFillerRowsToHide')
     && !page.includes('Math.max(15, itemCount)')
     && !page.includes('Math.max(16, itemCount)'),
-  'Full-tax preview and native print must share one block-flow A4-safe geometry without print-only row reflow.'
+  'Short full-tax previews must physically fit A4 before printing by sharing the same two-filler-row reduction in screen and print.'
 );
 
 console.log('Consolidated Document Line Editor Contract: PASS');

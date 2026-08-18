@@ -130,8 +130,13 @@ const QuotationPrintPage = () => {
       feedback.info('กรุณาระบุชื่อรายการ');
       return;
     }
+    const quantity = Number(lineDraft.quantity);
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      feedback.info('จำนวนต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป');
+      return;
+    }
 
-    const payload = { ...lineDraft, discountAmount: 0 };
+    const payload = { ...lineDraft, quantity, discountAmount: 0 };
     const isNew = editingLineId === 'NEW';
     setSavingLine(true);
     try {
@@ -171,7 +176,7 @@ const QuotationPrintPage = () => {
           </label>
           <label className="md:col-span-2">
             <span className="mb-1 block font-semibold text-slate-700">จำนวน</span>
-            <input type="number" min="0.01" step="0.01" value={lineDraft.quantity} onChange={(event) => patchLineDraft('quantity', event.target.value)} className="h-9 w-full rounded border border-slate-300 bg-white px-2.5 text-right outline-none focus:border-teal-500" />
+            <input type="number" min="1" step="1" value={lineDraft.quantity} onChange={(event) => patchLineDraft('quantity', event.target.value)} className="h-9 w-full rounded border border-slate-300 bg-white px-2.5 text-right outline-none focus:border-teal-500" />
           </label>
           <label className="md:col-span-2">
             <span className="mb-1 block font-semibold text-slate-700">หน่วย</span>

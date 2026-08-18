@@ -30,7 +30,7 @@ for (const token of [
   "runLifecycle('accept')",
   "runLifecycle('reject')",
   "runLifecycle('cancel')",
-  'หลังออกเอกสารแล้วข้อมูลและรายการจะถูกล็อกเป็น snapshot และแก้ไขไม่ได้',
+  'หลังออกเอกสารแล้วฉบับนี้จะถูกล็อก และหากต้องแก้ไขให้สร้าง Revision ใหม่',
 ]) {
   if (!printPage.includes(token)) throw new Error(`Quotation lifecycle workspace contract missing: ${token}`);
 }

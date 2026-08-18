@@ -1,9 +1,8 @@
 // src/features/bill/pages/PrintBillPageFullTax.jsx
-// 🏛️ Premium Next-Gen POS Print Page: (Full A4 Tax Invoice Core Logic Restored)
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
+import FullTaxA4Document from '@/features/bill/components/FullTaxA4Document'
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope'
 import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig'
 import { useBillDocumentSource } from '@/features/bill/hooks/useBillDocumentSource'
@@ -15,7 +14,6 @@ const PrintBillPageFullTax = () => {
   const params = useParams()
   const saleId = params.saleId || params.id
   const printedRef = useRef(false)
-
   const [searchParams] = useSearchParams()
 
   const paymentId = useMemo(() => {
@@ -27,6 +25,7 @@ const PrintBillPageFullTax = () => {
     () => String(searchParams.get('sourceType') || 'SALE').toUpperCase(),
     [searchParams]
   )
+
   const sourceId = useMemo(
     () => searchParams.get('sourceId') || saleId,
     [saleId, searchParams]
@@ -98,10 +97,7 @@ const PrintBillPageFullTax = () => {
     }
 
     run()
-
-    return () => {
-      reset()
-    }
+    return () => reset()
   }, [reloadForPrint, reset])
 
   useEffect(() => {
@@ -111,157 +107,55 @@ const PrintBillPageFullTax = () => {
   useEffect(() => {
     if (!autoPrint) return
     if (printedRef.current) return
-    if (!sale?.id) return
-    if (!documentConfig) return
-    if (!Array.isArray(saleItems) || saleItems.length === 0) return
-    if (!payment) return
+    if (!sale?.id || !documentConfig || !Array.isArray(saleItems) || saleItems.length === 0 || !payment) return
 
     printedRef.current = true
-
     const timerId = setTimeout(() => {
       try {
         window.focus?.()
         window.print?.()
       } catch {
-        // Printing remains a browser-owned operation.
+        // browser owns printing
       }
     }, 300)
 
     return () => clearTimeout(timerId)
-  }, [autoPrint, sale?.id, documentConfig, saleItems, payment?.id])
+  }, [autoPrint, sale?.id, documentConfig, saleItems, payment])
 
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
-  const useCompactA4Grid = useMemo(
-    () => Array.isArray(saleItems) && saleItems.length > 0 && saleItems.length <= 18,
-    [saleItems]
-  )
-
   if (loading) {
-    return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
+    return <div className="min-h-screen bg-slate-900 p-8 text-center font-bold text-zinc-400">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
   }
 
   if (workspaceError) {
-    return <div className="text-center p-8 text-rose-400 font-bold bg-slate-900 min-h-screen">เกิดข้อผิดพลาด: {workspaceError}</div>
+    return <div className="min-h-screen bg-slate-900 p-8 text-center font-bold text-rose-400">เกิดข้อผิดพลาด: {workspaceError}</div>
   }
 
   if (!sale || !Array.isArray(saleItems) || saleItems.length === 0 || !payment || !documentConfig) {
-    return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">ไม่พบข้อมูลใบเสร็จตามรหัสอ้างอิง</div>
+    return <div className="min-h-screen bg-slate-900 p-8 text-center font-bold text-zinc-400">ไม่พบข้อมูลใบเสร็จตามรหัสอ้างอิง</div>
   }
 
   return (
-    <>
-      <style>{`
-        .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
-
-        .bill-print-root .print-a4 {
-          display: block !important;
-          width: 210mm !important;
-          max-width: 210mm !important;
-          min-height: 296mm !important;
-          height: auto !important;
-          box-sizing: border-box !important;
-        }
-
-        .bill-print-compact-a4 .print-a4 tbody tr:nth-last-child(-n+2) {
-          display: none !important;
-        }
-
-        @media print {
-          html,
-          body,
-          #root,
-          .bill-print-page-shell,
-          .bill-print-root {
-            width: 210mm !important;
-            min-height: 0 !important;
-            height: auto !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            overflow: visible !important;
-          }
-
-          .bill-print-page-shell,
-          .bill-print-root {
-            display: block !important;
-            max-width: 210mm !important;
-          }
-
-          .bill-print-root .print-a4 {
-            display: block !important;
-            width: 210mm !important;
-            max-width: 210mm !important;
-            min-height: 296mm !important;
-            height: auto !important;
-            margin: 0 !important;
-            box-sizing: border-box !important;
-            overflow: visible !important;
-            border-radius: 0 !important;
-          }
-
-          .bill-print-root .print-a4 thead th:nth-child(7),
-          .bill-print-root .print-a4 tbody tr > td:nth-child(7) {
-            display: table-cell !important;
-            visibility: hidden !important;
-          }
-
-          .bill-print-root .print-a4 tbody tr.print\\:hidden {
-            display: none !important;
-          }
-        }
-      `}</style>
-
-      <div className="bill-print-page-shell w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
-        <div className={`bill-print-root ${useCompactA4Grid ? 'bill-print-compact-a4' : ''} mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none`}>
-          <StoreDocumentHeaderScope config={documentConfig}>
-            <BillLayoutFullTax
-              sale={sale}
-              saleItems={saleItems}
-              payments={[payment]}
-              config={documentConfig}
-              mode="full"
-              taxMode="full"
-              editableDocumentLines={canEditDocumentLines}
-              editingLineKey={canEditDocumentLines ? documentLineEditor.editingLineKey : null}
-              lineDrafts={canEditDocumentLines ? documentLineEditor.lineDrafts : {}}
-              savingLineKey={canEditDocumentLines ? documentLineEditor.savingLineKey : null}
-              onToggleDocumentLineEdit={canEditDocumentLines ? documentLineEditor.actions.toggle : undefined}
-              onChangeDocumentLineDraft={canEditDocumentLines ? documentLineEditor.actions.change : undefined}
-              onSaveDocumentLine={canEditDocumentLines ? documentLineEditor.actions.save : undefined}
-            />
-          </StoreDocumentHeaderScope>
-
-          {/* Must render after BillLayoutFullTax because that component injects its own @page rule. */}
-          <style data-bill-print-final-authority>{`
-            @media print {
-              @page {
-                size: A4;
-                margin: 0 !important;
-              }
-
-              html,
-              body,
-              #root,
-              .bill-print-page-shell,
-              .bill-print-root {
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-
-              .bill-print-root .print-a4 {
-                display: block !important;
-                width: 210mm !important;
-                max-width: 210mm !important;
-                min-height: 296mm !important;
-                height: auto !important;
-                margin: 0 !important;
-                box-sizing: border-box !important;
-              }
-            }
-          `}</style>
-        </div>
-      </div>
-    </>
+    <main className="min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
+      <section className="mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
+        <StoreDocumentHeaderScope config={documentConfig}>
+          <FullTaxA4Document
+            sale={sale}
+            saleItems={saleItems}
+            payments={[payment]}
+            config={documentConfig}
+            editableDocumentLines={canEditDocumentLines}
+            editingLineKey={canEditDocumentLines ? documentLineEditor.editingLineKey : null}
+            lineDrafts={canEditDocumentLines ? documentLineEditor.lineDrafts : {}}
+            savingLineKey={canEditDocumentLines ? documentLineEditor.savingLineKey : null}
+            onToggleDocumentLineEdit={canEditDocumentLines ? documentLineEditor.actions.toggle : undefined}
+            onChangeDocumentLineDraft={canEditDocumentLines ? documentLineEditor.actions.change : undefined}
+            onSaveDocumentLine={canEditDocumentLines ? documentLineEditor.actions.save : undefined}
+          />
+        </StoreDocumentHeaderScope>
+      </section>
+    </main>
   )
 }
 

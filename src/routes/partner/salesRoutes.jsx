@@ -25,7 +25,7 @@ import ReservationSaleBridgePage from '@/features/productReservation/merchant/pa
 import QuotationListPage from '@/features/quotation/pages/QuotationListPage';
 import CreateQuotationPage from '@/features/quotation/pages/CreateQuotationPage';
 import QuotationEditorPage from '@/features/quotation/pages/QuotationEditorPage';
-import QuotationPrintPage from '@/features/quotation/pages/QuotationPrintPage';
+import QuotationPrintLineagePage from '@/features/quotation/pages/QuotationPrintLineagePage';
 
 const salesRoutes = {
   path: 'sales',
@@ -39,7 +39,7 @@ const salesRoutes = {
     { path: 'quotations', element: <QuotationListPage /> },
     { path: 'quotations/new', element: <CreateQuotationPage /> },
     { path: 'quotations/:quotationId', element: <QuotationEditorPage /> },
-    { path: 'quotations/:quotationId/print', element: <QuotationPrintPage /> },
+    { path: 'quotations/:quotationId/print', element: <QuotationPrintLineagePage /> },
 
     // ProductReservation is the primary online-commerce work queue.
     { path: 'reservations', element: <ProductReservationInboxPage /> },

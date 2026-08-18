@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import {
   clearSaleCustomerFirstAssociation,
   storeSaleCustomerFirstAssociation,
@@ -37,6 +38,7 @@ export const useSaleCustomerHydration = ({
     }
 
     setCustomerId(fullCustomer.id);
+    useCustomerDepositStore.getState().setSelectedCustomer(fullCustomer);
     if (fullCustomer.firstAssociationToken) {
       storeSaleCustomerFirstAssociation({
         customerId: fullCustomer.id,

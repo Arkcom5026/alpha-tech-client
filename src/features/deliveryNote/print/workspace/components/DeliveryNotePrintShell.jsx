@@ -44,11 +44,32 @@ const DeliveryNotePrintShell = ({
           #root {
             margin: 0 !important;
             padding: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+          }
+
+          /* Chrome paginates the entire POS layout, even when aside/nav/header are
+             hidden. Normalize only the ancestor chain that owns this document so
+             app-shell min-height/flex constraints cannot create a phantom sheet. */
+          body:has(.a4-standard-delivery-shell) #root *:has(.a4-standard-delivery-shell) {
+            box-sizing: border-box !important;
+            display: block !important;
+            position: static !important;
+            width: auto !important;
+            max-width: none !important;
+            min-width: 0 !important;
+            min-height: 0 !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            transform: none !important;
           }
 
           .a4-standard-delivery-shell,
           .a4-standard-delivery-frame {
             display: block !important;
+            position: static !important;
             width: auto !important;
             max-width: none !important;
             min-height: 0 !important;

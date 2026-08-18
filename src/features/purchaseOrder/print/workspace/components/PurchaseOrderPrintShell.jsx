@@ -46,7 +46,7 @@ const PurchaseOrderPrintShell = ({
         }
 
         .purchase-order-a4-page {
-          position: static !important;
+          position: relative !important;
           box-sizing: border-box !important;
           width: 201mm !important;
           min-height: 288mm !important;
@@ -67,7 +67,7 @@ const PurchaseOrderPrintShell = ({
 
     <article
       ref={printRef}
-      className="print-area purchase-order-a4-page bg-white text-[14px] text-black shadow-sm"
+      className="print-area purchase-order-a4-page relative bg-white text-[14px] text-black shadow-sm"
     >
       <div role="banner" className="mb-5 flex items-start justify-between border-b border-slate-300 pb-3">
         <div>

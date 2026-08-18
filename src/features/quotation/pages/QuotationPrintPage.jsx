@@ -218,7 +218,7 @@ const QuotationPrintPage = () => {
         <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Printer className="h-4 w-4" /> พิมพ์ใบเสนอราคา</button>
       </div>
 
-      <section className="quotation-a4 mx-auto box-border flex w-[195mm] min-h-[280mm] flex-col rounded-[2.5mm] border border-slate-500 bg-white p-[5mm] shadow-sm print:rounded-[2.5mm] print:shadow-none">
+      <section className="quotation-a4 relative mx-auto box-border flex w-[195mm] min-h-[280mm] flex-col rounded-[2.5mm] border border-slate-500 bg-white p-[5mm] shadow-sm print:rounded-[2.5mm] print:shadow-none">
         <div className="quotation-document-header flex min-h-[31mm] items-center justify-between gap-5 border-b border-slate-300 pb-2 mb-1.5">
           <div className={`flex min-w-0 flex-1 items-center gap-4 ${header?.headerStyle?.logoPosition === 'right' ? 'flex-row-reverse' : header?.headerStyle?.logoPosition === 'center' ? 'flex-col items-center' : ''}`}>
             {header.logoUrl ? <img src={header.logoUrl} alt="โลโก้ร้าน" className="shrink-0 object-contain" style={{ width: `${deliveryAlignedLogoSize}px`, height: `${deliveryAlignedLogoSize}px` }} /> : null}
@@ -271,7 +271,7 @@ const QuotationPrintPage = () => {
       </section>
 
       <style>{`
-        .quotation-a4 { font-family: var(--document-font-family, Tahoma, Arial, sans-serif); }
+        .quotation-a4 { position: relative; font-family: var(--document-font-family, Tahoma, Arial, sans-serif); }
         @media print {
           @page { size: A4; margin: 6mm !important; }
           html, body, #root { margin: 0 !important; padding: 0 !important; min-height: 0 !important; height: auto !important; }

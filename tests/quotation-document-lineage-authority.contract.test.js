@@ -9,6 +9,9 @@ const read = (p) => fs.readFileSync(path.join(root, p), 'utf8');
 const includes = (source, token) => { if (!source.includes(token)) throw new Error(`Missing client lineage contract: ${token}`); };
 
 const quotationApi = read('src/features/quotation/api/quotationApi.js');
+const quotationLineagePanel = read('src/features/quotation/components/QuotationDocumentLineagePanel.jsx');
+const quotationPrintLineagePage = read('src/features/quotation/pages/QuotationPrintLineagePage.jsx');
+const salesRoutes = read('src/routes/partner/salesRoutes.jsx');
 const salePage = read('src/features/sales/create/pages/CreateSalePage.jsx');
 const hydration = read('src/features/sales/create/customer/hooks/useSaleCustomerHydration.js');
 const payload = read('src/features/sales/create/completion/services/saleCompletionPayload.js');
@@ -21,6 +24,24 @@ const deliveryShell = read('src/features/deliveryNote/print/workspace/components
 includes(quotationApi, 'export const getQuotationDocumentLineage');
 includes(quotationApi, 'export const listQuotationReferenceCandidates');
 includes(quotationApi, '/sales/quotations/reference-candidates?');
+for (const token of [
+  'getQuotationDocumentLineage(quotationId)',
+  "document.querySelector('.quotation-print-shell')",
+  "shell?.querySelector('.quotation-a4')",
+  'shell.insertBefore(host, a4)',
+  'data-testid="quotation-document-lineage"',
+  'เอกสารที่อ้างอิงใบเสนอราคานี้',
+  'การขาย:',
+  'ใบส่งของ:',
+  'เอกสารภาษี:',
+  'print:hidden',
+]) includes(quotationLineagePanel, token);
+for (const token of [
+  '<QuotationPrintPage />',
+  '<QuotationDocumentLineagePanel quotationId={quotationId} shopSlug={shopSlug} />',
+]) includes(quotationPrintLineagePage, token);
+includes(salesRoutes, "import QuotationPrintLineagePage from '@/features/quotation/pages/QuotationPrintLineagePage';");
+includes(salesRoutes, "{ path: 'quotations/:quotationId/print', element: <QuotationPrintLineagePage /> }");
 for (const token of [
   'const quotationWorkflowEnabled = Boolean(',
   'selectedCustomer?.quotationWorkflowEnabled === true',

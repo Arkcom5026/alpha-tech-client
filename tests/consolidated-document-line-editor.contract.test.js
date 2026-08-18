@@ -75,12 +75,15 @@ assert(
 assert(
   document.includes('const MAX_ROWS_LAST_PAGE = 16;')
     && document.includes('const MAX_ROWS_NORMAL_PAGE = 24;')
-    && document.includes("@page { size: A4; margin: 0; }")
-    && document.includes('const PHYSICAL_PAGE_HEIGHT_MM = 296;')
-    && document.includes("height: ${PHYSICAL_PAGE_HEIGHT_MM}mm !important;")
+    && document.includes('const PRINT_PAGE_MARGIN_MM = 4;')
+    && document.includes('const PRINT_SHEET_WIDTH_MM = 201;')
+    && document.includes('const PRINT_SHEET_HEIGHT_MM = 288;')
+    && document.includes('@page { size: A4; margin: ${PRINT_PAGE_MARGIN_MM}mm; }')
+    && document.includes('width: ${PRINT_SHEET_WIDTH_MM}mm !important;')
+    && document.includes('height: ${PRINT_SHEET_HEIGHT_MM}mm !important;')
     && document.includes("absolute bottom-[5mm]")
     && document.includes("absolute bottom-[31mm]"),
-  'Full-tax editor integration must preserve deterministic page capacities, Chromium-safe physical height, and reserved summary/signature zones.'
+  'Full-tax editor integration must preserve deterministic page capacities, print-safe A4 content geometry, and reserved summary/signature zones.'
 );
 
 console.log('Consolidated Document Line Editor Contract: PASS');

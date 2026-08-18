@@ -36,7 +36,6 @@ const buildLineDraft = (item = {}, sortOrder = 0) => ({
   quantity: Number(item.quantity || 1),
   unitName: item.unitName || '',
   unitPrice: Number(item.unitPrice || 0),
-  discountAmount: Number(item.discountAmount || 0),
   sortOrder: Number(item.sortOrder ?? sortOrder),
 });
 
@@ -132,11 +131,12 @@ const QuotationPrintPage = () => {
       return;
     }
 
+    const payload = { ...lineDraft, discountAmount: 0 };
     const isNew = editingLineId === 'NEW';
     setSavingLine(true);
     try {
-      if (isNew) await addQuotationLine(quotationId, lineDraft);
-      else await updateQuotationLine(quotationId, editingLineId, lineDraft);
+      if (isNew) await addQuotationLine(quotationId, payload);
+      else await updateQuotationLine(quotationId, editingLineId, payload);
       await refreshQuotation();
       setEditingLineId(null);
       setLineDraft(null);
@@ -177,15 +177,11 @@ const QuotationPrintPage = () => {
             <span className="mb-1 block font-semibold text-slate-700">หน่วย</span>
             <input value={lineDraft.unitName} onChange={(event) => patchLineDraft('unitName', event.target.value)} className="h-9 w-full rounded border border-slate-300 bg-white px-2.5 outline-none focus:border-teal-500" />
           </label>
-          <label className="md:col-span-3">
+          <label className="md:col-span-4">
             <span className="mb-1 block font-semibold text-slate-700">ราคา/หน่วย</span>
             <input type="number" min="0" step="0.01" value={lineDraft.unitPrice} onChange={(event) => patchLineDraft('unitPrice', event.target.value)} className="h-9 w-full rounded border border-slate-300 bg-white px-2.5 text-right outline-none focus:border-teal-500" />
           </label>
-          <label className="md:col-span-3">
-            <span className="mb-1 block font-semibold text-slate-700">ส่วนลด</span>
-            <input type="number" min="0" step="0.01" value={lineDraft.discountAmount} onChange={(event) => patchLineDraft('discountAmount', event.target.value)} className="h-9 w-full rounded border border-slate-300 bg-white px-2.5 text-right outline-none focus:border-teal-500" />
-          </label>
-          <div className="flex items-end justify-end gap-2 md:col-span-2">
+          <div className="flex items-end justify-end gap-2 md:col-span-4">
             <button type="button" onClick={cancelLineEdit} disabled={savingLine} className="inline-flex h-9 items-center gap-1 rounded border border-slate-300 bg-white px-3 font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50"><X className="h-3.5 w-3.5" /> ยกเลิก</button>
             <button type="button" onClick={saveLineEdit} disabled={savingLine} className="inline-flex h-9 items-center gap-1 rounded bg-teal-700 px-3 font-semibold text-white hover:bg-teal-800 disabled:opacity-50"><Save className="h-3.5 w-3.5" /> {savingLine ? 'กำลังบันทึก' : 'บันทึก'}</button>
           </div>
@@ -200,6 +196,13 @@ const QuotationPrintPage = () => {
   const recipientName = quotation.customerCompany || quotation.customerName || '-';
   const fillerHeight = tableFillerHeightMm(items);
   const hasTerms = Boolean(quotation.closingNote || quotation.notes || quotation.paymentTerms);
+  const adjustedSubtotal = items.reduce(
+    (sum, item) => sum + Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.unitPrice || 0)),
+    0,
+  );
+  const vatRate = quotation.vatEnabled === false ? 0 : Number(quotation.vatRate || 0);
+  const vatAmount = adjustedSubtotal * vatRate / 100;
+  const grandTotal = adjustedSubtotal + vatAmount;
 
   return (
     <main className="quotation-print-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
@@ -241,34 +244,11 @@ const QuotationPrintPage = () => {
             <tbody>
               {items.map((item, index) => {
                 const isEditing = editable && editingLineId === item.id;
-                return <React.Fragment key={item.id}><tr className={`align-top break-inside-avoid ${isEditing ? 'bg-slate-50 print:bg-white' : ''}`}><td className="border border-slate-500 px-1 py-1.5 text-center">{index + 1}</td><td className="border border-slate-500 px-2 py-1.5"><div className="font-semibold">{item.title}</div>{item.description ? <div className="mt-0.5 whitespace-pre-wrap text-[9px] leading-[1.5]">{item.description}</div> : null}</td><td className="border border-slate-500 px-1 py-1.5 text-right">{Number(item.quantity || 0)}</td><td className="border border-slate-500 px-1 py-1.5 text-center">{item.unitName || '-'}</td><td className="border border-slate-500 px-1 py-1.5 text-right tabular-nums">{money(item.unitPrice)}</td><td className="border border-slate-500 px-1 py-1.5 text-right font-semibold tabular-nums">{money(item.lineTotal)}</td>{editable ? <td className="border border-slate-500 px-1 py-1 text-center align-top print:hidden"><button type="button" onClick={() => beginLineEdit(item)} className={`inline-flex h-7 w-7 items-center justify-center rounded border ${isEditing ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}`} aria-label="แก้ไขรายการนี้บนใบเสนอราคา" title="แก้ไขรายการ"><Pencil className="h-3.5 w-3.5" /></button></td> : null}</tr>{isEditing ? <tr className="print:hidden"><td colSpan="7" className="p-0">{renderLineEditor()}</td></tr> : null}</React.Fragment>;
+                const amount = Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.unitPrice || 0));
+                return <React.Fragment key={item.id}><tr className={`align-top break-inside-avoid ${isEditing ? 'bg-slate-50 print:bg-white' : ''}`}><td className="border border-slate-500 px-1 py-1.5 text-center">{index + 1}</td><td className="border border-slate-500 px-2 py-1.5"><div className="font-semibold">{item.title}</div>{item.description ? <div className="mt-0.5 whitespace-pre-wrap text-[9px] leading-[1.5]">{item.description}</div> : null}</td><td className="border border-slate-500 px-1 py-1.5 text-right">{Number(item.quantity || 0)}</td><td className="border border-slate-500 px-1 py-1.5 text-center">{item.unitName || '-'}</td><td className="border border-slate-500 px-1 py-1.5 text-right tabular-nums">{money(item.unitPrice)}</td><td className="border border-slate-500 px-1 py-1.5 text-right font-semibold tabular-nums">{money(amount)}</td>{editable ? <td className="border border-slate-500 px-1 py-1 text-center align-top print:hidden"><button type="button" onClick={() => beginLineEdit(item)} className={`inline-flex h-7 w-7 items-center justify-center rounded border ${isEditing ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-slate-300 bg-white text-slate-500 hover:bg-slate-50'}`} aria-label="แก้ไขรายการนี้บนใบเสนอราคา" title="แก้ไขรายการ"><Pencil className="h-3.5 w-3.5" /></button></td> : null}</tr>{isEditing ? <tr className="print:hidden"><td colSpan="7" className="p-0">{renderLineEditor()}</td></tr> : null}</React.Fragment>;
               })}
 
-              {editable ? (
-                <React.Fragment>
-                  <tr className="quotation-add-line-row print:hidden">
-                    <td className="h-9 border border-slate-500 text-center text-slate-400">{items.length + 1}</td>
-                    <td className="border border-slate-500 px-2 text-[9px] text-slate-400">เพิ่มรายการถัดไป</td>
-                    <td className="border border-slate-500">&nbsp;</td>
-                    <td className="border border-slate-500">&nbsp;</td>
-                    <td className="border border-slate-500">&nbsp;</td>
-                    <td className="border border-slate-500">&nbsp;</td>
-                    <td className="border border-slate-500 p-1 text-center">
-                      <button
-                        type="button"
-                        onClick={beginNewLine}
-                        disabled={savingLine || editingLineId === 'NEW'}
-                        className="inline-flex h-7 w-7 items-center justify-center rounded border border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50"
-                        aria-label="เพิ่มรายการถัดไปบนใบเสนอราคา"
-                        title="เพิ่มรายการ"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                  {editingLineId === 'NEW' ? <tr className="print:hidden"><td colSpan="7" className="p-0">{renderLineEditor()}</td></tr> : null}
-                </React.Fragment>
-              ) : null}
+              {editable ? <React.Fragment><tr className="quotation-add-line-row print:hidden"><td className="h-9 border border-slate-500 text-center text-slate-400">{items.length + 1}</td><td className="border border-slate-500 px-2 text-[9px] text-slate-400">เพิ่มรายการถัดไป</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500 p-1 text-center"><button type="button" onClick={beginNewLine} disabled={savingLine || editingLineId === 'NEW'} className="inline-flex h-7 w-7 items-center justify-center rounded border border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50" aria-label="เพิ่มรายการถัดไปบนใบเสนอราคา" title="เพิ่มรายการ"><Plus className="h-4 w-4" /></button></td></tr>{editingLineId === 'NEW' ? <tr className="print:hidden"><td colSpan="7" className="p-0">{renderLineEditor()}</td></tr> : null}</React.Fragment> : null}
 
               {fillerHeight > 0 ? <tr className="quotation-table-filler" aria-hidden="true"><td className="border border-slate-500" style={{ height: `${fillerHeight}mm` }}>&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td>{editable ? <td className="border border-slate-500 print:hidden">&nbsp;</td> : null}</tr> : null}
             </tbody>
@@ -277,7 +257,7 @@ const QuotationPrintPage = () => {
 
         <div className="quotation-settlement grid h-[34mm] grid-cols-[1.6fr_1fr] break-inside-avoid text-[10px] leading-[1.55]">
           <section className="border-x border-b border-slate-500 px-2.5 py-2"><p className="font-semibold">เงื่อนไข / หมายเหตุ</p>{quotation.closingNote ? <div className="mt-1 whitespace-pre-wrap">{quotation.closingNote}</div> : null}{quotation.notes ? <div className={`${quotation.closingNote ? 'mt-1' : ''} whitespace-pre-wrap`}>{quotation.notes}</div> : null}{!hasTerms ? <p className="mt-1">-</p> : null}</section>
-          <section className="border-b border-r border-slate-500 px-2.5 py-2"><div className="flex justify-between gap-3"><span>ยอดรายการ</span><span className="tabular-nums">{money(quotation.subtotal)}</span></div>{Number(quotation.lineDiscountTotal || 0) > 0 ? <div className="flex justify-between gap-3"><span>ส่วนลดรายการ</span><span className="tabular-nums">- {money(quotation.lineDiscountTotal)}</span></div> : null}{Number(quotation.billDiscount || 0) > 0 ? <div className="flex justify-between gap-3"><span>ส่วนลดท้ายบิล</span><span className="tabular-nums">- {money(quotation.billDiscount)}</span></div> : null}{quotation.vatEnabled ? <div className="flex justify-between gap-3"><span>ภาษีมูลค่าเพิ่ม {Number(quotation.vatRate || 0)}%</span><span className="tabular-nums">{money(quotation.vatAmount)}</span></div> : null}<div className="mt-1 flex justify-between gap-3 border-t border-slate-400 pt-1 text-[13px] font-bold"><span>ยอดสุทธิ</span><span className="tabular-nums">{money(quotation.grandTotal)} บาท</span></div></section>
+          <section className="border-b border-r border-slate-500 px-2.5 py-2"><div className="flex justify-between gap-3"><span>ยอดราคาหลังปรับ</span><span className="tabular-nums">{money(adjustedSubtotal)}</span></div>{quotation.vatEnabled ? <div className="flex justify-between gap-3"><span>ภาษีมูลค่าเพิ่ม {Number(quotation.vatRate || 0)}%</span><span className="tabular-nums">{money(vatAmount)}</span></div> : null}<div className="mt-1 flex justify-between gap-3 border-t border-slate-400 pt-1 text-[13px] font-bold"><span>ยอดสุทธิ</span><span className="tabular-nums">{money(grandTotal)} บาท</span></div></section>
         </div>
 
         <footer className="quotation-signatures grid grid-cols-2 gap-[20mm] pt-[6mm] text-center text-[10px]"><div><div className="mx-auto h-[11mm] w-[86%] border-b border-slate-500" /><p className="mt-1 font-semibold">ผู้เสนอราคา / QUOTED BY</p><p className="mt-1 text-[9px]">วันที่ ______ / ______ / ______</p></div><div><div className="mx-auto h-[11mm] w-[86%] border-b border-slate-500" /><p className="mt-1 font-semibold">ผู้ตอบรับใบเสนอราคา / ACCEPTED BY</p><p className="mt-1 text-[9px]">วันที่ ______ / ______ / ______</p></div></footer>

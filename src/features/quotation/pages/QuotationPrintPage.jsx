@@ -208,6 +208,8 @@ const QuotationPrintPage = () => {
   const vatRate = quotation.vatEnabled === false ? 0 : Number(quotation.vatRate || 0);
   const vatAmount = adjustedSubtotal * vatRate / 100;
   const grandTotal = adjustedSubtotal + vatAmount;
+  const configuredLogoSize = Number(header?.headerStyle?.logoSize || 0);
+  const documentLogoSize = Math.min(92, Math.max(68, configuredLogoSize || 82));
 
   return (
     <main className="quotation-print-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
@@ -217,22 +219,25 @@ const QuotationPrintPage = () => {
       </div>
 
       <section className="quotation-a4 mx-auto box-border flex w-[195mm] min-h-[280mm] flex-col rounded-[2.5mm] border border-slate-500 bg-white p-[5mm] shadow-sm print:rounded-[2.5mm] print:shadow-none">
-        <div className="quotation-document-header flex items-start justify-between gap-5 border-b border-slate-300 pb-2.5">
-          <div className={`flex min-w-0 flex-1 gap-3 ${header?.headerStyle?.logoPosition === 'right' ? 'flex-row-reverse' : header?.headerStyle?.logoPosition === 'center' ? 'flex-col items-center' : ''}`}>
-            {header.logoUrl ? <img src={header.logoUrl} alt="โลโก้ร้าน" className="shrink-0 object-contain" style={{ width: `${header?.headerStyle?.logoSize || 56}px`, height: `${header?.headerStyle?.logoSize || 56}px` }} /> : null}
-            <div className={`min-w-0 text-[10.5px] leading-[1.5] ${header?.headerStyle?.textAlign === 'center' ? 'text-center' : header?.headerStyle?.textAlign === 'right' ? 'text-right' : 'text-left'}`}>
-              {header.branchName ? <h2 className="font-bold leading-tight text-slate-950" style={{ fontSize: header?.headerStyle?.storeNameSize === 'xl' ? 24 : header?.headerStyle?.storeNameSize === 'lg' ? 20 : header?.headerStyle?.storeNameSize === 'sm' ? 13 : 16 }}>{header.branchName}</h2> : null}
-              {header.address ? <p className="mt-1">ที่อยู่: {header.address}</p> : null}
-              <div className="flex flex-wrap gap-x-4">{header.phone ? <p>โทร: {header.phone}</p> : null}{header.taxId ? <p>เลขประจำตัวผู้เสียภาษี: {header.taxId}</p> : null}</div>
+        <div className="quotation-document-header flex min-h-[31mm] items-center justify-between gap-4 border-b border-slate-300 pb-2.5">
+          <div className={`flex min-w-0 flex-1 items-center gap-4 ${header?.headerStyle?.logoPosition === 'right' ? 'flex-row-reverse justify-end' : header?.headerStyle?.logoPosition === 'center' ? 'flex-col justify-center gap-2' : ''}`}>
+            {header.logoUrl ? <img src={header.logoUrl} alt="โลโก้ร้าน" className="quotation-document-logo shrink-0 object-contain" style={{ width: `${documentLogoSize}px`, height: `${documentLogoSize}px` }} /> : null}
+            <div className={`min-w-0 text-[11px] leading-[1.38] ${header?.headerStyle?.textAlign === 'center' ? 'text-center' : header?.headerStyle?.textAlign === 'right' ? 'text-right' : 'text-left'}`}>
+              {header.branchName ? <h2 className="font-bold leading-tight text-slate-950" style={{ fontSize: header?.headerStyle?.storeNameSize === 'xl' ? 20 : header?.headerStyle?.storeNameSize === 'lg' ? 18 : header?.headerStyle?.storeNameSize === 'sm' ? 13 : 16 }}>{header.branchName}</h2> : null}
+              {header.address ? <p className="mt-0.5">ที่อยู่: {header.address}</p> : null}
+              {header.phone ? <p>โทร: {header.phone}</p> : null}
+              {header.taxId ? <p>เลขประจำตัวผู้เสียภาษี: {header.taxId}</p> : null}
               {header?.headerStyle?.headerNote ? <p className="mt-0.5 whitespace-pre-wrap">{header.headerStyle.headerNote}</p> : null}
             </div>
           </div>
-          <div className="w-[34mm] shrink-0 text-right">
-            {quotation.status === 'DRAFT' ? <div className="inline-flex flex-col items-center rounded-[1.5mm] border border-amber-400 px-2 py-1 text-center"><span className="text-[9px] font-bold text-amber-800">ฉบับร่าง</span><span className="text-[7.5px] font-semibold tracking-wide text-amber-700">DRAFT</span></div> : <div className="inline-flex flex-col items-center rounded-[1.5mm] border border-slate-400 px-2 py-1 text-center"><span className="text-[9px] font-bold">ต้นฉบับลูกค้า</span><span className="text-[7.5px] font-semibold tracking-wide">CUSTOMER ORIGINAL</span></div>}
+          <div className="w-[36mm] shrink-0 self-center text-right">
+            {quotation.status === 'DRAFT'
+              ? <div className="inline-flex min-w-[27mm] flex-col items-center rounded-[1.5mm] border border-amber-400 px-2.5 py-1.5 text-center"><span className="text-[9.5px] font-bold text-amber-800">ฉบับร่าง</span><span className="text-[7.5px] font-semibold tracking-wide text-amber-700">DRAFT</span></div>
+              : <div className="inline-flex min-w-[27mm] flex-col items-center rounded-[1.5mm] border border-slate-400 px-2.5 py-1.5 text-center"><span className="text-[9.5px] font-bold">ต้นฉบับลูกค้า</span><span className="text-[7.5px] font-semibold tracking-wide">CUSTOMER ORIGINAL</span></div>}
           </div>
         </div>
 
-        <div className="quotation-document-title py-3 text-center"><h1 className="text-[18px] font-extrabold leading-none underline underline-offset-2">ใบเสนอราคา</h1><p className="mt-1 text-[10px] font-bold tracking-[0.16em]">QUOTATION</p></div>
+        <div className="quotation-document-title py-2.5 text-center"><h1 className="text-[18px] font-extrabold leading-none underline underline-offset-2">ใบเสนอราคา</h1><p className="mt-1 text-[10px] font-bold tracking-[0.16em]">QUOTATION</p></div>
 
         <div className="grid grid-cols-[1.6fr_1fr] gap-3 text-[10.5px] leading-[1.5]">
           <section className="quotation-info-panel rounded-[2mm] border border-slate-500 px-2.5 py-2">

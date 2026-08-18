@@ -46,7 +46,8 @@ const customerStore = read(paths.customerStore);
 assert(!searchComponent.includes('react-input-mask'), 'Unified search must not require a phone-only mask');
 assert(!searchComponent.includes('searchMode'), 'Unified search must not expose caller-selected modes');
 assert(searchComponent.includes('ชื่อ เบอร์โทร บริษัท หน่วยงาน อีเมล หรือเลขผู้เสียภาษี'), 'Search presentation must describe the customer-only fields');
-assert(searchComponent.includes('ไม่ค้นหาสินค้า บาร์โค้ด หรือหมายเลขอุปกรณ์'), 'Sale search must state the device-search boundary');
+assert(searchComponent.includes('aria-label="ค้นหาลูกค้า"'), 'Sale search must retain an explicit customer-only accessible boundary');
+assert(!searchComponent.includes('บาร์โค้ด') && !searchComponent.includes('หมายเลขอุปกรณ์'), 'Compact Sale customer search must not reintroduce device-search helper copy');
 assert(!searchComponent.includes('apiClient'), 'Search presentation must not call APIs');
 assert(!searchComponent.includes('useCustomerDepositStore'), 'Search presentation must not own Deposit state');
 assert(!resultsComponent.includes('apiClient'), 'Result presentation must not call APIs');
@@ -55,7 +56,7 @@ assert(resultsComponent.includes('customer.phone'), 'Results must expose phone e
 assert(detailsComponent.includes('AddressForm'), 'Details presentation must own address rendering');
 assert(detailsComponent.includes('แผนก / กอง / สำนัก'), 'Details presentation must expose department input');
 assert(detailsComponent.includes('departmentName: event.target.value'), 'Department input must update editor state');
-assert(!detailsComponent.includes('apiClient'), 'Details presentation must not call APIs');
+assert(!detailsComponent.includes('apiClient'), 'Details presentation must not call APIs directly');
 
 assert(searchHook.includes('submitSearch'), 'Search hook must own search execution');
 assert(searchHook.includes('setResults'), 'Search hook must own result state');

@@ -30,9 +30,6 @@ const PrintBillPageFullTax = () => {
     [saleId, searchParams]
   )
 
-  // Document Workspace baseline:
-  // - default: do not auto print, allowing document-line review first
-  // - opt in to the previous behavior with ?autoPrint=1
   const autoPrint = useMemo(() => {
     const value = String(searchParams.get('autoPrint') || '').toLowerCase()
     return value === '1' || value === 'true' || value === 'yes'
@@ -88,7 +85,6 @@ const PrintBillPageFullTax = () => {
     printedRef.current = false
   }, [sourceType, sourceId, autoPrint])
 
-  // Auto-print remains opt-in only via ?autoPrint=1.
   useEffect(() => {
     if (!autoPrint) return
     if (printedRef.current) return
@@ -131,23 +127,25 @@ const PrintBillPageFullTax = () => {
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
         @media print {
-          /* Match Delivery Note footer geometry without growing the document flow.
-             The A4 page stays fixed at 297mm; footer clearance is reserved inside
-             the page box, while signatures remain pinned 3mm from the bottom. */
+          /* Keep a tiny physical-page safety allowance for Chromium rounding.
+             This prevents a fully blank trailing sheet while preserving the A4 look. */
           .bill-print-root .store-document-header-scope .print-a4 {
             position: relative !important;
-            min-height: 297mm !important;
-            height: 297mm !important;
+            min-height: 296mm !important;
+            height: 296mm !important;
             padding-bottom: 24mm !important;
           }
 
-          /* Delivery Note uses a denser 24px row rhythm. Full Tax adopts the same
-             print-only table rhythm so the summary/footer remain inside one A4 page.
-             Screen/editor geometry is intentionally unchanged. */
+          /* Match Delivery Note's denser print table rhythm. */
           .bill-print-root .store-document-header-scope .print-a4 table thead th,
           .bill-print-root .store-document-header-scope .print-a4 table tbody td {
             height: 24px !important;
             min-height: 24px !important;
+          }
+
+          /* Move the summary slightly away from the table without increasing flow height. */
+          .bill-print-root .store-document-header-scope .print-a4 > div:nth-last-child(2) {
+            transform: translateY(4mm);
           }
 
           .bill-print-root .store-document-header-scope .print-a4 > div:last-child {

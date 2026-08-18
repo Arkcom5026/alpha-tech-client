@@ -241,8 +241,8 @@ const QuotationEditorPage = () => {
     const currentPrice = Number(line.unitPrice || 0);
     const adjustedPrice = currentPrice + adjustment;
 
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      feedback.info('จำนวนต้องมากกว่า 0');
+    if (!Number.isInteger(quantity) || quantity <= 0) {
+      feedback.info('จำนวนต้องเป็นจำนวนเต็มตั้งแต่ 1 ขึ้นไป');
       return;
     }
     if (!Number.isFinite(adjustment) || adjustedPrice < 0) {
@@ -431,7 +431,7 @@ const QuotationEditorPage = () => {
                       {line.description ? <p className="mt-1 line-clamp-2 whitespace-pre-line text-xs text-slate-500">{line.description}</p> : null}
                     </td>
                     <td className="px-3 py-3"><span className={`rounded-full px-2 py-1 text-xs font-semibold ${line.sourceProductId ? 'bg-teal-50 text-teal-800' : 'bg-slate-100 text-slate-600'}`}>{line.sourceProductId ? 'สินค้าในระบบ' : 'Manual'}</span></td>
-                    <td className="px-2 py-2 text-center"><input data-testid={`quotation-intake-quantity-${line.id}`} type="number" min="0.01" step="0.01" disabled={!editable || lineSavingId === line.id} value={draft.quantity} onChange={(event) => changeLineDraft(line, 'quantity', event.target.value)} className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-right tabular-nums outline-none focus:border-teal-500" /></td>
+                    <td className="px-2 py-2 text-center"><input data-testid={`quotation-intake-quantity-${line.id}`} type="number" min="1" step="1" disabled={!editable || lineSavingId === line.id} value={draft.quantity} onChange={(event) => changeLineDraft(line, 'quantity', event.target.value)} className="h-9 w-20 rounded-lg border border-slate-300 px-2 text-right tabular-nums outline-none focus:border-teal-500" /></td>
                     <td className="px-3 py-3 text-center">{line.unitName || '-'}</td>
                     <td className="px-3 py-3 text-right tabular-nums">{money(line.unitPrice)}</td>
                     <td className="px-2 py-2 text-center"><input data-testid={`quotation-intake-adjustment-${line.id}`} type="number" step="0.01" disabled={!editable || lineSavingId === line.id} value={draft.adjustment} onChange={(event) => changeLineDraft(line, 'adjustment', event.target.value)} className="h-9 w-28 rounded-lg border border-slate-300 px-2 text-right tabular-nums outline-none focus:border-teal-500" /></td>

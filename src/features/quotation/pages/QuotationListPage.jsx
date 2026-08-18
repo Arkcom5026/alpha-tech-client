@@ -11,7 +11,7 @@ const STATUS_LABELS = {
   REJECTED: 'ลูกค้าปฏิเสธ',
   EXPIRED: 'หมดอายุ',
   CANCELLED: 'ยกเลิก',
-  CONVERTED: 'สร้างการขายแล้ว',
+  CONVERTED: 'Legacy converted',
 };
 
 const formatMoney = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -48,7 +48,7 @@ const QuotationListPage = () => {
             <FileText className="h-5 w-5 text-teal-700" />
             <h1 className="text-lg font-bold text-slate-950">ใบเสนอราคา</h1>
           </div>
-          <p className="mt-1 text-sm text-slate-500">สร้างเอกสารเปล่าได้ทันที แล้วกรอกรายละเอียดทั้งหมดในหน้าเอกสาร</p>
+          <p className="mt-1 text-sm text-slate-500">เอกสารที่ออกแล้วคง immutable และสร้าง Revision ใหม่ได้เมื่อลูกค้าขอปรับข้อเสนอ</p>
         </div>
         <button
           type="button"
@@ -86,6 +86,7 @@ const QuotationListPage = () => {
             <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-4 py-3">เลขที่</th>
+                <th className="px-4 py-3">Revision</th>
                 <th className="px-4 py-3">ลูกค้า / หน่วยงาน</th>
                 <th className="px-4 py-3">หัวข้อ</th>
                 <th className="px-4 py-3">สถานะ</th>
@@ -95,11 +96,12 @@ const QuotationListPage = () => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {!loading && rows.length === 0 ? (
-                <tr><td colSpan="6" className="px-4 py-12 text-center text-slate-500">ยังไม่มีใบเสนอราคา</td></tr>
+                <tr><td colSpan="7" className="px-4 py-12 text-center text-slate-500">ยังไม่มีใบเสนอราคา</td></tr>
               ) : null}
               {rows.map((row) => (
                 <tr key={row.id} onClick={() => navigate(`${prefix}/${row.id}`)} className="cursor-pointer hover:bg-teal-50/40">
                   <td className="px-4 py-3 font-semibold text-teal-800">{row.code}</td>
+                  <td className="px-4 py-3"><span className="rounded-full border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-bold text-teal-800">Rev.{Number(row.revisionNumber || 0)}</span></td>
                   <td className="px-4 py-3">{row.customerCompany || row.customerName || 'ยังไม่ระบุ'}</td>
                   <td className="max-w-[28rem] truncate px-4 py-3 text-slate-600">{row.subject || '-'}</td>
                   <td className="px-4 py-3"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold">{STATUS_LABELS[row.status] || row.status}</span></td>

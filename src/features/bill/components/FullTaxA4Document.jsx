@@ -4,6 +4,7 @@ import { buildReceiptItems } from '../utils/receiptGrouping';
 
 const MAX_ROWS_LAST_PAGE = 16;
 const MAX_ROWS_NORMAL_PAGE = 24;
+const PHYSICAL_PAGE_HEIGHT_MM = 296;
 
 const round2 = (value) => Number((Number(value || 0)).toFixed(2));
 const formatCurrency = (value) => (Number(value) || 0).toLocaleString('th-TH', {
@@ -239,14 +240,20 @@ const FullTaxA4Document = ({
     <>
       <style>{`
         @page { size: A4; margin: 0; }
+        .full-tax-a4-page {
+          box-sizing: border-box;
+          width: 210mm;
+          height: ${PHYSICAL_PAGE_HEIGHT_MM}mm;
+          min-height: ${PHYSICAL_PAGE_HEIGHT_MM}mm;
+        }
         @media print {
           html, body, #root { margin: 0 !important; padding: 0 !important; }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .full-tax-a4-page {
             box-sizing: border-box !important;
             width: 210mm !important;
-            height: 297mm !important;
-            min-height: 297mm !important;
+            height: ${PHYSICAL_PAGE_HEIGHT_MM}mm !important;
+            min-height: ${PHYSICAL_PAGE_HEIGHT_MM}mm !important;
             padding: 6mm !important;
             border: 0 !important;
             border-radius: 0 !important;
@@ -289,8 +296,8 @@ const FullTaxA4Document = ({
             key={`full-tax-page-${pageIndex + 1}`}
             className="full-tax-a4-page relative mx-auto mb-6 w-[210mm] overflow-hidden rounded-md border border-gray-600 bg-white p-[6mm] text-black shadow-sm print:mb-0"
             style={{
-              minHeight: '297mm',
-              height: '297mm',
+              minHeight: `${PHYSICAL_PAGE_HEIGHT_MM}mm`,
+              height: `${PHYSICAL_PAGE_HEIGHT_MM}mm`,
               fontFamily: 'Tahoma, Arial, sans-serif',
               pageBreakAfter: page.isLast ? 'auto' : 'always',
               breakAfter: page.isLast ? 'auto' : 'page',

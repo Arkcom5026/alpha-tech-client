@@ -102,7 +102,7 @@ includes(printPage, 'รายละเอียดเพิ่มเติม',
 includes(printPage, 'ราคา/หน่วย', 'Inline editor must support the offered unit price');
 includes(printPage, 'min="1" step="1"', 'Document workspace quantity control must use whole-number increments');
 includes(printPage, 'Number.isInteger(quantity)', 'Document workspace must reject fractional quantity even when typed manually');
-includes(printPage, 'ยอดราคาหลังปรับ', 'Quotation print totals must use the adjusted offered price directly');
+includes(printPage, 'มูลค่าก่อนภาษี', 'Quotation print totals must extract pre-tax value from VAT-inclusive offered prices');
 excludes(printPage, '<span className="mb-1 block font-semibold text-slate-700">ส่วนลด</span>', 'Document workspace must not expose a discount input');
 excludes(printPage, 'ส่วนลดรายการ', 'Printed quotation must not expose line discounts');
 excludes(printPage, 'ส่วนลดท้ายบิล', 'Printed quotation must not expose bill discounts');

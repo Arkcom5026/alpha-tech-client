@@ -76,8 +76,9 @@ assert(
     && page.includes('Math.max(15, itemCount)')
     && page.includes('bill-print-page-shell')
     && page.includes('min-height: 0 !important;')
+    && !page.includes('min-height: 277mm !important;')
     && page.includes('overflow: visible !important;'),
-  'Full-tax print must reserve signature space and prevent wrapper boxes from creating a blank second page.'
+  'Full-tax print must use natural content height so mt-auto cannot push signatures into a second page.'
 );
 
 console.log('Consolidated Document Line Editor Contract: PASS');

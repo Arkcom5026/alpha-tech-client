@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import BillLayoutShortTax from '@/features/bill/components/BillLayoutShortTax';
-import FullTaxA4Document from '@/features/bill/components/FullTaxA4Document';
+import FullTaxA4Document from '../bill/components/FullTaxA4Document';
 import { getConsolidatedTaxPrintable } from '../api/combinedBillingApi';
 
 const PrintConsolidatedTaxPage = () => {

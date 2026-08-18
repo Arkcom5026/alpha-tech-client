@@ -1,9 +1,9 @@
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const fs = require('fs');
-const path = require('path');
-
-const root = path.join(__dirname, '..');
+const filename = fileURLToPath(import.meta.url);
+const root = path.resolve(path.dirname(filename), '..');
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'utf8');
 const includes = (source, value, message) => {
   if (!source.includes(value)) throw new Error(message || `Expected source to include: ${value}`);

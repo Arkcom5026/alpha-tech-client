@@ -26,6 +26,8 @@ assert.match(scope, /Math\.min\(180,\s*Math\.max\(24/, 'shared renderer must pre
 assert.match(fullTaxPage, /StoreDocumentHeaderScope/, 'Full Tax must use the shared document header scope');
 assert.match(fullTaxPage, /documentType:\s*'FULL_TAX_INVOICE'/, 'Full Tax must resolve its dedicated document header profile');
 assert.match(scope, /\.print-a4 > div:first-child > div:first-child \{ align-items: center; \}/, 'Full Tax store header row must vertically center logo and store copy');
+assert.match(scope, /@page \{ size: A4; margin: 0; \}/, 'shared Full Tax shell must own physical A4 margins inside the document');
+assert.match(scope, /\.store-document-header-scope \.print-a4 \{[\s\S]*padding: 6mm !important;[\s\S]*border-radius: 0 !important;[\s\S]*overflow: visible !important;/, 'Full Tax shell must match Delivery Note inner A4 geometry without changing pagination logic');
 
 // Customer Receipt may use the historical Full Tax renderer or the newer dedicated A4 document,
 // but it must remain inside the shared store-document-header authority.

@@ -52,7 +52,12 @@ export const useSalePaymentWorkflow = ({
   );
 
   const calculation = useMemo(
-    () => projectSalePaymentCalculation({ saleItems, billDiscount, paymentList, depositUsed }),
+    () => projectSalePaymentCalculation({
+      saleItems,
+      billDiscount,
+      paymentList,
+      depositUsed,
+    }),
     [billDiscount, depositUsed, paymentList, saleItems]
   );
 
@@ -70,7 +75,9 @@ export const useSalePaymentWorkflow = ({
   }, [isCreditSale, setCardRef, setPaymentAmount]);
 
   useEffect(() => {
-    if (recovery?.state === 'UNCERTAIN' && recovery?.message) setPaymentError(recovery.message);
+    if (recovery?.state === 'UNCERTAIN' && recovery?.message) {
+      setPaymentError(recovery.message);
+    }
   }, [recovery?.message, recovery?.state]);
 
   const changeDepositUsed = useCallback((input) => {
@@ -121,7 +128,18 @@ export const useSalePaymentWorkflow = ({
     onSaleModeChange?.('CASH');
     onSaleOptionChange?.('NONE');
     onIncludeDeliveryNoteChange?.(false);
-  }, [clearCustomerAndDeposit, onSaleModeChange, onSaleOptionChange, onIncludeDeliveryNoteChange, resetSaleOrderAction, setBillDiscount, setCardRef, setClearPhoneTrigger, setCustomerIdAction, setDepositUsed]);
+  }, [
+    clearCustomerAndDeposit,
+    onSaleModeChange,
+    onSaleOptionChange,
+    onIncludeDeliveryNoteChange,
+    resetSaleOrderAction,
+    setBillDiscount,
+    setCardRef,
+    setClearPhoneTrigger,
+    setCustomerIdAction,
+    setDepositUsed,
+  ]);
 
   const confirm = useCallback(async (confirmContext = {}) => {
     if (isSubmitting) return null;
@@ -152,11 +170,16 @@ export const useSalePaymentWorkflow = ({
         setPaymentError(`${result?.code ? `[${result.code}] ` : ''}${recoveryMessage}`);
         return null;
       }
+
       if (!result?.saleId) {
         setPaymentError('ไม่พบ ID ของรายการขายหลังจากยืนยัน');
         return null;
       }
-      if (result.warning) setCompletionWarning(result.warning);
+
+      if (result.warning) {
+        setCompletionWarning(result.warning);
+      }
+
       resetAfterSuccess();
       return result;
     } catch (error) {
@@ -164,7 +187,23 @@ export const useSalePaymentWorkflow = ({
       setPaymentError(`❌ ยืนยันการขายล้มเหลว: ${error?.message || 'เกิดข้อผิดพลาด'}`);
       return null;
     }
-  }, [calculation, cardRef, currentSaleMode, customerType, hasImmediatePayment, hasValidCustomerId, includeDeliveryNote, isSubmitting, onConfirmSale, onSaleConfirmed, paymentList, resetAfterSuccess, saleOption, selectedDeposit, sourceQuotationId]);
+  }, [
+    calculation,
+    cardRef,
+    currentSaleMode,
+    customerType,
+    hasImmediatePayment,
+    hasValidCustomerId,
+    isSubmitting,
+    onConfirmSale,
+    onSaleConfirmed,
+    paymentList,
+    resetAfterSuccess,
+    saleOption,
+    includeDeliveryNote,
+    selectedDeposit,
+    sourceQuotationId,
+  ]);
 
   return projectSalePaymentWorkflow({
     calculation,
@@ -172,6 +211,11 @@ export const useSalePaymentWorkflow = ({
     completionWarning,
     isConfirmEnabled,
     recovery,
-    handlers: { confirm, changeDepositUsed, changeSaleMode, changeBillDiscount },
+    handlers: {
+      confirm,
+      changeDepositUsed,
+      changeSaleMode,
+      changeBillDiscount,
+    },
   });
 };

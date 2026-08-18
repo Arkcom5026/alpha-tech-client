@@ -4,7 +4,15 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getBranchById } from '@/features/branch/api/branchApi';
 import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig';
 import { feedback } from '@/design-system';
-import { addQuotationLine, getQuotation, updateQuotationLine } from '../api/quotationApi';
+import {
+  acceptQuotation,
+  addQuotationLine,
+  cancelQuotation,
+  getQuotation,
+  issueQuotation,
+  rejectQuotation,
+  updateQuotationLine,
+} from '../api/quotationApi';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -49,6 +57,7 @@ const QuotationPrintPage = () => {
   const [editingLineId, setEditingLineId] = useState(null);
   const [lineDraft, setLineDraft] = useState(null);
   const [savingLine, setSavingLine] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
 
   const refreshQuotation = async () => {
     const refreshed = await getQuotation(quotationId);
@@ -156,6 +165,60 @@ const QuotationPrintPage = () => {
     }
   };
 
+  const runLifecycle = async (action) => {
+    if (!quotation || transitioning || savingLine) return;
+
+    if (action === 'issue') {
+      if (!(quotation.customerCompany || quotation.customerName)) {
+        feedback.info('กรุณาเลือกลูกค้าก่อนออกใบเสนอราคา');
+        return;
+      }
+      if (!items.length) {
+        feedback.info('กรุณาเพิ่มอย่างน้อย 1 รายการก่อนออกใบเสนอราคา');
+        return;
+      }
+    }
+
+    const config = {
+      issue: {
+        execute: () => issueQuotation(quotationId),
+        confirm: 'ยืนยันออกใบเสนอราคา? หลังออกเอกสารแล้วข้อมูลและรายการจะถูกล็อกเป็น snapshot และแก้ไขไม่ได้',
+        success: 'ออกใบเสนอราคาและล็อก snapshot เรียบร้อยแล้ว',
+      },
+      accept: {
+        execute: () => acceptQuotation(quotationId),
+        confirm: 'ยืนยันว่าลูกค้าตอบรับใบเสนอราคานี้แล้ว?',
+        success: 'บันทึกการตอบรับใบเสนอราคาแล้ว',
+      },
+      reject: {
+        execute: () => rejectQuotation(quotationId),
+        confirm: 'ยืนยันว่าลูกค้าปฏิเสธใบเสนอราคานี้?',
+        success: 'บันทึกการปฏิเสธใบเสนอราคาแล้ว',
+      },
+      cancel: {
+        execute: () => cancelQuotation(quotationId),
+        confirm: 'ยืนยันยกเลิกใบเสนอราคานี้?',
+        success: 'ยกเลิกใบเสนอราคาแล้ว',
+      },
+    }[action];
+
+    if (!config || !window.confirm(config.confirm)) return;
+
+    setTransitioning(true);
+    try {
+      const updated = await config.execute();
+      setQuotation(updated);
+      setEditingLineId(null);
+      setLineDraft(null);
+      if (action === 'issue') setDraftBranch(null);
+      feedback.actionSuccess(config.success, `quotation:${quotationId}:lifecycle:${action}:success`);
+    } catch (error) {
+      feedback.actionError(error, 'เปลี่ยนสถานะใบเสนอราคาไม่สำเร็จ', `quotation:${quotationId}:lifecycle:${action}:error`);
+    } finally {
+      setTransitioning(false);
+    }
+  };
+
   const renderLineEditor = () => {
     if (!editable || !lineDraft) return null;
     const isNew = editingLineId === 'NEW';
@@ -221,9 +284,21 @@ const QuotationPrintPage = () => {
 
   return (
     <main className="quotation-print-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
-      <div className="quotation-print-toolbar mx-auto mb-4 flex max-w-[195mm] items-center justify-between print:hidden">
+      <div className="quotation-print-toolbar mx-auto mb-4 flex max-w-[195mm] items-center justify-between gap-3 print:hidden">
         <button type="button" onClick={() => navigate(`${prefix}/${quotationId}`)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50"><ArrowLeft className="h-4 w-4" /> กลับไปแก้ไข</button>
-        <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Printer className="h-4 w-4" /> พิมพ์ใบเสนอราคา</button>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {quotation.status === 'DRAFT' ? <>
+            <button type="button" disabled={transitioning} onClick={() => runLifecycle('cancel')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ยกเลิกฉบับร่าง</button>
+            <button type="button" disabled={transitioning || savingLine} onClick={() => runLifecycle('issue')} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50">{transitioning ? 'กำลังดำเนินการ...' : 'ออกใบเสนอราคา'}</button>
+          </> : null}
+          {quotation.status === 'ISSUED' ? <>
+            <button type="button" disabled={transitioning} onClick={() => runLifecycle('reject')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ปฏิเสธ</button>
+            <button type="button" disabled={transitioning} onClick={() => runLifecycle('cancel')} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">ยกเลิก</button>
+            <button type="button" disabled={transitioning} onClick={() => runLifecycle('accept')} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">ตอบรับ</button>
+          </> : null}
+          {quotation.status === 'ACCEPTED' ? <button type="button" disabled={transitioning} onClick={() => runLifecycle('cancel')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ยกเลิก</button> : null}
+          <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Printer className="h-4 w-4" /> พิมพ์ใบเสนอราคา</button>
+        </div>
       </div>
 
       <section className="quotation-a4 relative mx-auto box-border flex w-[195mm] min-h-[280mm] flex-col rounded-[2.5mm] border border-slate-500 bg-white p-[5mm] shadow-sm print:rounded-[2.5mm] print:shadow-none">

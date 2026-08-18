@@ -44,8 +44,12 @@ for (const source of [editor, printPage]) {
   for (const token of ['calculateQuotationTotals', 'isVatInclusiveQuotation']) {
     if (!source.includes(token)) throw new Error(`Quotation pricing integration missing: ${token}`);
   }
+  if (source.includes('grandTotal = adjustedSubtotal + vatAmount')) {
+    throw new Error('Quotation presentation must not add VAT on top of VAT-inclusive prices');
+  }
 }
 
+if (!editor.includes('ราคาสินค้าเป็นราคารวม VAT แล้ว')) throw new Error('Quotation intake must explain VAT-inclusive pricing');
 if (!editor.includes("(รวมในราคา)")) throw new Error('Quotation intake must label extracted VAT as included in price');
 if (!printPage.includes("(รวมในราคา)")) throw new Error('Quotation print must label extracted VAT as included in price');
 if (!printPage.includes('มูลค่าก่อนภาษี')) throw new Error('Quotation print must show pre-tax value extracted from inclusive price');

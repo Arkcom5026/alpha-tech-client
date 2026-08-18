@@ -1,10 +1,12 @@
-'use strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import assert from 'node:assert';
+import { fileURLToPath } from 'node:url';
 
-const fs = require('fs');
-const path = require('path');
-const assert = require('assert');
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const root = path.resolve(__dirname, '..');
+
 const page = fs.readFileSync(
   path.join(root, 'src/features/sales/create/pages/CreateSalePage.jsx'),
   'utf8'

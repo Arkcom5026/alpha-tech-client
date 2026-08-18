@@ -405,7 +405,7 @@ const FullTaxA4Document = ({
 
             {page.isLast ? (
               <>
-                <div className="absolute bottom-[31mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-5 text-[13px]">
+                <div className="absolute bottom-[28mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-5 text-[13px]">
                   <div className="pt-3 text-center leading-tight">
                     <p className="font-bold">จำนวนเงินเป็นตัวอักษร</p>
                     <p className="text-[18px] font-semibold italic">({bahtText(total)})</p>

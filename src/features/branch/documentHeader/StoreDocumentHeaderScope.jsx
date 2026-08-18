@@ -135,7 +135,7 @@ const StoreDocumentHeaderScope = ({ config, children }) => {
             box-sizing: border-box !important;
             width: 210mm !important;
             min-height: 297mm !important;
-            height: auto !important;
+            height: 297mm !important;
             padding: 6mm !important;
             border-radius: 0 !important;
             overflow: visible !important;

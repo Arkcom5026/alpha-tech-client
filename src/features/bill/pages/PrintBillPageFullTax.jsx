@@ -150,15 +150,18 @@ const PrintBillPageFullTax = () => {
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
         /*
-         * Single A4 authority: screen preview and native print use the same
-         * physical 210 x 297 mm sheet. BillLayoutFullTax already owns the
-         * document's internal padding, so the browser must not add another
-         * 10 mm @page margin and shrink/reflow the document.
+         * One geometry and one layout engine for both the on-screen document
+         * and Chromium paged media. The legacy component uses flex + mt-auto,
+         * which Chromium fragments differently during printing. Block flow
+         * prevents the signature block from being promoted to a second page.
+         * 296mm keeps a 1mm rounding reserve while remaining visually A4.
          */
         .bill-print-root .print-a4 {
+          display: block !important;
           width: 210mm !important;
           max-width: 210mm !important;
-          min-height: 297mm !important;
+          min-height: 296mm !important;
+          height: auto !important;
           box-sizing: border-box !important;
         }
 
@@ -188,13 +191,14 @@ const PrintBillPageFullTax = () => {
           }
 
           .bill-print-root .print-a4 {
+            display: block !important;
             width: 210mm !important;
             max-width: 210mm !important;
-            min-height: 297mm !important;
-            height: 297mm !important;
+            min-height: 296mm !important;
+            height: auto !important;
             margin: 0 !important;
             box-sizing: border-box !important;
-            overflow: hidden !important;
+            overflow: visible !important;
             border-radius: 0 !important;
           }
 

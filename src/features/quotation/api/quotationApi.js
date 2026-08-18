@@ -20,8 +20,12 @@ const hydrateIssuedSnapshot = (quotation) => {
 
   const customer = snapshot.customer || {};
   const totals = snapshot.totals || {};
+  const superseded = Boolean(quotation.revisedTo);
   return {
     ...quotation,
+    lifecycleStatus: quotation.status,
+    status: superseded ? 'SUPERSEDED' : quotation.status,
+    isSuperseded: superseded,
     revisionNumber: snapshot.revisionNumber ?? quotation.revisionNumber ?? 0,
     revisionRootId: snapshot.revisionRootId ?? quotation.revisionRootId ?? null,
     revisedFromId: snapshot.revisedFromId ?? quotation.revisedFromId ?? null,

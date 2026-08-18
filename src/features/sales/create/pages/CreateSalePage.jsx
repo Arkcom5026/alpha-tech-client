@@ -9,6 +9,7 @@ import { useCreateSaleWorkflow } from '../index';
 import { SaleCustomerSection as CustomerSection } from '../customer';
 import PaymentSection from '../components/PaymentSection';
 import SaleItemTable from '../components/SaleItemTable';
+import SaleQuotationReferenceChecklist from '../components/SaleQuotationReferenceChecklist';
 import SaleWorkspacePanel from '../components/workspace/SaleWorkspacePanel';
 import SalePriceTypeSelector from '../components/workspace/SalePriceTypeSelector';
 import SaleItemSearchDialog from '../item-search/components/SaleItemSearchDialog';
@@ -207,6 +208,11 @@ const QuickSalePage = ({
           </div>
         </div>
       ) : null}
+
+      <SaleQuotationReferenceChecklist
+        quotationId={sourceQuotationId}
+        disabled={checkoutLocked}
+      />
 
       <div className="min-h-[240px] xl:min-h-0 xl:flex-1 xl:overflow-hidden">
         <SaleWorkspacePanel locked={cartLocked} className="h-full min-h-[240px] xl:min-h-0 xl:overflow-hidden">

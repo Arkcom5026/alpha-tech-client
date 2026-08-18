@@ -252,7 +252,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
             <div
               className={`grid gap-y-1.5 text-sm sm:grid-cols-2 ${
                 isOrganization
-                  ? 'gap-x-8 xl:grid-cols-[minmax(0,1.5fr)_minmax(5.5rem,0.55fr)_minmax(0,1fr)_minmax(7.5rem,0.9fr)]'
+                  ? 'gap-x-5 xl:grid-cols-[minmax(15rem,2.2fr)_minmax(4.5rem,0.45fr)_minmax(6.5rem,0.8fr)_minmax(7rem,0.8fr)]'
                   : 'gap-x-5 xl:grid-cols-3'
               }`}
             >
@@ -263,7 +263,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
                 </p>
               ) : null}
               {isOrganization ? (
-                <p className="min-w-0 text-slate-700">
+                <p className="min-w-0 whitespace-nowrap text-slate-700">
                   <span className="font-semibold text-slate-500">ชื่อหน่วยงาน :</span>{' '}
                   <span className="font-semibold text-slate-950">{organizationName}</span>
                 </p>

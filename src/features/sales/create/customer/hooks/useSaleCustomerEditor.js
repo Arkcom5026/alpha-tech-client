@@ -63,7 +63,8 @@ export const useSaleCustomerEditor = () => {
   const validateForSave = useCallback(() => {
     if (!editor.name.trim()) return 'กรุณากรอกชื่อลูกค้า';
     const phone = String(editor.phone || '').replace(/\D/g, '');
-    if (phone && !/^[0-9]{10}$/.test(phone)) return 'กรุณากรอกเบอร์โทรให้ครบ 10 หลัก';
+    if (!phone) return 'กรุณากรอกเบอร์โทร';
+    if (!/^[0-9]{9,10}$/.test(phone)) return 'กรุณากรอกเบอร์โทร 9 หรือ 10 หลัก';
     return null;
   }, [editor.name, editor.phone]);
 

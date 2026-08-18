@@ -3,7 +3,7 @@ import React from 'react'
 const clampLogoSize = (value) => {
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) return 56
-  return Math.min(120, Math.max(24, Math.round(parsed)))
+  return Math.min(180, Math.max(24, Math.round(parsed)))
 }
 
 const getHeaderScopeClassName = (style = {}) => [

@@ -1,7 +1,7 @@
 const HEADER_ALIGNMENTS = new Set(['left', 'center', 'right']);
 const HEADER_NAME_SIZES = new Set(['sm', 'md', 'lg', 'xl']);
 const DOCUMENT_LOGO_SIZE_MIN = 24;
-const DOCUMENT_LOGO_SIZE_MAX = 120;
+const DOCUMENT_LOGO_SIZE_MAX = 180;
 const DOCUMENT_LOGO_SIZE_DEFAULT = 56;
 const LEGACY_LOGO_SIZE_PIXELS = Object.freeze({ sm: 40, md: 56, lg: 72, xl: 88 });
 

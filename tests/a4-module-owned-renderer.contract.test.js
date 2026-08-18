@@ -13,6 +13,7 @@ const customerReceiptRenderer = read('src/features/customerReceipt/components/Cu
 const purchaseOrderShell = read('src/features/purchaseOrder/print/workspace/components/PurchaseOrderPrintShell.jsx')
 const salesTaxReport = read('src/features/salesTaxReport/pages/PrintSalesTaxReportPage.jsx')
 const inputTaxReport = read('src/features/inputTaxReport/pages/PrintInputTaxReportPage.jsx')
+const creditNote = read('src/features/sales/return/pages/PrintCreditNotePage.jsx')
 
 assert(!consolidatedBill.includes("@/features/bill/components/FullTaxA4Document"), 'Consolidated Bill A4 must not import the bill module document renderer.')
 assert(!consolidatedTax.includes("@/features/bill/components/FullTaxA4Document"), 'Consolidated Tax A4 must not import the bill module document renderer.')
@@ -42,5 +43,11 @@ assert(inputTaxReport.includes('input-tax-report-a4-page'), 'Input Tax Report mu
 assert(inputTaxReport.includes('@page { size: A4 portrait; margin: 4mm; }'), 'Input Tax Report must own its print-safe A4 geometry.')
 assert(!inputTaxReport.includes('@/features/bill/'), 'Input Tax Report must not import document renderers from the bill module.')
 assert(!inputTaxReport.includes('@/features/salesTaxReport/'), 'Input Tax Report must not import the sales-tax report renderer.')
+
+assert(creditNote.includes('credit-note-a4-page'), 'Credit Note must own a namespaced A4 presentation surface.')
+assert(creditNote.includes('@page { size: A4; margin: 4mm; }'), 'Credit Note must own its print-safe A4 geometry.')
+assert(!creditNote.includes('@/features/bill/'), 'Credit Note must not import document renderers from the bill module.')
+assert(!creditNote.includes('@/features/customerReceipt/'), 'Credit Note must not import document renderers from the customer receipt module.')
+assert(!creditNote.includes('@/features/combinedBilling/'), 'Credit Note must not import document renderers from the combined billing module.')
 
 console.log('A4 Module-Owned Renderer Contract: PASS')

@@ -137,13 +137,12 @@ const PrintBillPageFullTax = () => {
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
   // Keep the main-branch 20-row preview unchanged. On paper only, trim the
-  // trailing visual filler rows down to a 16-row grid so totals/signatures fit
-  // inside the 190 x 277 mm printable box created by @page margin: 10mm.
-  // The suppression count is capped by the raw item count, so real sale rows
-  // are never hidden even when receipt grouping produces fewer display rows.
+  // trailing visual filler rows down to a 15-row grid. This reserves one extra
+  // 28px row for the signature block under Chrome's default A4 margins while
+  // never hiding a real sale row.
   const printFillerRowsToHide = useMemo(() => {
     const itemCount = Array.isArray(saleItems) ? saleItems.length : 0
-    const printableGridRows = Math.max(16, itemCount)
+    const printableGridRows = Math.max(15, itemCount)
     return Math.max(20 - printableGridRows, 0)
   }, [saleItems])
 
@@ -165,6 +164,25 @@ const PrintBillPageFullTax = () => {
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
         @media print {
+          /* Keep browser/app wrappers from creating an empty second fragment. */
+          html,
+          body,
+          #root,
+          .bill-print-page-shell,
+          .bill-print-root {
+            min-height: 0 !important;
+            height: auto !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+            overflow: visible !important;
+          }
+
+          .bill-print-page-shell {
+            display: block !important;
+          }
+
           /*
            * BillLayoutFullTax owns @page { size:A4; margin:10mm }. Override only
            * the legacy physical-sheet shell so it fits that printable box. The
@@ -185,7 +203,7 @@ const PrintBillPageFullTax = () => {
         }
       `}</style>
 
-      <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
+      <div className="bill-print-page-shell w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
         <div className="bill-print-root mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
           <StoreDocumentHeaderScope config={documentConfig}>
             <BillLayoutFullTax

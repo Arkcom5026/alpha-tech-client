@@ -55,6 +55,8 @@ includes(editor, 'data-testid={`quotation-intake-adjustment-${line.id}`}', 'Quot
 includes(editor, 'ปรับราคา (+/-)', 'Quotation intake quick editing should mirror the sales-page price-adjustment mental model');
 includes(editor, 'ราคาหลังปรับ', 'Quotation intake must preview the adjusted price before save');
 includes(editor, 'data-testid="quotation-intake-totals"', 'Quotation intake must expose a useful commercial totals panel');
+includes(editor, 'const adjustedTotal = quotationItems.reduce((sum, line) => {', 'Quotation totals must derive from live per-line draft values');
+includes(editor, 'return sum + (quantity * adjustedPrice);', 'Quotation totals must update immediately from draft quantity and adjusted price before save');
 includes(editor, 'ยอดรวมราคาหลังปรับ', 'Quotation intake totals must use the adjusted quotation price as the sole commercial price');
 includes(editor, 'มูลค่าก่อนภาษี', 'Quotation intake totals must expose pre-tax value');
 includes(editor, 'ยอดสุทธิประมาณการ', 'Quotation intake must show an approximate grand total before entering the document workspace');

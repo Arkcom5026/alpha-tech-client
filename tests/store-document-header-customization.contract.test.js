@@ -26,7 +26,7 @@ assert.match(resolver, /config\?\.documents\?\.\[key\]/, 'resolver must support 
 assert.match(resolver, /buildStoreDocumentHeader/, 'shared print projection must exist');
 assert.match(resolver, /buildDocumentHeaderConfigFromForm/, 'settings payload builder must exist');
 assert.match(resolver, /DOCUMENT_LOGO_SIZE_MIN = 24/, 'client logo size must have a safe lower bound');
-assert.match(resolver, /DOCUMENT_LOGO_SIZE_MAX = 120/, 'client logo size must have a safe upper bound');
+assert.match(resolver, /DOCUMENT_LOGO_SIZE_MAX = 180/, 'client logo size must allow larger logos up to 180px');
 assert.match(resolver, /DOCUMENT_LOGO_SIZE_DEFAULT = 56/, 'client logo size must default to 56px');
 assert.match(resolver, /LEGACY_LOGO_SIZE_PIXELS/, 'legacy logo size presets must remain supported');
 assert.match(resolver, /sm: 40, md: 56, lg: 72, xl: 88/, 'legacy presets must preserve their original pixel sizes');
@@ -64,7 +64,7 @@ assert.match(mediaField, /เลือกจากคลัง/, 'canonical medi
 assert.match(scope, /--store-document-header-logo-size/, 'shared A4 scope must pass custom logo size through a CSS variable');
 assert.match(scope, /width: var\(--store-document-header-logo-size\) !important/, 'A4 logo width must use the custom pixel size');
 assert.match(scope, /height: var\(--store-document-header-logo-size\) !important/, 'A4 logo height must use the custom pixel size');
-assert.match(scope, /Math\.min\(120, Math\.max\(24/, 'A4 renderer must clamp custom logo size defensively');
+assert.match(scope, /Math\.min\(180, Math\.max\(24/, 'A4 renderer must clamp custom logo size defensively at 180px');
 assert.match(scope, /\.store-document-header-scope \.print-a4 > div:first-child > div:first-child \{ align-items: center; \}/, 'shared A4 header row must vertically center the logo against store copy');
 assert.match(scope, /top: 50%; transform: translateY\(-50%\)/, 'delivery-note side logos must vertically center against the full store-copy block');
 assert.match(scope, /credit-collection-store-header \{ text-align: left; align-items: center; \}/, 'credit collection A4 header must vertically center the logo against store copy');

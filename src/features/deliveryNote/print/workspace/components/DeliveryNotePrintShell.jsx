@@ -100,6 +100,12 @@ const DeliveryNotePrintShell = ({
             break-inside: avoid-page !important;
           }
 
+          /* Keep the signature baselines close to the physical page edge so the
+             blank area above them remains usable for handwritten signatures. */
+          body .a4-standard-delivery-frame .dn-signatures {
+            bottom: 1mm !important;
+          }
+
           body .a4-standard-delivery-frame .dn-print-page:last-of-type {
             page-break-after: auto !important;
             break-after: auto !important;

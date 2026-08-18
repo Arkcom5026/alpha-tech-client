@@ -13,14 +13,15 @@ const printPolicy = read('src/features/deliveryNote/print/workspace/policies/del
 describe('Delivery Note server authority cutover contract', () => {
   it('uses the shared document workspace boundary with the required command shape', () => {
     expect(page).toContain("from '@/features/sales/documents/workspace'");
-    expect(page).toContain('loadSaleDocument({ saleId })');
+    expect(page).toContain('loadSaleDocument({ saleId: sourceId })');
     expect(page).not.toContain('loadSaleDocument(saleId)');
     expect(workspaceApi).toContain('loadSaleDocument = async ({ saleId, paymentId } = {})');
     expect(workspaceApi).toContain('getSaleById');
   });
 
-  it('uses route saleId as the document identity authority', () => {
+  it('uses route saleId as the normal sale document identity authority while allowing consolidated source routing', () => {
     expect(page).toContain('const { saleId } = useParams()');
+    expect(page).toContain("const sourceId = searchParams.get('sourceId') || saleId");
     expect(routes).toContain("{ path: 'print/:saleId', element: <PrintDeliveryNotePage /> }");
   });
 
@@ -40,7 +41,8 @@ describe('Delivery Note server authority cutover contract', () => {
   });
 
   it('reloads from the server through the shared editor after mutation', () => {
-    expect(page).toContain('reload: reloadSaleDocument');
+    expect(page).toContain('reload: loadCurrentDocument');
+    expect(page).toContain('saleId: isConsolidated ? null : saleId');
     expect(page).toContain('useSaleDocumentLineEditor');
     expect(page).not.toContain('updateSaleDocumentLinesAction');
   });

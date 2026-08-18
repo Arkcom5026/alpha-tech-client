@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { CircleHelp, Search } from 'lucide-react';
 
 import useSalesStore from '@/features/sales/store/salesStore';
+import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import { listQuotationReferenceCandidates } from '@/features/quotation/api/quotationApi';
 import { useCreateSaleWorkflow } from '../index';
 import { SaleCustomerSection as CustomerSection } from '../customer';
@@ -33,6 +34,7 @@ const QuickSalePage = ({
   const billDiscount = useSalesStore((state) => state.billDiscount);
   const clearSaleErrorAction = useSalesStore((state) => state.clearErrorAction);
   const setCustomerIdAction = useSalesStore((state) => state.setCustomerIdAction);
+  const selectedCustomer = useCustomerDepositStore((state) => state.selectedCustomer);
 
   const { shopSlug } = useParams();
   const navigate = useNavigate();
@@ -54,25 +56,30 @@ const QuickSalePage = ({
     sale.completion.isSubmitting || sale.completion.recovery?.preserveCheckout
   );
   const cartLocked = checkoutLocked || sourceLocked;
+  const quotationWorkflowEnabled = Boolean(
+    customerId &&
+    Number(selectedCustomer?.id) === Number(customerId) &&
+    selectedCustomer?.quotationWorkflowEnabled === true
+  );
 
   useEffect(() => {
     let alive = true;
     setSourceQuotationId('');
     setAcceptedQuotations([]);
 
-    if (!customerId) return () => { alive = false; };
+    if (!quotationWorkflowEnabled) return () => { alive = false; };
 
     listQuotationReferenceCandidates(customerId)
-      .then((rows) => {
+      .then((result) => {
         if (!alive) return;
-        setAcceptedQuotations(Array.isArray(rows) ? rows : []);
+        setAcceptedQuotations(Array.isArray(result?.candidates) ? result.candidates : []);
       })
       .catch(() => {
         if (alive) setAcceptedQuotations([]);
       });
 
     return () => { alive = false; };
-  }, [customerId]);
+  }, [customerId, quotationWorkflowEnabled]);
 
   useEffect(() => {
     if (clearPhoneTrigger) setHideCustomerDetails(false);
@@ -176,7 +183,7 @@ const QuickSalePage = ({
         </div>
       </div>
 
-      {customerId && acceptedQuotations.length > 0 ? (
+      {quotationWorkflowEnabled && acceptedQuotations.length > 0 ? (
         <div className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
             <div className="min-w-[190px]">

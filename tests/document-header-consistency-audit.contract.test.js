@@ -28,8 +28,9 @@ assert.match(fullTaxPage, /documentType:\s*'FULL_TAX_INVOICE'/, 'Full Tax must r
 assert.match(scope, /\.print-a4 > div:first-child > div:first-child \{ align-items: center; \}/, 'Full Tax store header row must vertically center logo and store copy');
 assert.match(scope, /@page \{ size: A4; margin: 0; \}/, 'shared Full Tax shell must own physical A4 margins inside the document');
 assert.match(scope, /\.store-document-header-scope \.print-a4 \{[\s\S]*padding: 6mm !important;[\s\S]*border-radius: 0 !important;[\s\S]*overflow: visible !important;/, 'Full Tax shell must match Delivery Note inner A4 geometry without changing pagination logic');
+assert.match(fullTaxPage, /\.print-a4 \{[\s\S]*height: 297mm !important;[\s\S]*padding-bottom: 30mm !important;/, 'Full Tax must reserve footer clearance inside a fixed one-page A4 box');
 assert.match(fullTaxPage, /\.print-a4 > div:last-child \{[\s\S]*position: absolute !important;[\s\S]*left: 6mm !important;[\s\S]*right: 6mm !important;[\s\S]*bottom: 3mm !important;/, 'Full Tax signatures must use the Delivery Note bottom anchor');
-assert.match(fullTaxPage, /\.print-a4 > div:nth-last-child\(2\) \{[\s\S]*margin-bottom: 28mm !important;/, 'Full Tax summary must reserve footer clearance above anchored signatures');
+assert.doesNotMatch(fullTaxPage, /margin-bottom:\s*28mm/, 'Full Tax footer clearance must not extend document flow beyond one A4 page');
 
 // Customer Receipt may use the historical Full Tax renderer or the newer dedicated A4 document,
 // but it must remain inside the shared store-document-header authority.

@@ -137,25 +137,47 @@ const PrintBillPageFullTax = () => {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
-      <section className="mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
-        <StoreDocumentHeaderScope config={documentConfig}>
-          <FullTaxA4Document
-            sale={sale}
-            saleItems={saleItems}
-            payments={[payment]}
-            config={documentConfig}
-            editableDocumentLines={canEditDocumentLines}
-            editingLineKey={canEditDocumentLines ? documentLineEditor.editingLineKey : null}
-            lineDrafts={canEditDocumentLines ? documentLineEditor.lineDrafts : {}}
-            savingLineKey={canEditDocumentLines ? documentLineEditor.savingLineKey : null}
-            onToggleDocumentLineEdit={canEditDocumentLines ? documentLineEditor.actions.toggle : undefined}
-            onChangeDocumentLineDraft={canEditDocumentLines ? documentLineEditor.actions.change : undefined}
-            onSaveDocumentLine={canEditDocumentLines ? documentLineEditor.actions.save : undefined}
-          />
-        </StoreDocumentHeaderScope>
-      </section>
-    </main>
+    <>
+      <style>{`
+        @media print {
+          .full-tax-print-shell,
+          .full-tax-print-frame {
+            display: block !important;
+            width: 210mm !important;
+            max-width: 210mm !important;
+            min-height: 0 !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            overflow: visible !important;
+            background: #fff !important;
+          }
+        }
+      `}</style>
+
+      <main className="full-tax-print-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
+        <section className="full-tax-print-frame mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
+          <StoreDocumentHeaderScope config={documentConfig}>
+            <FullTaxA4Document
+              sale={sale}
+              saleItems={saleItems}
+              payments={[payment]}
+              config={documentConfig}
+              editableDocumentLines={canEditDocumentLines}
+              editingLineKey={canEditDocumentLines ? documentLineEditor.editingLineKey : null}
+              lineDrafts={canEditDocumentLines ? documentLineEditor.lineDrafts : {}}
+              savingLineKey={canEditDocumentLines ? documentLineEditor.savingLineKey : null}
+              onToggleDocumentLineEdit={canEditDocumentLines ? documentLineEditor.actions.toggle : undefined}
+              onChangeDocumentLineDraft={canEditDocumentLines ? documentLineEditor.actions.change : undefined}
+              onSaveDocumentLine={canEditDocumentLines ? documentLineEditor.actions.save : undefined}
+            />
+          </StoreDocumentHeaderScope>
+        </section>
+      </main>
+    </>
   )
 }
 

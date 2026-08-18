@@ -182,7 +182,7 @@
 
 .full-tax-a4-page table th:nth-child(2),
 .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(2) {
-  width: 39% !important;
+  width: 45% !important;
 }
 
 .full-tax-a4-page table th:nth-child(3),
@@ -196,7 +196,7 @@
 .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(5),
 .full-tax-a4-page table th:nth-child(6),
 .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(6) {
-  width: 17% !important;
+  width: 14% !important;
 }
 
 .full-tax-a4-page table .full-tax-editor-column {
@@ -238,7 +238,7 @@ button[aria-label='ดูสถานะความพร้อมของร�
 
   .full-tax-a4-page table th:nth-child(2),
   .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(2) {
-    width: 43% !important;
+    width: 49% !important;
   }
 
   .full-tax-a4-page table th:nth-child(1),
@@ -257,7 +257,7 @@ button[aria-label='ดูสถานะความพร้อมของร�
   .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(5),
   .full-tax-a4-page table th:nth-child(6),
   .full-tax-a4-page table tbody > tr:not(.print\:hidden) > td:nth-child(6) {
-    width: 17% !important;
+    width: 14% !important;
   }
 
   * {

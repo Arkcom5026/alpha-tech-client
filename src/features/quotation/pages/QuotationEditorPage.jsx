@@ -6,6 +6,7 @@ import useCustomerStore from '@/features/customer/store/customerStore';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 import { searchSaleItems } from '@/features/sales/item-search/api/saleItemSearchApi';
 import { addQuotationLine, getQuotation, updateQuotation, updateQuotationLine } from '../api/quotationApi';
+import { calculateQuotationTotals, isVatInclusiveQuotation } from '../utils/quotationPricing';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -291,10 +292,14 @@ const QuotationEditorPage = () => {
     );
     return sum + (quantity * adjustedPrice);
   }, 0);
-  const taxableBase = adjustedTotal;
   const vatRate = quotation.vatEnabled === false ? 0 : Math.max(0, Number(quotation.vatRate ?? 7));
-  const vatAmount = taxableBase * vatRate / 100;
-  const grandTotal = taxableBase + vatAmount;
+  const vatInclusive = isVatInclusiveQuotation(quotation);
+  const { taxableBase, vatAmount, grandTotal } = calculateQuotationTotals({
+    grossTotal: adjustedTotal,
+    vatEnabled: quotation.vatEnabled !== false,
+    vatRate,
+    vatInclusive,
+  });
 
   return (
     <div className="mx-auto w-full max-w-[1380px] space-y-4 p-4 text-slate-800">
@@ -452,12 +457,12 @@ const QuotationEditorPage = () => {
         </div>
 
         <div data-testid="quotation-intake-totals" className="mt-4 grid gap-4 lg:grid-cols-[1fr_380px]">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600">ยอดด้านขวาเป็นยอดประมาณการจากราคาหลังปรับในใบเสนอราคาปัจจุบัน การปรับจำนวนหรือราคาบนหน้านี้จะบันทึกลง Draft Quotation เท่านั้น และไม่ตัดหรือจองสต๊อกสินค้า</div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs leading-5 text-slate-600">ยอดด้านขวาเป็นยอดประมาณการจากราคาหลังปรับในใบเสนอราคาปัจจุบัน ราคาสินค้าเป็นราคารวม VAT แล้ว การปรับจำนวนหรือราคาบนหน้านี้จะบันทึกลง Draft Quotation เท่านั้น และไม่ตัดหรือจองสต๊อกสินค้า</div>
           <div className="rounded-xl border border-slate-200 bg-white p-4">
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between"><span className="text-slate-600">ยอดรวมราคาหลังปรับ</span><strong className="tabular-nums">{money(adjustedTotal)} ฿</strong></div>
               <div className="flex items-center justify-between border-t border-slate-200 pt-2"><span className="text-slate-600">มูลค่าก่อนภาษี</span><strong className="tabular-nums">{money(taxableBase)} ฿</strong></div>
-              <div className="flex items-center justify-between"><span className="text-slate-600">VAT {money(vatRate).replace('.00', '')}%</span><strong className="tabular-nums">{money(vatAmount)} ฿</strong></div>
+              <div className="flex items-center justify-between"><span className="text-slate-600">VAT {money(vatRate).replace('.00', '')}%{vatInclusive ? ' (รวมในราคา)' : ''}</span><strong className="tabular-nums">{money(vatAmount)} ฿</strong></div>
               <div className="flex items-center justify-between rounded-lg bg-teal-50 px-3 py-2 text-base"><span className="font-bold text-slate-900">ยอดสุทธิประมาณการ</span><strong className="text-lg tabular-nums text-teal-800">{money(grandTotal)} ฿</strong></div>
             </div>
           </div>

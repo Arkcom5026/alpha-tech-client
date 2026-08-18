@@ -73,7 +73,7 @@ assert(
   'Consolidated saves must target persisted line ids while the page uses the deterministic A4 renderer.'
 );
 assert(
-  document.includes('const MAX_ROWS_LAST_PAGE = 18;')
+  document.includes('const MAX_ROWS_LAST_PAGE = 20;')
     && document.includes('const MAX_ROWS_NORMAL_PAGE = 24;')
     && document.includes('const PRINT_PAGE_MARGIN_MM = 4;')
     && document.includes('const PRINT_SHEET_WIDTH_MM = 201;')
@@ -81,11 +81,12 @@ assert(
     && document.includes('@page { size: A4; margin: ${PRINT_PAGE_MARGIN_MM}mm; }')
     && document.includes('width: ${PRINT_SHEET_WIDTH_MM}mm !important;')
     && document.includes('height: ${PRINT_SHEET_HEIGHT_MM}mm !important;')
+    && document.includes('border-radius: 2.5mm !important;')
     && document.includes('full-tax-editor-column')
     && document.includes('display: none !important;')
     && document.includes("absolute bottom-[5mm]")
     && document.includes("absolute bottom-[31mm]"),
-  'Full-tax editor integration must preserve the fuller deterministic grid, print-safe A4 content geometry, print-only editor-column removal, and reserved summary/signature zones.'
+  'Full-tax editor integration must preserve the fuller 20-row deterministic grid, rounded print-safe A4 geometry, print-only editor-column removal, and reserved summary/signature zones.'
 );
 
 console.log('Consolidated Document Line Editor Contract: PASS');

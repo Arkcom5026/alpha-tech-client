@@ -41,6 +41,15 @@ assert(
 );
 
 assert(
+  page.includes('full-tax-print-shell')
+    && page.includes('full-tax-print-frame')
+    && page.includes('min-height: 0 !important;')
+    && page.includes('height: auto !important;')
+    && page.includes('overflow: visible !important;'),
+  'The surrounding application shell must collapse out of print pagination so it cannot create a trailing blank page.'
+);
+
+assert(
   document.includes("className=\"absolute bottom-[31mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-5 text-[13px]\"")
     && document.includes("className=\"absolute bottom-[5mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-12 text-center text-[15px]\""),
   'Totals and signatures must occupy reserved last-page zones instead of participating in browser fragmentation.'

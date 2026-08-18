@@ -84,6 +84,9 @@ export const getQuotation = async (quotationId) =>
 export const getQuotationRevisionHistory = async (quotationId) =>
   unwrap(await apiClient.get(`/sales/quotations/${quotationId}/revisions`));
 
+export const getQuotationDocumentLineage = async (quotationId) =>
+  unwrap(await apiClient.get(`/sales/quotations/${quotationId}/lineage`));
+
 export const createQuotationRevision = async (quotationId, note = null) =>
   sanitizeQuotation(unwrap(await apiClient.post(`/sales/quotations/${quotationId}/revisions`, { note })));
 

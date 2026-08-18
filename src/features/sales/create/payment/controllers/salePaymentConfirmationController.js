@@ -65,13 +65,21 @@ export const executeSalePaymentConfirmation = async ({
     paymentIntent,
   });
 
-  if (!validation.ok) return validation;
+  if (!validation.ok) {
+    return validation;
+  }
+
   if (typeof onConfirmSale !== 'function') {
-    return { ok: false, error: 'ระบบยืนยันการขายยังไม่พร้อมใช้งาน (missing onConfirmSale)' };
+    return {
+      ok: false,
+      error: 'ระบบยืนยันการขายยังไม่พร้อมใช้งาน (missing onConfirmSale)',
+    };
   }
 
   try {
-    const deliveryNoteMode = saleMode === 'CREDIT' ? 'PRINT' : includeDeliveryNote ? 'PRINT' : undefined;
+    const deliveryNoteMode =
+      saleMode === 'CREDIT' ? 'PRINT' : includeDeliveryNote ? 'PRINT' : undefined;
+
     const response = await onConfirmSale({
       deliveryNoteMode,
       sourceQuotationId: sourceQuotationId || undefined,
@@ -81,13 +89,20 @@ export const executeSalePaymentConfirmation = async ({
 
     if (response?.error) {
       closeReservedPrintWindow(confirmContext);
-      return { ok: false, error: `${response.code ? `[${response.code}] ` : ''}${response.error}`, code: response.code };
+      return {
+        ok: false,
+        error: `${response.code ? `[${response.code}] ` : ''}${response.error}`,
+        code: response.code,
+      };
     }
 
     const saleId = response?.saleId;
     if (!saleId) {
       closeReservedPrintWindow(confirmContext);
-      return { ok: false, error: '❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน' };
+      return {
+        ok: false,
+        error: '❌ ไม่พบ ID ของรายการขายหลังจากยืนยัน',
+      };
     }
 
     if (saleMode === 'CASH') {
@@ -114,7 +129,12 @@ export const executeSalePaymentConfirmation = async ({
 
       const taxDocumentId = Number(completion?.taxIntake?.taxDocumentId || response?.taxIntake?.taxDocumentId || 0);
       if (!taxDocumentId) {
-        const fallbackOpened = openShortReceiptFallback({ saleId, saleOption, onSaleConfirmed, confirmContext });
+        const fallbackOpened = openShortReceiptFallback({
+          saleId,
+          saleOption,
+          onSaleConfirmed,
+          confirmContext,
+        });
         if (!fallbackOpened) closeReservedPrintWindow(confirmContext);
         return {
           ok: true,
@@ -142,9 +162,20 @@ export const executeSalePaymentConfirmation = async ({
         const issuedDocumentId = Number(issued?.document?.id || taxDocumentId);
         const finalTaxOption = taxInvoiceKind === 'FULL' ? 'TAX_DOCUMENT_FULL' : 'TAX_DOCUMENT_SHORT';
         onSaleConfirmed?.(issuedDocumentId, finalTaxOption, confirmContext);
-        return { ok: true, saleId, taxDocumentId: issuedDocumentId, saleOption: finalTaxOption, response };
+        return {
+          ok: true,
+          saleId,
+          taxDocumentId: issuedDocumentId,
+          saleOption: finalTaxOption,
+          response,
+        };
       } catch (issuanceError) {
-        const fallbackOpened = openShortReceiptFallback({ saleId, saleOption, onSaleConfirmed, confirmContext });
+        const fallbackOpened = openShortReceiptFallback({
+          saleId,
+          saleOption,
+          onSaleConfirmed,
+          confirmContext,
+        });
         if (!fallbackOpened) closeReservedPrintWindow(confirmContext);
         return {
           ok: true,
@@ -153,7 +184,10 @@ export const executeSalePaymentConfirmation = async ({
           response,
           warning: projectPostSaleDocumentWarning({
             saleId,
-            code: issuanceError?.response?.data?.code || issuanceError?.code || 'TAX_DOCUMENT_ISSUANCE_FAILED',
+            code:
+              issuanceError?.response?.data?.code ||
+              issuanceError?.code ||
+              'TAX_DOCUMENT_ISSUANCE_FAILED',
             message: fallbackOpened
               ? 'ขายสำเร็จ และเปิดใบกำกับภาษีอย่างย่อสำรองแล้ว แต่ TaxDocument ยังออกไม่สำเร็จ'
               : 'ขายสำเร็จ แต่ออกเอกสารภาษีไม่สำเร็จ',
@@ -166,9 +200,18 @@ export const executeSalePaymentConfirmation = async ({
 
     const finalSaleOption = projectSaleOption({ saleMode, saleOption });
     onSaleConfirmed?.(saleId, finalSaleOption, confirmContext);
-    return { ok: true, saleId, saleOption: finalSaleOption, response };
+
+    return {
+      ok: true,
+      saleId,
+      saleOption: finalSaleOption,
+      response,
+    };
   } catch (error) {
     closeReservedPrintWindow(confirmContext);
-    return { ok: false, error: `❌ ยืนยันการขายล้มเหลว: ${error?.message || 'เกิดข้อผิดพลาด'}` };
+    return {
+      ok: false,
+      error: `❌ ยืนยันการขายล้มเหลว: ${error?.message || 'เกิดข้อผิดพลาด'}`,
+    };
   }
 };

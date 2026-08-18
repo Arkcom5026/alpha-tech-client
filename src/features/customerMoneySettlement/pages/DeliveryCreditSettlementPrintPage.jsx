@@ -95,8 +95,8 @@ const DeliveryCreditSettlementPrintPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-100 p-4 print:bg-white print:p-0">
-      <style>{`@media print { @page { size: ${isShort ? '80mm auto' : 'A4'}; margin: ${isShort ? '4mm' : '12mm'}; } .no-print { display:none!important; } }`}</style>
+    <div className="min-h-screen bg-slate-100 p-4 print:min-h-0 print:bg-white print:p-0">
+      <style>{`@media print { @page { size: ${isShort ? '80mm auto' : 'A4'}; margin: 4mm; } .no-print { display:none!important; } }`}</style>
       <div className="no-print mx-auto mb-4 flex max-w-5xl flex-wrap gap-2">
         <button type="button" onClick={() => navigate('..')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">กลับรายละเอียด</button>
         <button type="button" onClick={() => setMode('A4')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">A4</button>

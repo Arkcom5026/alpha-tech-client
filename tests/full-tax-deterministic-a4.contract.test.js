@@ -29,15 +29,22 @@ assert(
 
 assert(
   document.includes('const PHYSICAL_PAGE_HEIGHT_MM = 296;')
-    && document.includes("@page { size: A4; margin: 0; }")
-    && document.includes('width: 210mm !important;')
-    && document.includes('height: ${PHYSICAL_PAGE_HEIGHT_MM}mm !important;')
-    && document.includes('min-height: ${PHYSICAL_PAGE_HEIGHT_MM}mm !important;')
-    && document.includes('padding: 6mm !important;')
-    && document.includes('overflow: hidden !important;')
-    && !document.includes('height: 297mm !important;')
-    && !document.includes("height: '297mm'"),
-  'Each deterministic sheet must keep a 1mm Chromium rounding reserve instead of touching the exact 297mm page boundary.'
+    && document.includes('const PRINT_PAGE_MARGIN_MM = 4;')
+    && document.includes('const PRINT_SHEET_WIDTH_MM = 201;')
+    && document.includes('const PRINT_SHEET_HEIGHT_MM = 288;')
+    && document.includes('@page { size: A4; margin: ${PRINT_PAGE_MARGIN_MM}mm; }')
+    && document.includes('width: ${PRINT_SHEET_WIDTH_MM}mm !important;')
+    && document.includes('height: ${PRINT_SHEET_HEIGHT_MM}mm !important;')
+    && document.includes('min-height: ${PRINT_SHEET_HEIGHT_MM}mm !important;')
+    && document.includes('padding: 5mm !important;')
+    && document.includes('overflow: hidden !important;'),
+  'Printed full-tax sheets must live inside an explicit print-safe A4 content box instead of touching physical paper edges.'
+);
+
+assert(
+  document.includes('<div role="banner"')
+    && !document.includes('<header className='),
+  'Document identity must not use the global semantic header selector that the application hides during printing.'
 );
 
 assert(

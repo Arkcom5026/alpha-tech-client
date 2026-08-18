@@ -19,12 +19,25 @@ describe('delivery note print workspace presentation contract', () => {
   });
 
   it('preserves printable document shell and form ownership', () => {
-    expect(shell).toContain('min-h-screen bg-slate-100');
+    expect(shell).toContain('a4-standard-delivery-shell');
+    expect(shell).toContain('a4-standard-delivery-frame');
     expect(shell).toContain('max-w-[210mm]');
     expect(shell).toContain('<DeliveryNoteForm');
     expect(shell).toContain('editableDocumentLines');
     expect(shell).toContain('saleItems={saleItems}');
     expect(shell).toContain('config={config}');
+  });
+
+  it('uses the shared print-safe A4 presentation standard', () => {
+    expect(shell).toContain('@page { size: A4; margin: 4mm !important; }');
+    expect(shell).toContain('width: 201mm !important;');
+    expect(shell).toContain('height: 288mm !important;');
+    expect(shell).toContain('min-height: 288mm !important;');
+    expect(shell).toContain('border: 0.3mm solid #444 !important;');
+    expect(shell).toContain('border-radius: 2.5mm !important;');
+    expect(shell).toContain('font-family: var(--document-font-family) !important;');
+    expect(shell).toContain('min-height: 0 !important;');
+    expect(shell).toContain('height: auto !important;');
   });
 
   it('preserves editable-line presentation through explicit intents', () => {

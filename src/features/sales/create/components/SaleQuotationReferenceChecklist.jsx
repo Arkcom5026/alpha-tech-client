@@ -75,8 +75,11 @@ const SaleQuotationReferenceChecklist = ({ quotationId, disabled = false }) => {
               {loading ? 'กำลังโหลดรายการ…' : `${items.length} รายการ`}
             </span>
           </div>
-          <p className="text-[11px] text-slate-500">ใช้เป็นเช็คลิสต์เตรียมสินค้าเท่านั้น ไม่เชื่อมกับตะกร้าขาย</p>
+          {expanded ? (
+            <p className="text-[11px] text-slate-500">ใช้เป็นเช็คลิสต์เตรียมสินค้าเท่านั้น ไม่เชื่อมกับตะกร้าขาย</p>
+          ) : null}
         </div>
+        <span className="text-[11px] font-medium text-slate-500">{expanded ? 'หุบรายการ' : 'ดูรายการ'}</span>
         {expanded ? (
           <ChevronUp className="h-4 w-4 shrink-0 text-slate-500" />
         ) : (
@@ -91,6 +94,8 @@ const SaleQuotationReferenceChecklist = ({ quotationId, disabled = false }) => {
               {items.map((item, index) => {
                 const key = keyForItem(item, index);
                 const done = checked.has(key);
+                const quantity = Number(item?.quantity || 0).toLocaleString('th-TH');
+                const unitName = String(item?.unitName || '').trim();
                 return (
                   <button
                     key={key}
@@ -111,7 +116,7 @@ const SaleQuotationReferenceChecklist = ({ quotationId, disabled = false }) => {
                         {item?.title || `รายการที่ ${index + 1}`}
                       </span>
                       <span className="block text-[11px] text-slate-500">
-                        {Number(item?.quantity || 0).toLocaleString('th-TH')} {item?.unitName || ''}
+                        จำนวน {quantity}{unitName ? ` ${unitName}` : ''}
                       </span>
                     </span>
                   </button>

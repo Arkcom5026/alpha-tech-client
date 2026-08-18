@@ -1,19 +1,19 @@
 // src/features/bill/pages/PrintBillPageFullTax.jsx
-// 🏛️ Premium Next-Gen POS Print Page: (Full A4 Tax Invoice Core Logic Restored)
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import BillLayoutFullTax from '@/features/bill/components/BillLayoutFullTax'
+import FullTaxA4Document from '@/features/bill/components/FullTaxA4Document'
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope'
 import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig'
 import { useBillDocumentSource } from '@/features/bill/hooks/useBillDocumentSource'
-import { useSaleDocumentLineEditor } from '@/features/sales/documents/workspace'
+import { useBillDocumentLineEditor } from '@/features/bill/hooks/useBillDocumentLineEditor'
+import { executeSaleDocumentLineUpdate } from '@/features/sales/documents/workspace'
+import { executeConsolidatedDocumentLineUpdate } from '@/features/combinedBilling/controllers/consolidatedDocumentLineUpdateController'
 
 const PrintBillPageFullTax = () => {
   const params = useParams()
   const saleId = params.saleId || params.id
   const printedRef = useRef(false)
-
   const [searchParams] = useSearchParams()
 
   const paymentId = useMemo(() => {
@@ -25,14 +25,12 @@ const PrintBillPageFullTax = () => {
     () => String(searchParams.get('sourceType') || 'SALE').toUpperCase(),
     [searchParams]
   )
+
   const sourceId = useMemo(
     () => searchParams.get('sourceId') || saleId,
     [saleId, searchParams]
   )
 
-  // Document Workspace baseline:
-  // - default: do not auto print, allowing document-line review first
-  // - opt in to the previous behavior with ?autoPrint=1
   const autoPrint = useMemo(() => {
     const value = String(searchParams.get('autoPrint') || '').toLowerCase()
     return value === '1' || value === 'true' || value === 'yes'
@@ -47,7 +45,9 @@ const PrintBillPageFullTax = () => {
     error,
     reload,
     reset,
+    isConsolidated,
     canEditDocumentLines,
+    documentSourceId,
   } = useBillDocumentSource({ saleId, sourceType, sourceId, paymentId })
 
   const documentConfig = useMemo(() => (
@@ -62,9 +62,28 @@ const PrintBillPageFullTax = () => {
 
   const reloadForPrint = useCallback(async () => reload(), [reload])
 
-  const documentLineEditor = useSaleDocumentLineEditor({
-    saleId: canEditDocumentLines ? saleId : null,
-    reload: reloadForPrint,
+  const saveDocumentLine = useCallback(async ({ item, draft }) => {
+    if (isConsolidated) {
+      return executeConsolidatedDocumentLineUpdate({
+        documentId: documentSourceId,
+        lineId: item?.documentSourceLineId,
+        draft,
+        reload: reloadForPrint,
+      })
+    }
+
+    return executeSaleDocumentLineUpdate({
+      saleId,
+      saleItemIds: item?.saleItemIds,
+      simpleItemIds: item?.simpleItemIds,
+      draft,
+      reload: reloadForPrint,
+    })
+  }, [documentSourceId, isConsolidated, reloadForPrint, saleId])
+
+  const documentLineEditor = useBillDocumentLineEditor({
+    documentKey: `${sourceType}:${documentSourceId || ''}`,
+    saveDocumentLine: canEditDocumentLines ? saveDocumentLine : null,
   })
 
   useEffect(() => {
@@ -78,81 +97,65 @@ const PrintBillPageFullTax = () => {
     }
 
     run()
-
-    return () => {
-      reset()
-    }
+    return () => reset()
   }, [reloadForPrint, reset])
 
   useEffect(() => {
     printedRef.current = false
   }, [sourceType, sourceId, autoPrint])
 
-  // Auto-print remains opt-in only via ?autoPrint=1.
   useEffect(() => {
     if (!autoPrint) return
     if (printedRef.current) return
-    if (!sale?.id) return
-    if (!documentConfig) return
-    if (!Array.isArray(saleItems) || saleItems.length === 0) return
-    if (!payment) return
+    if (!sale?.id || !documentConfig || !Array.isArray(saleItems) || saleItems.length === 0 || !payment) return
 
     printedRef.current = true
-
     const timerId = setTimeout(() => {
       try {
         window.focus?.()
         window.print?.()
       } catch {
-        // Printing remains a browser-owned operation.
+        // browser owns printing
       }
     }, 300)
 
     return () => clearTimeout(timerId)
-  }, [autoPrint, sale?.id, documentConfig, saleItems, payment?.id])
+  }, [autoPrint, sale?.id, documentConfig, saleItems, payment])
 
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
   if (loading) {
-    return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
+    return <div className="min-h-screen bg-slate-900 p-8 text-center font-bold text-zinc-400">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
   }
 
   if (workspaceError) {
-    return <div className="text-center p-8 text-rose-400 font-bold bg-slate-900 min-h-screen">เกิดข้อผิดพลาด: {workspaceError}</div>
+    return <div className="min-h-screen bg-slate-900 p-8 text-center font-bold text-rose-400">เกิดข้อผิดพลาด: {workspaceError}</div>
   }
 
   if (!sale || !Array.isArray(saleItems) || saleItems.length === 0 || !payment || !documentConfig) {
-    return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">ไม่พบข้อมูลใบเสร็จตามรหัสอ้างอิง</div>
+    return <div className="min-h-screen bg-slate-900 p-8 text-center font-bold text-zinc-400">ไม่พบข้อมูลใบเสร็จตามรหัสอ้างอิง</div>
   }
 
   return (
-    <>
-      <style>{`
-        .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
-      `}</style>
-
-      <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
-        <div className="bill-print-root mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
-          <StoreDocumentHeaderScope config={documentConfig}>
-            <BillLayoutFullTax
-              sale={sale}
-              saleItems={saleItems}
-              payments={[payment]}
-              config={documentConfig}
-              mode="full"
-              taxMode="full"
-              editableDocumentLines={canEditDocumentLines}
-              editingLineKey={canEditDocumentLines ? documentLineEditor.editingLineKey : null}
-              lineDrafts={canEditDocumentLines ? documentLineEditor.lineDrafts : {}}
-              savingLineKey={canEditDocumentLines ? documentLineEditor.savingLineKey : null}
-              onToggleDocumentLineEdit={canEditDocumentLines ? documentLineEditor.actions.toggle : undefined}
-              onChangeDocumentLineDraft={canEditDocumentLines ? documentLineEditor.actions.change : undefined}
-              onSaveDocumentLine={canEditDocumentLines ? documentLineEditor.actions.save : undefined}
-            />
-          </StoreDocumentHeaderScope>
-        </div>
-      </div>
-    </>
+    <main className="min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
+      <section className="mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
+        <StoreDocumentHeaderScope config={documentConfig}>
+          <FullTaxA4Document
+            sale={sale}
+            saleItems={saleItems}
+            payments={[payment]}
+            config={documentConfig}
+            editableDocumentLines={canEditDocumentLines}
+            editingLineKey={canEditDocumentLines ? documentLineEditor.editingLineKey : null}
+            lineDrafts={canEditDocumentLines ? documentLineEditor.lineDrafts : {}}
+            savingLineKey={canEditDocumentLines ? documentLineEditor.savingLineKey : null}
+            onToggleDocumentLineEdit={canEditDocumentLines ? documentLineEditor.actions.toggle : undefined}
+            onChangeDocumentLineDraft={canEditDocumentLines ? documentLineEditor.actions.change : undefined}
+            onSaveDocumentLine={canEditDocumentLines ? documentLineEditor.actions.save : undefined}
+          />
+        </StoreDocumentHeaderScope>
+      </section>
+    </main>
   )
 }
 

@@ -33,6 +33,12 @@ includes(editor, 'searchStoreCustomersAction', 'Quotation intake must provide ca
 includes(editor, 'chooseCustomer', 'Quotation intake must allow selecting or changing the quotation customer');
 includes(editor, 'buildPreservedDraftPayload', 'Customer selection must preserve existing draft document fields while changing customer authority');
 includes(editor, 'searchSaleItems', 'Quotation intake must keep product catalog discovery as an optional helper');
+includes(editor, 'groupProductSearchResults', 'Quotation intake must preserve per-product stock context from sales search results');
+includes(editor, 'availableQuantity', 'Quotation product helper must surface useful current stock availability context');
+includes(editor, 'Barcode/SN:', 'Quotation product helper must surface stock identifiers when present');
+includes(editor, 'ข้อมูลสต๊อกเป็นข้อมูลประกอบการเสนอราคา ไม่ใช่การจองสต๊อก', 'Quotation intake must never imply that stock visibility creates a reservation');
+includes(editor, 'data-testid="quotation-intake-overview"', 'Quotation intake must show a useful read-only overview of current quotation lines');
+includes(editor, 'สินค้าในระบบ', 'Quotation intake overview must distinguish product-assisted lines from manual lines');
 includes(editor, 'addProductHelper', 'Product helper selection must create a starter quotation line');
 includes(editor, 'addQuotationLine(quotationId', 'Product-assisted starter lines must persist through canonical quotation line authority');
 includes(editor, 'เป็นตัวช่วยเท่านั้น — เพิ่มแล้วสามารถแก้รายละเอียดทั้งหมดต่อบนหน้าเอกสาร', 'Product helper must remain subordinate to the document workspace');

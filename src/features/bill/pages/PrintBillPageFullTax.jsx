@@ -132,6 +132,15 @@ const PrintBillPageFullTax = () => {
 
   const workspaceError = error || (canEditDocumentLines ? documentLineEditor.error : null)
 
+  // The legacy layout reserves 20 rows. For short documents there are always at
+  // least two trailing visual filler rows. Hide exactly those two fillers in
+  // BOTH screen preview and print, so the preview itself is a physically valid
+  // one-page A4 document rather than relying on print-only reflow.
+  const useCompactA4Grid = useMemo(
+    () => Array.isArray(saleItems) && saleItems.length > 0 && saleItems.length <= 18,
+    [saleItems]
+  )
+
   if (loading) {
     return <div className="text-center p-8 text-zinc-400 font-bold bg-slate-900 min-h-screen">⏳ กำลังโหลดข้อมูลใบเสร็จเต็มรูปแบบ...</div>
   }
@@ -149,13 +158,7 @@ const PrintBillPageFullTax = () => {
       <style>{`
         .bill-print-root { font-family: 'THSarabunNew', 'TH Sarabun New', 'Sarabun', system-ui, sans-serif; }
 
-        /*
-         * One geometry and one layout engine for both the on-screen document
-         * and Chromium paged media. The legacy component uses flex + mt-auto,
-         * which Chromium fragments differently during printing. Block flow
-         * prevents the signature block from being promoted to a second page.
-         * 296mm keeps a 1mm rounding reserve while remaining visually A4.
-         */
+        /* One physical/layout authority for screen and native print. */
         .bill-print-root .print-a4 {
           display: block !important;
           width: 210mm !important;
@@ -163,6 +166,11 @@ const PrintBillPageFullTax = () => {
           min-height: 296mm !important;
           height: auto !important;
           box-sizing: border-box !important;
+        }
+
+        /* These are guaranteed trailing fillers when raw item count <= 18. */
+        .bill-print-compact-a4 .print-a4 tbody tr:nth-last-child(-n+2) {
+          display: none !important;
         }
 
         @media print {
@@ -202,7 +210,7 @@ const PrintBillPageFullTax = () => {
             border-radius: 0 !important;
           }
 
-          /* Keep the editor column's 4% width so the printable columns do not reflow. */
+          /* Keep the editor column's 4% width so printable columns do not reflow. */
           .bill-print-root .print-a4 thead th:nth-child(7),
           .bill-print-root .print-a4 tbody tr > td:nth-child(7) {
             display: table-cell !important;
@@ -217,7 +225,7 @@ const PrintBillPageFullTax = () => {
       `}</style>
 
       <div className="bill-print-page-shell w-full min-h-screen bg-white text-black dark:bg-white dark:text-black py-8 px-4 print:p-0 print:bg-white">
-        <div className="bill-print-root mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none">
+        <div className={`bill-print-root ${useCompactA4Grid ? 'bill-print-compact-a4' : ''} mx-auto max-w-[210mm] bg-white text-black dark:bg-white dark:text-black p-6 rounded-2xl border border-zinc-200 shadow-sm print:p-0 print:border-none print:shadow-none`}>
           <StoreDocumentHeaderScope config={documentConfig}>
             <BillLayoutFullTax
               sale={sale}

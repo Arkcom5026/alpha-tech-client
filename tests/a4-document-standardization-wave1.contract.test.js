@@ -39,11 +39,13 @@ assert(
   deliveryShell.includes('a4-standard-delivery-shell')
     && deliveryShell.includes('@page { size: A4; margin: 4mm !important; }')
     && deliveryShell.includes('width: 201mm !important;')
-    && deliveryShell.includes('height: 288mm !important;')
+    && deliveryShell.includes('height: 286mm !important;')
+    && deliveryShell.includes('max-height: 286mm !important;')
     && deliveryShell.includes('border: 0.3mm solid #444 !important;')
     && deliveryShell.includes('border-radius: 2.5mm !important;')
-    && deliveryShell.includes('font-family: var(--document-font-family) !important;'),
-  'Delivery-note A4 output must retain its own shell while adopting the shared low-level paper standard.'
+    && deliveryShell.includes('font-family: var(--document-font-family) !important;')
+    && deliveryShell.includes('.dn-print-page:last-of-type'),
+  'Delivery-note A4 output must retain module-owned field-safe geometry without a trailing blank sheet.'
 );
 
 console.log('A4 Document Standardization Wave 1 Contract: PASS');

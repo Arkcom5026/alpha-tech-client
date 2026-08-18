@@ -76,9 +76,9 @@ assert(
 );
 
 assert(
-  document.includes("className=\"absolute bottom-[31mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-5 text-[13px]\"")
+  document.includes("className=\"absolute bottom-[28mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-5 text-[13px]\"")
     && document.includes("className=\"absolute bottom-[5mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-12 text-center text-[15px]\""),
-  'Totals and signatures must occupy reserved last-page zones instead of participating in browser fragmentation.'
+  'Totals and signatures must occupy reserved last-page zones with visible breathing room below the item table.'
 );
 
 assert(

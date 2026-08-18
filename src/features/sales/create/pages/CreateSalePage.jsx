@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { CircleHelp, Search } from 'lucide-react';
 
 import useSalesStore from '@/features/sales/store/salesStore';
 import { useCreateSaleWorkflow } from '../index';
@@ -8,7 +8,6 @@ import { SaleCustomerSection as CustomerSection } from '../customer';
 import PaymentSection from '../components/PaymentSection';
 import SaleItemTable from '../components/SaleItemTable';
 import SaleWorkspacePanel from '../components/workspace/SaleWorkspacePanel';
-import SaleWorkspaceHeader from '../components/workspace/SaleWorkspaceHeader';
 import SalePriceTypeSelector from '../components/workspace/SalePriceTypeSelector';
 import SaleItemSearchDialog from '../item-search/components/SaleItemSearchDialog';
 import PosHeldCartPanel from '../../held-cart/components/PosHeldCartPanel';
@@ -75,14 +74,6 @@ const QuickSalePage = ({
 
   return (
     <div className="mx-auto flex min-h-full w-full max-w-[1560px] flex-col gap-3 p-2.5 text-slate-800 selection:bg-teal-200 selection:text-teal-950 md:p-4 xl:h-[calc(100dvh-4rem)] xl:min-h-0 xl:overflow-hidden">
-      <SaleWorkspaceHeader
-        title="ขายสินค้า"
-        description="ค้นหาลูกค้าและสินค้า ตรวจสอบรายการ แล้วดำเนินการชำระเงินในพื้นที่งานเดียว"
-        status={sourceLocked ? 'รายการสินค้าถูกล็อกจากใบจอง' : 'พร้อมสร้างรายการขาย'}
-        tone={sourceLocked ? 'info' : 'good'}
-        onHelp={() => setIsHelpOpen(true)}
-      />
-
       {sourceContext && (
         <div className="shrink-0 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm leading-6 text-blue-900">
           รายการสินค้าถูกอ้างอิงจากใบจองเดิม จำนวน ราคา และรายการสต๊อกจึงถูกล็อกไว้จนกว่าจะยืนยันการขาย
@@ -126,11 +117,22 @@ const QuickSalePage = ({
             locked={checkoutLocked}
             className="h-full"
             action={
-              <SalePriceTypeSelector
-                value={sale.presentation.selectedPriceType}
-                onChange={sale.presentation.setSelectedPriceType}
-                disabled={cartLocked}
-              />
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <SalePriceTypeSelector
+                  value={sale.presentation.selectedPriceType}
+                  onChange={sale.presentation.setSelectedPriceType}
+                  disabled={cartLocked}
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsHelpOpen(true)}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-3 text-sm font-semibold text-emerald-800 shadow-sm transition-colors hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                  aria-label="เปิดคู่มือการขาย"
+                >
+                  <CircleHelp className="h-4 w-4" />
+                  คู่มือ
+                </button>
+              </div>
             }
           >
             {!sourceLocked && (

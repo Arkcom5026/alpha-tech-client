@@ -9,6 +9,7 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), 'u
 
 const page = read('src/features/bill/pages/PrintBillPageFullTax.jsx');
 const document = read('src/features/bill/components/FullTaxA4Document.jsx');
+const globalStyles = read('src/index.css');
 
 const assert = (condition, message) => {
   if (!condition) throw new Error(message);
@@ -21,10 +22,10 @@ assert(
 );
 
 assert(
-  document.includes('const MAX_ROWS_LAST_PAGE = 16;')
+  document.includes('const MAX_ROWS_LAST_PAGE = 18;')
     && document.includes('const MAX_ROWS_NORMAL_PAGE = 24;')
     && document.includes('paginateItems(displayItems)'),
-  'Full-tax A4 pagination must be decided before render with explicit last/normal page capacities.'
+  'Full-tax A4 pagination must use the fuller 18-row last-page grid while retaining deterministic multi-page capacity.'
 );
 
 assert(
@@ -39,6 +40,23 @@ assert(
     && document.includes('padding: 5mm !important;')
     && document.includes('overflow: hidden !important;'),
   'Printed full-tax sheets must live inside an explicit print-safe A4 content box instead of touching physical paper edges.'
+);
+
+assert(
+  document.includes('DOCUMENT_FONT_FAMILY')
+    && document.includes('TH Sarabun New')
+    && document.includes('Sarabun')
+    && globalStyles.includes('--document-font-family: "TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif;')
+    && globalStyles.includes('body *')
+    && globalStyles.includes('font-family: var(--document-font-family) !important;'),
+  'Printed documents must share the TH Sarabun-first document typography authority without changing normal application UI typography.'
+);
+
+assert(
+  document.includes('full-tax-editor-column')
+    && document.includes('.full-tax-a4-page .full-tax-editor-column')
+    && document.includes('display: none !important;'),
+  'The document-line editor column must remain available on screen but be removed from printed table geometry.'
 );
 
 assert(
@@ -73,7 +91,7 @@ assert(
     && document.includes('documentPrefix')
     && document.includes('documentSuffix')
     && document.includes('onSaveDocumentLine?.(item)'),
-  'Deterministic A4 rendering must preserve the existing document-line editor workspace while hiding controls on paper.'
+  'Deterministic A4 rendering must preserve the existing document-line editor workspace while hiding editor controls on paper.'
 );
 
 console.log('Full Tax Deterministic A4 Contract: PASS');

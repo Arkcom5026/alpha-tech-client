@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap');
 @import "./design-system/styles/tokens.css";
 @import "./design-system/styles/buttons.css";
 
@@ -33,6 +33,7 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    --document-font-family: "TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif;
   }
 
   .dark {
@@ -161,6 +162,10 @@
     line-height: var(--ads-type-label-line-height);
     font-weight: var(--ads-font-weight-medium);
   }
+
+  .document-print-font {
+    font-family: var(--document-font-family);
+  }
 }
 
 /* The operational verification control remains available as an internal feature,
@@ -185,6 +190,11 @@ button[aria-label='ดูสถานะความพร้อมของร�
     margin: 0;
     padding: 0;
     overflow: visible !important;
+  }
+
+  body,
+  body * {
+    font-family: var(--document-font-family) !important;
   }
 
   * {

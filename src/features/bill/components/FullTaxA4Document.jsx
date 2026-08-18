@@ -2,12 +2,13 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { buildCustomerFullAddress } from '@features/customer/utils/customerAddressFormatter';
 import { buildReceiptItems } from '../utils/receiptGrouping';
 
-const MAX_ROWS_LAST_PAGE = 16;
+const MAX_ROWS_LAST_PAGE = 18;
 const MAX_ROWS_NORMAL_PAGE = 24;
 const PHYSICAL_PAGE_HEIGHT_MM = 296;
 const PRINT_PAGE_MARGIN_MM = 4;
 const PRINT_SHEET_WIDTH_MM = 201;
 const PRINT_SHEET_HEIGHT_MM = 288;
+const DOCUMENT_FONT_FAMILY = '"TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif';
 
 const round2 = (value) => Number((Number(value || 0)).toFixed(2));
 const formatCurrency = (value) => (Number(value) || 0).toLocaleString('th-TH', {
@@ -248,6 +249,7 @@ const FullTaxA4Document = ({
           width: 210mm;
           height: ${PHYSICAL_PAGE_HEIGHT_MM}mm;
           min-height: ${PHYSICAL_PAGE_HEIGHT_MM}mm;
+          font-family: ${DOCUMENT_FONT_FAMILY};
         }
         @media print {
           html, body, #root { margin: 0 !important; padding: 0 !important; }
@@ -263,6 +265,10 @@ const FullTaxA4Document = ({
             border-radius: 0 !important;
             box-shadow: none !important;
             overflow: hidden !important;
+            font-family: ${DOCUMENT_FONT_FAMILY} !important;
+          }
+          .full-tax-a4-page .full-tax-editor-column {
+            display: none !important;
           }
           .full-tax-a4-page + .full-tax-a4-page { break-before: page; page-break-before: always; }
         }
@@ -302,7 +308,7 @@ const FullTaxA4Document = ({
             style={{
               minHeight: `${PHYSICAL_PAGE_HEIGHT_MM}mm`,
               height: `${PHYSICAL_PAGE_HEIGHT_MM}mm`,
-              fontFamily: 'Tahoma, Arial, sans-serif',
+              fontFamily: DOCUMENT_FONT_FAMILY,
               pageBreakAfter: page.isLast ? 'auto' : 'always',
               breakAfter: page.isLast ? 'auto' : 'page',
             }}
@@ -349,7 +355,7 @@ const FullTaxA4Document = ({
                   <th className="h-[24px] w-[10%] border border-black px-1">หน่วย<br />UNIT</th>
                   <th className="h-[24px] w-[19%] border border-black px-2 text-right">ราคาต่อหน่วย<br />UNIT PRICE</th>
                   <th className="h-[24px] w-[19%] border border-black px-2 text-right">จำนวนเงิน<br />AMOUNT</th>
-                  {editableDocumentLines ? <th className="h-[24px] w-[4%] border border-black px-1 print:invisible">&nbsp;</th> : null}
+                  {editableDocumentLines ? <th className="full-tax-editor-column h-[24px] w-[4%] border border-black px-1">&nbsp;</th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -368,7 +374,7 @@ const FullTaxA4Document = ({
                         <td className="h-[24px] border border-black px-2 text-right align-top tabular-nums">{formatCurrency(unitPriceIncVat(item))}</td>
                         <td className="h-[24px] border border-black px-2 text-right align-top tabular-nums">{formatCurrency(lineAmountIncVat(item))}</td>
                         {editableDocumentLines ? (
-                          <td className="border border-black px-1 py-1 text-center align-top print:invisible">
+                          <td className="full-tax-editor-column border border-black px-1 py-1 text-center align-top">
                             <button
                               type="button"
                               onClick={() => onToggleDocumentLineEdit?.(item)}
@@ -391,7 +397,7 @@ const FullTaxA4Document = ({
                     <td className="h-[24px] border border-black">&nbsp;</td>
                     <td className="h-[24px] border border-black">&nbsp;</td>
                     <td className="h-[24px] border border-black">&nbsp;</td>
-                    {editableDocumentLines ? <td className="h-[24px] border border-black print:invisible">&nbsp;</td> : null}
+                    {editableDocumentLines ? <td className="full-tax-editor-column h-[24px] border border-black">&nbsp;</td> : null}
                   </tr>
                 ))}
               </tbody>

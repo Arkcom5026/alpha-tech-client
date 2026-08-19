@@ -12,6 +12,7 @@ import {
 } from '@/features/printing/presentation/presentationConfig'
 import QuotationPresentationFooter from '@/features/quotation/components/QuotationPresentationFooter'
 import { quotationTypographyPx } from '@/features/quotation/presentation/quotationPresentation'
+import DocumentPresentationLivePreview from '@/features/settings/documentPreview/DocumentPresentationLivePreview'
 
 const inputClassName = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100'
 const labelClassName = 'mb-1.5 block text-xs font-black text-slate-600'
@@ -104,6 +105,23 @@ const QuotationPresentationSettingsCard = ({ branch, branchId, updateBranch, onB
     resolved: { typography: { footer: form.footerTypography } },
   }), [form.footerTypography])
 
+  const previewLayer = useMemo(() => ({
+    typography: { footer: form.footerTypography },
+    blocks: {
+      COMMERCIAL_TERMS: { visible: Boolean(form.commercialTerms.trim()), content: form.commercialTerms },
+      PAYMENT_TERMS: { visible: Boolean(form.paymentTerms.trim()), content: form.paymentTerms },
+      DELIVERY_TERMS: { visible: Boolean(form.deliveryTerms.trim()), content: form.deliveryTerms },
+      NOTES: { visible: Boolean(form.notes.trim()), content: form.notes },
+      CUSTOM_FOOTER: { visible: Boolean(form.customFooter.trim()), content: form.customFooter },
+    },
+    paymentAccountSelection: {
+      accountIds: form.accountIds,
+      showBankName: form.showBankName,
+      showAccountName: form.showAccountName,
+      showAccountNumber: form.showAccountNumber,
+    },
+  }), [form])
+
   const toggleAccount = (id) => {
     const normalizedId = Number(id)
     setForm((current) => ({
@@ -118,26 +136,10 @@ const QuotationPresentationSettingsCard = ({ branch, branchId, updateBranch, onB
     if (!branchId || !branch || saving) return
     setSaving(true)
     try {
-      const blocks = {
-        COMMERCIAL_TERMS: { visible: Boolean(form.commercialTerms.trim()), content: form.commercialTerms },
-        PAYMENT_TERMS: { visible: Boolean(form.paymentTerms.trim()), content: form.paymentTerms },
-        DELIVERY_TERMS: { visible: Boolean(form.deliveryTerms.trim()), content: form.deliveryTerms },
-        NOTES: { visible: Boolean(form.notes.trim()), content: form.notes },
-        CUSTOM_FOOTER: { visible: Boolean(form.customFooter.trim()), content: form.customFooter },
-      }
       const documentHeaderConfig = upsertDocumentPresentationLayer(
         branch.documentHeaderConfig,
         'QUOTATION',
-        {
-          typography: { footer: form.footerTypography },
-          blocks,
-          paymentAccountSelection: {
-            accountIds: form.accountIds,
-            showBankName: form.showBankName,
-            showAccountName: form.showAccountName,
-            showAccountNumber: form.showAccountNumber,
-          },
-        },
+        previewLayer,
       )
       const updated = await updateBranch(branchId, { documentHeaderConfig })
       onBranchChange?.(updated || { ...branch, documentHeaderConfig })
@@ -200,108 +202,105 @@ const QuotationPresentationSettingsCard = ({ branch, branchId, updateBranch, onB
         </button>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
-        <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
-          <div>
-            <label className={labelClassName}>เงื่อนไขการเสนอราคา</label>
-            <textarea rows={3} value={form.commercialTerms} onChange={(event) => patch('commercialTerms', event.target.value)} className={inputClassName} placeholder="เช่น ใบเสนอราคามีอายุ 30 วัน" />
-          </div>
-          <div>
-            <label className={labelClassName}>เงื่อนไขการชำระเงิน</label>
-            <textarea rows={3} value={form.paymentTerms} onChange={(event) => patch('paymentTerms', event.target.value)} className={inputClassName} placeholder="เช่น มัดจำ 50% ก่อนเริ่มงาน" />
-          </div>
-          <div>
-            <label className={labelClassName}>เงื่อนไขการจัดส่ง</label>
-            <textarea rows={3} value={form.deliveryTerms} onChange={(event) => patch('deliveryTerms', event.target.value)} className={inputClassName} placeholder="เช่น จัดส่งภายใน 7–14 วัน" />
-          </div>
-          <div>
-            <label className={labelClassName}>หมายเหตุเริ่มต้น</label>
-            <textarea rows={3} value={form.notes} onChange={(event) => patch('notes', event.target.value)} className={inputClassName} />
-          </div>
-          <div>
-            <label className={labelClassName}>ข้อความท้ายเอกสาร</label>
-            <textarea rows={3} value={form.customFooter} onChange={(event) => patch('customFooter', event.target.value)} className={inputClassName} placeholder="เช่น ขอบคุณที่ไว้วางใจ" />
-          </div>
-          <div>
-            <label className={labelClassName}>ขนาดตัวอักษรส่วนท้าย</label>
-            <select value={form.footerTypography} onChange={(event) => patch('footerTypography', event.target.value)} className={inputClassName}>
-              <option value="xs">เล็กมาก</option>
-              <option value="sm">เล็ก</option>
-              <option value="md">มาตรฐาน</option>
-              <option value="lg">ใหญ่</option>
-              <option value="xl">ใหญ่มาก</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
-          <div className="flex items-center gap-2">
-            <Landmark className="h-4 w-4 text-emerald-600" />
-            <p className="text-xs font-black text-slate-800">บัญชีรับโอนของร้าน</p>
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <input value={accountDraft.displayName} onChange={(event) => patchAccountDraft('displayName', event.target.value)} className={inputClassName} placeholder="ชื่อเรียก เช่น บัญชีหลัก" />
-            <input value={accountDraft.bankName} onChange={(event) => patchAccountDraft('bankName', event.target.value)} className={inputClassName} placeholder="ธนาคาร" />
-            <input value={accountDraft.accountName} onChange={(event) => patchAccountDraft('accountName', event.target.value)} className={inputClassName} placeholder="ชื่อบัญชี" />
-            <input value={accountDraft.accountNumber} onChange={(event) => patchAccountDraft('accountNumber', event.target.value)} className={inputClassName} placeholder="เลขบัญชี" />
-          </div>
-          <button type="button" onClick={addPaymentAccount} disabled={creatingAccount} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">
-            <Plus className="h-3.5 w-3.5" /> {creatingAccount ? 'กำลังเพิ่ม...' : 'เพิ่มบัญชีรับโอน'}
-          </button>
-
-          <div className="space-y-2 border-t border-slate-200 pt-3">
-            {loadingAccounts ? <p className="text-xs font-bold text-slate-400">กำลังโหลดบัญชี...</p> : null}
-            {!loadingAccounts && !accounts.length ? <p className="text-xs font-medium text-slate-400">ยังไม่มีบัญชีรับโอนของร้าน</p> : null}
-            {accounts.map((account) => (
-              <label key={account.id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-3">
-                <input type="checkbox" checked={form.accountIds.includes(Number(account.id))} onChange={() => toggleAccount(account.id)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-                <span className="min-w-0 text-xs">
-                  <span className="block font-black text-slate-800">{account.displayName}</span>
-                  <span className="mt-0.5 block text-slate-500">{account.bankName} · {account.accountName} · {account.accountNumber}</span>
-                </span>
-              </label>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 gap-2 border-t border-slate-200 pt-3 sm:grid-cols-3">
-            {[
-              ['showBankName', 'แสดงธนาคาร'],
-              ['showAccountName', 'แสดงชื่อบัญชี'],
-              ['showAccountNumber', 'แสดงเลขบัญชี'],
-            ].map(([key, label]) => (
-              <label key={key} className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                <input type="checkbox" checked={form[key]} onChange={(event) => patch(key, event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
-                {label}
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-        <div className="mb-3">
-          <p className="text-xs font-black text-slate-800">ตัวอย่างท้ายใบเสนอราคา</p>
-          <p className="mt-0.5 text-[10px] font-medium text-slate-400">ใช้ block renderer เดียวกับหน้าพิมพ์ เพื่อให้ตัวอย่างและเอกสารจริงใช้ semantics ชุดเดียวกัน</p>
-        </div>
-        <div className="mx-auto max-w-[760px] overflow-hidden rounded-xl border border-slate-300 bg-white p-4 shadow-inner">
-          <div className="grid grid-cols-[1.6fr_1fr] text-slate-800">
-            <QuotationPresentationFooter
-              terms={previewTerms}
-              paymentAccounts={selectedAccounts}
-              paymentDisplay={{
-                showBankName: form.showBankName,
-                showAccountName: form.showAccountName,
-                showAccountNumber: form.showAccountNumber,
-              }}
-              fontSizePx={quotationTypographyPx(previewPresentation, 'footer', 'md')}
-            />
-            <div className="border-b border-r border-slate-500">
-              <div className="flex justify-between border-b border-slate-300 px-2.5 py-1 text-[11px]"><span>มูลค่าก่อนภาษี</span><span>10,000.00</span></div>
-              <div className="flex justify-between border-b border-slate-300 px-2.5 py-1 text-[11px]"><span>ภาษีมูลค่าเพิ่ม 7%</span><span>700.00</span></div>
-              <div className="flex justify-between px-2.5 py-1.5 text-[13px] font-extrabold"><span>ยอดสุทธิ</span><span>10,700.00 บาท</span></div>
+      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,0.92fr)_minmax(440px,1.08fr)]">
+        <div className="space-y-5">
+          <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
+            <div>
+              <label className={labelClassName}>เงื่อนไขการเสนอราคา</label>
+              <textarea rows={3} value={form.commercialTerms} onChange={(event) => patch('commercialTerms', event.target.value)} className={inputClassName} placeholder="เช่น ใบเสนอราคามีอายุ 30 วัน" />
+            </div>
+            <div>
+              <label className={labelClassName}>เงื่อนไขการชำระเงิน</label>
+              <textarea rows={3} value={form.paymentTerms} onChange={(event) => patch('paymentTerms', event.target.value)} className={inputClassName} placeholder="เช่น มัดจำ 50% ก่อนเริ่มงาน" />
+            </div>
+            <div>
+              <label className={labelClassName}>เงื่อนไขการจัดส่ง</label>
+              <textarea rows={3} value={form.deliveryTerms} onChange={(event) => patch('deliveryTerms', event.target.value)} className={inputClassName} placeholder="เช่น จัดส่งภายใน 7–14 วัน" />
+            </div>
+            <div>
+              <label className={labelClassName}>หมายเหตุเริ่มต้น</label>
+              <textarea rows={3} value={form.notes} onChange={(event) => patch('notes', event.target.value)} className={inputClassName} />
+            </div>
+            <div>
+              <label className={labelClassName}>ข้อความท้ายเอกสาร</label>
+              <textarea rows={3} value={form.customFooter} onChange={(event) => patch('customFooter', event.target.value)} className={inputClassName} placeholder="เช่น ขอบคุณที่ไว้วางใจ" />
+            </div>
+            <div>
+              <label className={labelClassName}>ขนาดตัวอักษรส่วนท้าย</label>
+              <select value={form.footerTypography} onChange={(event) => patch('footerTypography', event.target.value)} className={inputClassName}>
+                <option value="xs">เล็กมาก</option>
+                <option value="sm">เล็ก</option>
+                <option value="md">มาตรฐาน</option>
+                <option value="lg">ใหญ่</option>
+                <option value="xl">ใหญ่มาก</option>
+              </select>
             </div>
           </div>
+
+          <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
+            <div className="flex items-center gap-2">
+              <Landmark className="h-4 w-4 text-emerald-600" />
+              <p className="text-xs font-black text-slate-800">บัญชีรับโอนของร้าน</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <input value={accountDraft.displayName} onChange={(event) => patchAccountDraft('displayName', event.target.value)} className={inputClassName} placeholder="ชื่อเรียก เช่น บัญชีหลัก" />
+              <input value={accountDraft.bankName} onChange={(event) => patchAccountDraft('bankName', event.target.value)} className={inputClassName} placeholder="ธนาคาร" />
+              <input value={accountDraft.accountName} onChange={(event) => patchAccountDraft('accountName', event.target.value)} className={inputClassName} placeholder="ชื่อบัญชี" />
+              <input value={accountDraft.accountNumber} onChange={(event) => patchAccountDraft('accountNumber', event.target.value)} className={inputClassName} placeholder="เลขบัญชี" />
+            </div>
+            <button type="button" onClick={addPaymentAccount} disabled={creatingAccount} className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 hover:bg-emerald-100 disabled:opacity-50">
+              <Plus className="h-3.5 w-3.5" /> {creatingAccount ? 'กำลังเพิ่ม...' : 'เพิ่มบัญชีรับโอน'}
+            </button>
+
+            <div className="space-y-2 border-t border-slate-200 pt-3">
+              {loadingAccounts ? <p className="text-xs font-bold text-slate-400">กำลังโหลดบัญชี...</p> : null}
+              {!loadingAccounts && !accounts.length ? <p className="text-xs font-medium text-slate-400">ยังไม่มีบัญชีรับโอนของร้าน</p> : null}
+              {accounts.map((account) => (
+                <label key={account.id} className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-white p-3">
+                  <input type="checkbox" checked={form.accountIds.includes(Number(account.id))} onChange={() => toggleAccount(account.id)} className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+                  <span className="min-w-0 text-xs">
+                    <span className="block font-black text-slate-800">{account.displayName}</span>
+                    <span className="mt-0.5 block text-slate-500">{account.bankName} · {account.accountName} · {account.accountNumber}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-2 border-t border-slate-200 pt-3 sm:grid-cols-3">
+              {[
+                ['showBankName', 'แสดงธนาคาร'],
+                ['showAccountName', 'แสดงชื่อบัญชี'],
+                ['showAccountNumber', 'แสดงเลขบัญชี'],
+              ].map(([key, label]) => (
+                <label key={key} className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                  <input type="checkbox" checked={form[key]} onChange={(event) => patch(key, event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="xl:sticky xl:top-4 xl:self-start">
+          <DocumentPresentationLivePreview
+            branch={branch}
+            documentPurpose="QUOTATION"
+            draftLayer={previewLayer}
+            title="ตัวอย่างใบเสนอราคา"
+            footer={(
+              <QuotationPresentationFooter
+                terms={previewTerms}
+                paymentAccounts={selectedAccounts}
+                paymentDisplay={{
+                  showBankName: form.showBankName,
+                  showAccountName: form.showAccountName,
+                  showAccountNumber: form.showAccountNumber,
+                }}
+                fontSizePx={quotationTypographyPx(previewPresentation, 'footer', 'md')}
+              />
+            )}
+          />
         </div>
       </div>
     </section>

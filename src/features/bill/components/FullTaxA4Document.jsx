@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { buildCustomerFullAddress } from '@features/customer/utils/customerAddressFormatter';
+import StatutoryTaxPresentationFooter from '@/features/printing/presentation/StatutoryTaxPresentationFooter';
 import { buildReceiptItems } from '../utils/receiptGrouping';
 
 const MAX_ROWS_LAST_PAGE = 20;
 const MAX_ROWS_NORMAL_PAGE = 24;
+const MAX_ROWS_LAST_PAGE_WITH_PRESENTATION_FOOTER = 17;
 const PHYSICAL_PAGE_HEIGHT_MM = 296;
 const PRINT_PAGE_MARGIN_MM = 4;
 const PRINT_SHEET_WIDTH_MM = 201;
 const PRINT_SHEET_HEIGHT_MM = 288;
+const PRESENTATION_FOOTER_HEIGHT_MM = 18;
 const DOCUMENT_FONT_FAMILY = '"TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif';
 
 const round2 = (value) => Number((Number(value || 0)).toFixed(2));
@@ -17,7 +20,6 @@ const formatCurrency = (value) => (Number(value) || 0).toLocaleString('th-TH', {
 });
 
 const normalizeText = (value) => (typeof value === 'string' ? value.trim() : '');
-
 const buildBranchFullAddress = (branch, fallbackAddress = '-') => {
   const subdistrict = branch?.subdistrict || null;
   const district = subdistrict?.district || null;
@@ -111,11 +113,42 @@ const paginateItems = (items) => {
   return pages;
 };
 
+const paginateItemsWithReservedFooter = (items) => {
+  const src = Array.isArray(items) ? items : [];
+  if (src.length <= MAX_ROWS_LAST_PAGE_WITH_PRESENTATION_FOOTER) {
+    return [{ items: src, isLast: true }];
+  }
+
+  const pages = [];
+  let index = 0;
+  while (src.length - index > MAX_ROWS_NORMAL_PAGE + MAX_ROWS_LAST_PAGE_WITH_PRESENTATION_FOOTER) {
+    pages.push({ items: src.slice(index, index + MAX_ROWS_NORMAL_PAGE), isLast: false });
+    index += MAX_ROWS_NORMAL_PAGE;
+  }
+
+  const remaining = src.length - index;
+  if (remaining > MAX_ROWS_LAST_PAGE_WITH_PRESENTATION_FOOTER) {
+    const penultimateCount = Math.min(
+      MAX_ROWS_NORMAL_PAGE,
+      Math.max(
+        remaining - MAX_ROWS_LAST_PAGE_WITH_PRESENTATION_FOOTER,
+        Math.ceil(remaining / 2),
+      ),
+    );
+    pages.push({ items: src.slice(index, index + penultimateCount), isLast: false });
+    index += penultimateCount;
+  }
+
+  pages.push({ items: src.slice(index), isLast: true });
+  return pages;
+};
+
 const FullTaxA4Document = ({
   sale,
   saleItems,
   payments,
   config,
+  presentationFooter = null,
   editableDocumentLines = false,
   editingLineKey = null,
   lineDrafts = {},
@@ -132,7 +165,19 @@ const FullTaxA4Document = ({
   }, [config?.hideDate]);
 
   const displayItems = useMemo(() => buildReceiptItems(saleItems || []), [saleItems]);
-  const pages = useMemo(() => paginateItems(displayItems), [displayItems]);
+  const normalizedPresentationFooter = useMemo(() => ({
+    notes: normalizeText(presentationFooter?.notes),
+    customFooter: normalizeText(presentationFooter?.customFooter),
+  }), [presentationFooter?.notes, presentationFooter?.customFooter]);
+  const hasPresentationFooter = Boolean(
+    normalizedPresentationFooter.notes || normalizedPresentationFooter.customFooter,
+  );
+  const pages = useMemo(
+    () => (hasPresentationFooter
+      ? paginateItemsWithReservedFooter(displayItems)
+      : paginateItems(displayItems)),
+    [displayItems, hasPresentationFooter],
+  );
 
   if (!sale || !Array.isArray(saleItems) || !payments || !config) return null;
 
@@ -298,7 +343,9 @@ const FullTaxA4Document = ({
 
       {pages.map((page, pageIndex) => {
         const pageItems = page.items || [];
-        const rowCap = page.isLast ? MAX_ROWS_LAST_PAGE : MAX_ROWS_NORMAL_PAGE;
+        const rowCap = page.isLast
+          ? (hasPresentationFooter ? MAX_ROWS_LAST_PAGE_WITH_PRESENTATION_FOOTER : MAX_ROWS_LAST_PAGE)
+          : MAX_ROWS_NORMAL_PAGE;
         const emptyRowCount = Math.max(rowCap - pageItems.length, 0);
 
         return (
@@ -405,6 +452,19 @@ const FullTaxA4Document = ({
 
             {page.isLast ? (
               <>
+                {hasPresentationFooter ? (
+                  <div
+                    data-testid="full-tax-presentation-footer-zone"
+                    className="absolute bottom-[50mm] left-[6mm] right-[6mm] overflow-hidden border-t border-gray-300 pt-1"
+                    style={{ height: `${PRESENTATION_FOOTER_HEIGHT_MM}mm` }}
+                  >
+                    <StatutoryTaxPresentationFooter
+                      notes={normalizedPresentationFooter.notes}
+                      customFooter={normalizedPresentationFooter.customFooter}
+                    />
+                  </div>
+                ) : null}
+
                 <div className="absolute bottom-[28mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-5 text-[13px]">
                   <div className="pt-3 text-center leading-tight">
                     <p className="font-bold">จำนวนเงินเป็นตัวอักษร</p>

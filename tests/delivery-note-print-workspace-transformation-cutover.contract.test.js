@@ -23,11 +23,14 @@ describe('delivery note print workspace transformation cutover contract', () => 
     expect(page).not.toContain('const grouped = new Map()');
   });
 
-  it('keeps fetch and editable-line runtime authority in the page', () => {
-    expect(page).toContain('loadSaleDocument({ saleId })');
-    expect(page).toContain('useSaleDocumentLineEditor({ saleId, reload: reloadSaleDocument })');
+  it('keeps source-aware fetch and editable-line runtime authority in the page', () => {
+    expect(page).toContain('loadSaleDocument({ saleId: sourceId })');
+    expect(page).toContain('loadSaleDeliveryNoteAuthority({ saleId: sourceId })');
+    expect(page).toContain('useSaleDocumentLineEditor({');
+    expect(page).toContain('saleId: isConsolidated ? null : saleId');
+    expect(page).toContain('reload: loadCurrentDocument');
     expect(page).toContain('documentLineActions.clearError()');
-    expect(page).toContain('onSaveDocumentLine={documentLineActions.save}');
+    expect(page).toContain('onSaveDocumentLine={isConsolidated ? undefined : documentLineActions.save}');
   });
 
   it('keeps the policy pure and free of react or sales runtime ownership', () => {

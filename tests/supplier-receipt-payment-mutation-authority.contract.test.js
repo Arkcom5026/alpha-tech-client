@@ -16,7 +16,7 @@ describe('Supplier receipt payment mutation authority', () => {
     expect(form).toContain('receipts: formData.receipts.map((row) => ({ ...row }))');
     expect(form).toContain('const mutationBusy = submitting || submittingRef.current');
     expect(form).toContain('isLoading={isReceiptsLoading || mutationBusy}');
-    expect(form).toContain("'supplier-payment:receipt:create:success'");
-    expect(form).toContain("'supplier-payment:receipt:create:error'");
+    expect(form).toContain('`supplier-payment:receipt:${supplierIdSnapshot}:create:success`');
+    expect(form).toContain('`supplier-payment:receipt:${supplierIdSnapshot}:create:error`');
   });
 });

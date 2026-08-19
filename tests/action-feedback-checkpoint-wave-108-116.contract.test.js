@@ -17,9 +17,11 @@ describe('Action Feedback checkpoint Wave 108-116', () => {
   it('separates repair communication record success from refresh failure', () => {
     const source = read('src/features/repair/components/RepairCommunicationPanel.jsx');
     expect(source).toContain('savingRef.current');
-    expect(source).toContain('const refreshResult = await load();');
-    expect(source).toContain('บันทึกสำเร็จแล้ว แต่โหลดประวัติการติดต่อล่าสุดไม่สำเร็จ');
+    expect(source).toContain('const repairJobIdSnapshot = repairJobId;');
     expect(source).toContain('destinationSnapshot: destination || null');
+    expect(source).toContain('const refreshResult = await load({ jobId: repairJobIdSnapshot, reportError: false });');
+    expect(source).toContain('บันทึกสำเร็จแล้ว แต่โหลดประวัติการติดต่อล่าสุดไม่สำเร็จ');
+    expect(source).toContain('repairJobIdRef.current');
   });
 
   it('separates expense payee creation from parent selection failure', () => {

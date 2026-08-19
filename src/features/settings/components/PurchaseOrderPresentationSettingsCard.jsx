@@ -4,6 +4,7 @@ import { Save } from 'lucide-react'
 import { feedback } from '@/design-system/feedback'
 import PurchaseOrderPresentationFooter from '@/features/purchaseOrder/components/PurchaseOrderPresentationFooter'
 import { purchaseOrderTypographyPx } from '@/features/purchaseOrder/presentation/purchaseOrderPresentation'
+import DocumentPresentationLivePreview from '@/features/settings/documentPreview/DocumentPresentationLivePreview'
 import {
   normalizeDocumentPresentationConfig,
   upsertDocumentPresentationLayer,
@@ -67,6 +68,16 @@ const PurchaseOrderPresentationSettingsCard = ({ branch, branchId, updateBranch,
     customFooter: form.customFooter.trim(),
   }), [form])
   const previewPresentation = useMemo(() => ({ resolved: { typography: { footer: form.footerTypography } } }), [form.footerTypography])
+  const previewLayer = useMemo(() => ({
+    typography: { footer: form.footerTypography },
+    blocks: {
+      COMMERCIAL_TERMS: { visible: Boolean(form.commercialTerms.trim()), content: form.commercialTerms },
+      PAYMENT_TERMS: { visible: Boolean(form.paymentTerms.trim()), content: form.paymentTerms },
+      DELIVERY_TERMS: { visible: Boolean(form.deliveryTerms.trim()), content: form.deliveryTerms },
+      NOTES: { visible: Boolean(form.notes.trim()), content: form.notes },
+      CUSTOM_FOOTER: { visible: Boolean(form.customFooter.trim()), content: form.customFooter },
+    },
+  }), [form])
 
   return (
     <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm">
@@ -82,7 +93,7 @@ const PurchaseOrderPresentationSettingsCard = ({ branch, branchId, updateBranch,
         </button>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.1fr]">
+      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(440px,1.1fr)]">
         <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
           <div><label className={labelClassName}>เงื่อนไขทางการค้า</label><textarea rows={2} value={form.commercialTerms} onChange={(e) => patch('commercialTerms', e.target.value)} className={inputClassName} /></div>
           <div><label className={labelClassName}>เงื่อนไขการชำระเงิน</label><textarea rows={2} value={form.paymentTerms} onChange={(e) => patch('paymentTerms', e.target.value)} className={inputClassName} /></div>
@@ -92,12 +103,19 @@ const PurchaseOrderPresentationSettingsCard = ({ branch, branchId, updateBranch,
           <div><label className={labelClassName}>ขนาดตัวอักษรส่วนท้าย</label><select value={form.footerTypography} onChange={(e) => patch('footerTypography', e.target.value)} className={inputClassName}><option value="xs">เล็กมาก</option><option value="sm">เล็ก</option><option value="md">มาตรฐาน</option><option value="lg">ใหญ่</option><option value="xl">ใหญ่มาก</option></select></div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-          <div className="mb-3"><p className="text-xs font-black text-slate-800">ตัวอย่างท้ายใบสั่งซื้อ</p><p className="mt-0.5 text-[10px] font-medium text-slate-400">ใช้ semantic footer component เดียวกับหน้าพิมพ์จริง</p></div>
-          <div className="mx-auto min-h-[210px] max-w-[760px] rounded-xl border border-slate-300 bg-white p-4 shadow-inner">
-            <PurchaseOrderPresentationFooter content={previewContent} fontSizePx={purchaseOrderTypographyPx(previewPresentation, 'footer', 'md')} />
-            <div className="mt-12 grid grid-cols-2 gap-10 text-center text-[10px] text-slate-400"><div className="border-t border-slate-400 pt-2">ผู้สั่งซื้อ</div><div className="border-t border-slate-400 pt-2">ผู้ขาย</div></div>
-          </div>
+        <div className="xl:sticky xl:top-4 xl:self-start">
+          <DocumentPresentationLivePreview
+            branch={branch}
+            documentPurpose="PURCHASE_ORDER"
+            draftLayer={previewLayer}
+            title="ตัวอย่างใบสั่งซื้อ"
+            footer={(
+              <PurchaseOrderPresentationFooter
+                content={previewContent}
+                fontSizePx={purchaseOrderTypographyPx(previewPresentation, 'footer', 'md')}
+              />
+            )}
+          />
         </div>
       </div>
     </section>

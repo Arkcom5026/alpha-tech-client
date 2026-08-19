@@ -116,8 +116,7 @@ const CombinedBillingPage = () => {
   return <div className="p-6 space-y-6">
     <div>
       <h1 className="text-2xl font-bold">Document Workspace / จัดชุดเอกสาร</h1>
-      <p className="text-gray-600">เลือกใบส่งของที่มีหลักฐานชำระพร้อมแล้วจากทั้งเงินสดและเครดิต แล้วรวมเข้าสู่เอกสารชุดเดียวกัน</p>
-      <p className="mt-1 text-xs text-slate-500">รายการเงินสดที่ชำระแล้วจะล็อกราคาต้นทาง หากต้องแก้ราคาให้ใช้โฟลว์คืนสินค้า/เครดิตโน้ตเพื่อรักษาหลักฐานการชำระและภาษี</p>
+      <p className="text-gray-600">เลือกรายการที่ชำระพร้อมแล้ว ปรับราคาสุดท้าย และส่งต่อเข้าสู่โฟลว์ใบส่งสินค้าและบิลมาตรฐาน</p>
     </div>
     <CustomerFilter />
     {message && <div className="rounded-lg bg-green-50 p-4 text-green-800">{message}</div>}
@@ -125,12 +124,6 @@ const CombinedBillingPage = () => {
       <div>
         <div className="font-semibold">ชุดเอกสาร {lastResult.code}</div>
         <div className="text-sm text-slate-500">จากจุดนี้ให้ใช้หน้าใบส่งสินค้าและหน้าบิลเดิมสำหรับการพิมพ์ ดูย้อนหลัง และพิมพ์ซ้ำ</div>
-        {lastResult.taxAuthorityMode === 'SOURCE_TAX_PRESERVED' ? (
-          <div className="mt-1 text-xs font-medium text-amber-700">คงใบกำกับภาษีที่ออกจากรายการต้นทางไว้เดิม และไม่สร้างใบกำกับภาษีซ้ำสำหรับชุดนี้</div>
-        ) : null}
-        {lastResult.taxAuthorityMode === 'CONSOLIDATED_TAX_DRAFT' ? (
-          <div className="mt-1 text-xs font-medium text-emerald-700">สิทธิ์ออกใบกำกับภาษีของรายการที่เลือกถูกส่งต่อมาที่เอกสารรวมชุดนี้</div>
-        ) : null}
       </div>
       <div className="flex flex-wrap gap-3">
         <button className="rounded bg-slate-800 px-4 py-2 text-white" onClick={() => printDelivery(lastResult)}>พิมพ์ใบส่งสินค้า</button>
@@ -143,31 +136,22 @@ const CombinedBillingPage = () => {
     {error && <div className="rounded-lg bg-red-50 p-4 text-red-700">{error.response?.data?.message || error.message}</div>}
     {customer && <div className="space-y-4">
       {workspace.map((sale) => <section key={sale.id} className="rounded-xl border bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <b>{sale.documentNo}</b><span className="ml-2 text-sm text-gray-500">{sale.code}</span>
-            <div className="mt-1 text-xs text-slate-500">
-              {sale.saleMode === 'CASH' ? 'เงินสด · Sale Payment authority' : 'เครดิต · Settlement authority'}
-            </div>
-          </div>
+        <div className="mb-3 flex items-center justify-between">
+          <div><b>{sale.documentNo}</b><span className="ml-2 text-sm text-gray-500">{sale.code}</span></div>
           <span className="rounded bg-gray-100 px-2 py-1 text-xs">{sale.documentStatus}</span>
         </div>
         <div className="overflow-x-auto"><table className="min-w-full text-sm"><thead><tr className="bg-gray-50 text-left"><th className="p-2">เลือก</th><th className="p-2">รายการ</th><th className="p-2">สถานะ</th><th className="p-2 text-right">ราคาเดิม</th><th className="p-2">ราคาสุดท้าย/หน่วย</th><th className="p-2">เหตุผลปรับราคา</th></tr></thead><tbody>
           {sale.lines.map((line) => {
             const key = `${line.lineType}:${line.lineId}`;
             const ready = line.status === 'PAID_READY';
-            const cashLocked = line.saleMode === 'CASH';
             const changed = Number(prices[key]) !== Number(line.sourceUnitPrice);
             return <tr key={key} className="border-t">
               <td className="p-2"><input type="checkbox" disabled={!ready || mutationBusy} checked={!!selected[key]} onChange={() => setSelected((state) => ({ ...state, [key]: !state[key] }))} /></td>
-              <td className="p-2">{line.description}<div className="text-xs text-gray-500">จำนวน {line.quantity} · ชำระ {money(line.settledAmount)} · {line.paymentAuthority === 'SALE_PAYMENT' ? 'Sale Payment' : 'Settlement'}</div></td>
+              <td className="p-2">{line.description}<div className="text-xs text-gray-500">จำนวน {line.quantity} · ชำระ {money(line.settledAmount)}</div></td>
               <td className="p-2">{line.status}</td>
               <td className="p-2 text-right">{money(line.sourceUnitPrice)}</td>
-              <td className="p-2">
-                <input className="w-32 rounded border px-2 py-1 text-right disabled:bg-slate-100 disabled:text-slate-500" type="number" min="0" step="0.01" disabled={!ready || mutationBusy || cashLocked} value={prices[key] ?? ''} onChange={(e) => setPrices((state) => ({ ...state, [key]: e.target.value }))} />
-                {cashLocked ? <div className="mt-1 text-[11px] text-slate-400">ล็อกราคาหลังชำระ</div> : null}
-              </td>
-              <td className="p-2"><input className="w-full min-w-48 rounded border px-2 py-1 disabled:bg-slate-100" disabled={cashLocked || !ready || !changed || mutationBusy} required={!cashLocked && changed} value={reasons[key] || ''} onChange={(e) => setReasons((state) => ({ ...state, [key]: e.target.value }))} placeholder={cashLocked ? 'ใช้ราคาต้นทาง' : changed ? 'ระบุเหตุผล (จำเป็น)' : '-'} /></td>
+              <td className="p-2"><input className="w-32 rounded border px-2 py-1 text-right" type="number" min="0" step="0.01" disabled={!ready || mutationBusy} value={prices[key] ?? ''} onChange={(e) => setPrices((state) => ({ ...state, [key]: e.target.value }))} /></td>
+              <td className="p-2"><input className="w-full min-w-48 rounded border px-2 py-1" disabled={!ready || !changed || mutationBusy} required={changed} value={reasons[key] || ''} onChange={(e) => setReasons((state) => ({ ...state, [key]: e.target.value }))} placeholder={changed ? 'ระบุเหตุผล (จำเป็น)' : '-'} /></td>
             </tr>;
           })}
         </tbody></table></div>
@@ -176,7 +160,7 @@ const CombinedBillingPage = () => {
         <div className="flex flex-wrap items-end gap-4">
           <label className="flex-1">หมายเหตุ<input className="mt-1 w-full rounded border px-3 py-2" disabled={mutationBusy} value={note} onChange={(e) => setNote(e.target.value)} /></label>
           <div className="text-right"><div className="text-sm text-gray-500">{chosen.length} รายการ</div><div className="text-xl font-bold">{money(total)} บาท</div></div>
-          <button className="rounded bg-blue-600 px-5 py-2 text-white disabled:opacity-50" disabled={mutationBusy || !chosen.length || chosen.some((line) => line.saleMode !== 'CASH' && Number(prices[`${line.lineType}:${line.lineId}`]) !== Number(line.sourceUnitPrice) && !reasons[`${line.lineType}:${line.lineId}`]?.trim())} onClick={confirm}>{confirming ? 'กำลังยืนยันชุดเอกสาร...' : 'ยืนยันชุดเอกสาร'}</button>
+          <button className="rounded bg-blue-600 px-5 py-2 text-white disabled:opacity-50" disabled={mutationBusy || !chosen.length || chosen.some((line) => Number(prices[`${line.lineType}:${line.lineId}`]) !== Number(line.sourceUnitPrice) && !reasons[`${line.lineType}:${line.lineId}`]?.trim())} onClick={confirm}>{confirming ? 'กำลังยืนยันชุดเอกสาร...' : 'ยืนยันชุดเอกสาร'}</button>
         </div>
       </div>
     </div>}

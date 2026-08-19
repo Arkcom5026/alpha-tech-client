@@ -10,11 +10,13 @@ describe('Action feedback checkpoint — waves 138-139', () => {
 
     expect(page).toContain('const submittingRef = useRef(false)');
     expect(page).toContain('if (submitting || submittingRef.current) return');
-    expect(page).toContain('const employeeId = id');
+    expect(page).toContain("const employeeIdSnapshot = String(id || '')");
+    expect(page).toContain("const shopSlugSnapshot = shopSlug || 'advancetech'");
     expect(page).toContain('const payload = { ...formData }');
-    expect(page).toContain('await updateEmployee(employeeId, payload)');
+    expect(page).toContain('await updateEmployee(employeeIdSnapshot, payload)');
     expect(page).toContain('const mutationBusy = submitting || submittingRef.current');
     expect(page).toContain('loading={mutationBusy}');
+    expect(page).toContain('employeeContextRef.current');
   });
 
   it('serializes sale return completion against a stable financial command snapshot', () => {

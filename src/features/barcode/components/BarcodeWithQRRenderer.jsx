@@ -1,5 +1,7 @@
 import React from 'react';
-import QRCode from 'react-qr-code';
+import QRCodeModule from 'react-qr-code';
+
+const QRCode = QRCodeModule?.default?.default ?? QRCodeModule?.default ?? QRCodeModule;
 
 const BarcodeWithQRRenderer = ({
   barcodeValue,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope';
 import {
   loadSaleDeliveryNoteAuthority,
@@ -26,7 +26,8 @@ import {
 } from '../print/workspace/policies/deliveryNotePrintPolicy';
 
 const PrintDeliveryNotePage = () => {
-  const { saleId } = useParams();
+  const navigate = useNavigate();
+  const { saleId, shopSlug } = useParams();
   const [searchParams] = useSearchParams();
   const sourceType = String(searchParams.get('sourceType') || 'SALE').toUpperCase();
   const sourceId = searchParams.get('sourceId') || saleId;
@@ -144,6 +145,15 @@ const PrintDeliveryNotePage = () => {
     () => deliveryNoteTypographyPx(presentation, 'footer', 'md'),
     [presentation]
   );
+  const sourceQuotationPath = useMemo(() => {
+    const sourceQuotationId = currentSale?.sourceQuotation?.id || currentSale?.sourceQuotation?.quotationId || null;
+    return sourceQuotationId
+      ? `/${shopSlug || 'advancetech'}/pos/sales/quotations/${sourceQuotationId}/print`
+      : null;
+  }, [currentSale?.sourceQuotation, shopSlug]);
+  const openSourceQuotation = useCallback(() => {
+    if (sourceQuotationPath) navigate(sourceQuotationPath);
+  }, [navigate, sourceQuotationPath]);
   const error = pageError || (isConsolidated ? '' : editorError);
 
   if (isLoading) {
@@ -166,6 +176,8 @@ const PrintDeliveryNotePage = () => {
         setHideDate={setHideDate}
         saleItems={preparedSaleItems}
         config={preparedConfig}
+        sourceQuotationPath={sourceQuotationPath}
+        onOpenSourceQuotation={openSourceQuotation}
         presentationFooter={(
           <DeliveryNotePresentationFooter
             content={footerContent}

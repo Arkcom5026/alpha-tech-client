@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveQrCodeComponent } from '../src/features/repair/customer-access/utils/resolveQrCodeComponent.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,13 +83,28 @@ test('staff paperless access remains tokenized QR and share based', () => {
   assert.match(source, /revokeTrackingAccess/);
 });
 
-test('staff tracking QR normalizes module-object interop before React render', () => {
-  const source = read('src/features/repair/customer-access/components/RepairTrackingAccessPanel.jsx');
+test('QR resolver accepts production interop shapes but rejects module objects', () => {
+  const Component = () => null;
+  const ReactObjectComponent = { $$typeof: Symbol.for('react.forward_ref') };
 
-  assert.match(source, /import QRCodeModule from 'react-qr-code'/);
-  assert.match(
-    source,
-    /const QRCode = QRCodeModule\?\.default\?\.default \?\? QRCodeModule\?\.default \?\? QRCodeModule/,
-  );
-  assert.match(source, /<QRCode value=\{trackingUrl\} size=\{132\} level="M" \/>/);
+  assert.equal(resolveQrCodeComponent(Component), Component);
+  assert.equal(resolveQrCodeComponent({ default: Component }), Component);
+  assert.equal(resolveQrCodeComponent({ default: { default: Component } }), Component);
+  assert.equal(resolveQrCodeComponent({ QRCode: Component }), Component);
+  assert.equal(resolveQrCodeComponent({ default: { QRCode: Component } }), Component);
+  assert.equal(resolveQrCodeComponent({ default: ReactObjectComponent }), ReactObjectComponent);
+  assert.equal(resolveQrCodeComponent({ default: { unexpected: true } }), null);
+});
+
+test('staff tracking QR cannot render an unresolved module object in production', () => {
+  const source = read('src/features/repair/customer-access/components/RepairTrackingAccessPanel.jsx');
+  const resolverSource = read('src/features/repair/customer-access/utils/resolveQrCodeComponent.js');
+
+  assert.match(source, /import \* as QRCodeModule from 'react-qr-code'/);
+  assert.match(source, /resolveQrCodeComponent\(QRCodeModule\)/);
+  assert.match(source, /QRCode \? \(/);
+  assert.match(source, /QR ไม่พร้อมใช้งาน กรุณาใช้ลิงก์ด้านข้าง/);
+  assert.match(resolverSource, /moduleValue\?\.QRCode/);
+  assert.match(resolverSource, /candidate\.\$\$typeof/);
+  assert.doesNotMatch(source, /const QRCode = QRCodeModule\?\.default\?\.default/);
 });

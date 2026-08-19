@@ -11,15 +11,17 @@ describe('Repair subcontract lifecycle mutation authority', () => {
     expect(source).toContain("import { feedback } from '@/design-system'");
     expect(source).toContain('const mutationRef = useRef(false)');
     expect(source).toContain('if (mutationRef.current || mutationBusy) return false');
+    expect(source).toContain('const ownerJobId = jobIdSnapshot || jobIdRef.current');
     expect(source).toContain('feedback.actionSuccess');
     expect(source).toContain('feedback.actionError');
-    expect(source).toContain('repair:subcontract:${job.id}:${key}:success');
-    expect(source).toContain('repair:subcontract:${job.id}:${key}:error');
+    expect(source).toContain('repair:subcontract:${ownerJobId}:${key}:success');
+    expect(source).toContain('repair:subcontract:${ownerJobId}:${key}:error');
   });
 
   it('freezes mutable payloads before send, update, return request, and return receipt', () => {
     const source = read('src/features/repair/components/RepairSubcontractPanel.jsx');
 
+    expect(source).toContain('const jobIdSnapshot = job.id');
     expect(source).toContain('const sendFormSnapshot = { ...sendForm }');
     expect(source).toContain('const updateFormSnapshot = { ...updateForm }');
     expect(source).toContain('const returnNoteSnapshot = returnNote.trim()');
@@ -31,7 +33,7 @@ describe('Repair subcontract lifecycle mutation authority', () => {
   it('keeps all subcontract lifecycle controls locked while one mutation owns the boundary', () => {
     const source = read('src/features/repair/components/RepairSubcontractPanel.jsx');
 
-    expect(source).toContain('const interactionLocked = loading || mutationBusy');
+    expect(source).toContain('const interactionLocked = loading || mutationBusy || mutationRef.current');
     expect(source).toContain('<fieldset disabled={interactionLocked}');
     expect(source).toContain("mutationAction === 'send'");
     expect(source).toContain("mutationAction === 'update'");

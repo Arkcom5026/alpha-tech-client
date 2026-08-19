@@ -13,6 +13,7 @@ import {
   normalizeLogoSize,
   projectDocumentHeaderFormDefaults,
 } from '@/features/branch/documentHeader/documentHeaderConfig';
+import QuotationPresentationSettingsCard from '@/features/settings/components/QuotationPresentationSettingsCard';
 import StorefrontMediaUploadField from '@/features/storeExperience/components/StorefrontMediaUploadField';
 import { uploadStorefrontMedia } from '@/features/storeExperience/api/storeExperienceApi';
 
@@ -147,7 +148,7 @@ const DocumentFormatSettingsPage = () => {
               <h1 className="text-xl font-black tracking-tight text-slate-900">รูปแบบเอกสาร</h1>
             </div>
             <p className="mt-1 text-xs font-bold leading-relaxed text-slate-400">
-              กำหนดรูปแบบหัวเอกสารของ {branch.name || 'ร้านปัจจุบัน'} โดยไม่เปลี่ยนข้อมูลทางกฎหมายของผู้ออกเอกสารภาษี
+              กำหนดหัวเอกสารและรูปแบบเฉพาะของ {branch.name || 'ร้านปัจจุบัน'} โดยไม่เปลี่ยนข้อมูลทางกฎหมายของผู้ออกเอกสารภาษี
             </p>
           </div>
           <span className="inline-flex self-start rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">ร้าน ID: {branchId}</span>
@@ -218,7 +219,7 @@ const DocumentFormatSettingsPage = () => {
           </section>
 
           <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-2 text-[11px] font-medium leading-relaxed text-slate-400"><Info className="mt-0.5 h-4 w-4 shrink-0" /><span>ระยะแรกใช้กับเอกสาร A4 ที่เชื่อมต่อแล้ว ส่วนใบเสร็จ 80 มม. จะเปิดใช้งานหลังผ่านการตรวจสอบความสูงและการตัดหน้าของเครื่องพิมพ์จริง</span></div>
+            <div className="flex items-start gap-2 text-[11px] font-medium leading-relaxed text-slate-400"><Info className="mt-0.5 h-4 w-4 shrink-0" /><span>หัวเอกสารนี้เป็นค่าเริ่มต้นของร้าน เอกสารแต่ละประเภทสามารถมีค่าที่กำหนดเฉพาะเพิ่มเติมได้ โดยไม่ทำลายค่าเริ่มต้นนี้</span></div>
             <button type="submit" disabled={saving || uploadingLogo} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-black text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"><Save className="h-4 w-4" />{uploadingLogo ? 'กำลังอัปโหลดโลโก้...' : saving ? 'กำลังบันทึก...' : 'บันทึกรูปแบบ'}</button>
           </div>
         </form>
@@ -249,6 +250,13 @@ const DocumentFormatSettingsPage = () => {
           </div>
         </aside>
       </div>
+
+      <QuotationPresentationSettingsCard
+        branch={branch}
+        branchId={branchId}
+        updateBranch={updateBranch}
+        onBranchChange={setBranch}
+      />
     </div>
   );
 };

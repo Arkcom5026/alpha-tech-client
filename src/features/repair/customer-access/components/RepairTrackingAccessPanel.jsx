@@ -1,7 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import QRCode from 'react-qr-code';
+import QRCodeModule from 'react-qr-code';
 import repairApi from '../../api/repairApi';
 import { ConfirmActionDialog, feedback } from '@/design-system';
+
+// react-qr-code can be surfaced by Vite/CommonJS interop as a module object
+// instead of the component itself. Normalize the runtime export before render
+// so creating a customer tracking link never crashes the repair workspace.
+const QRCode = QRCodeModule?.default?.default ?? QRCodeModule?.default ?? QRCodeModule;
 
 const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
   const [access, setAccess] = useState(null);

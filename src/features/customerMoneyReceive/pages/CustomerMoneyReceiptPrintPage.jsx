@@ -4,7 +4,11 @@ import { feedback } from '@/design-system/feedback';
 import { getCustomerMoneyReceive } from '../api/customerMoneyReceiveApi';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope';
-import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig';
+import FinanceOperationalPresentationFooter from '@/features/printing/presentation/FinanceOperationalPresentationFooter';
+import {
+  buildCustomerMoneyReceiptHeader,
+  resolveCustomerMoneyReceiptPresentation,
+} from '../presentation/customerMoneyReceiptPresentation';
 
 const formatMoney = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -60,26 +64,38 @@ const thaiBahtText = (value) => {
   return satang ? `${bahtText}${readThaiInteger(satang)}สตางค์` : `${bahtText}ถ้วน`;
 };
 
-const CustomerMoneyReceiptDocument = ({ record, mode, headerConfig }) => {
+const CustomerMoneyReceiptDocument = ({ record, mode, headerConfig, presentation }) => {
   const isShort = mode === 'SHORT';
   const isCancelled = record.status === 'CANCELLED';
   const isFullyAllocated = record.status === 'FULLY_ALLOCATED';
-  const branch = record.branch || {};
   const customer = record.customer || {};
   const customerContact = customer.user?.loginId || customer.user?.email || '-';
-  const branchIdentity = branch.isHeadOffice ? 'สำนักงานใหญ่' : 'สาขา';
+  const branchIdentity = record.branch?.isHeadOffice ? 'สำนักงานใหญ่' : 'สาขา';
   const moneyStatusText = isCancelled
     ? 'เอกสารถูกยกเลิกและยอดนี้ไม่อยู่ใน Customer Money ที่พร้อมใช้'
     : isFullyAllocated
       ? 'Customer Money จากใบรับนี้ถูกนำไปใช้ครบแล้ว'
       : `รับเข้า Customer Money และยังพร้อมใช้ ฿${formatMoney(record.remainingAmount)}`;
+  const lifecycleNotice = isFullyAllocated
+    ? 'เงินจากใบรับนี้ถูกนำไปใช้ผ่าน Customer Money workflow ครบแล้ว'
+    : isCancelled
+      ? 'ใบรับเงินนี้ถูกยกเลิกและไม่ใช่ยอดเงินพร้อมใช้'
+      : 'ยอดคงเหลือของใบรับนี้ยังสามารถนำไปใช้ผ่าน Customer Money workflow ได้';
+  const systemNotices = [
+    'เอกสารนี้เป็นหลักฐานการรับเงินจริงจากลูกค้า',
+    lifecycleNotice,
+    !isShort ? 'ไม่ใช่ใบกำกับภาษี และไม่ก่อให้เกิดการตัดสต๊อกหรือรายการภาษีจากการรับเงินนี้' : '',
+  ].filter(Boolean);
 
   return (
     <article className={`customer-money-receipt-document bg-white text-black ${isShort ? 'w-[80mm] p-4 text-[12px]' : 'credit-collection-a4 text-[14px]'}`}>
       {isShort ? (
         <header className="border-b-2 border-black pb-4 text-center">
-          <h1 className="text-xl font-bold">{branch.name || 'ร้านค้า'}</h1>
-          <div className="mt-1 text-sm">{[branch.phone && `โทร ${branch.phone}`, branch.taxId && `เลขประจำตัวผู้เสียภาษี ${branch.taxId}`].filter(Boolean).join(' · ')}</div>
+          <h1 className="text-xl font-bold">{headerConfig?.branchName || 'ร้านค้า'}</h1>
+          <div className="mt-1 text-sm">{[
+            headerConfig?.phone && `โทร ${headerConfig.phone}`,
+            headerConfig?.taxId && `เลขประจำตัวผู้เสียภาษี ${headerConfig.taxId}`,
+          ].filter(Boolean).join(' · ')}</div>
           <div className="mt-3 text-lg font-bold">ใบรับเงิน</div>
           <div className="text-xs tracking-wide">CUSTOMER MONEY RECEIPT</div>
         </header>
@@ -92,7 +108,7 @@ const CustomerMoneyReceiptDocument = ({ record, mode, headerConfig }) => {
               {headerConfig?.address ? <p className="credit-collection-store-address mt-1 text-sm">{headerConfig.address}</p> : null}
               {headerConfig?.phone ? <p className="credit-collection-store-phone mt-1 text-sm">โทร {headerConfig.phone}</p> : null}
               {headerConfig?.taxId ? <p className="credit-collection-store-tax mt-1 text-sm">เลขประจำตัวผู้เสียภาษี {headerConfig.taxId}</p> : null}
-              {headerConfig?.headerStyle?.showBranchLabel !== false && branch.name ? <p className="mt-1 text-xs">{branchIdentity}</p> : null}
+              {headerConfig?.headerStyle?.showBranchLabel !== false && headerConfig?.branchName ? <p className="mt-1 text-xs">{branchIdentity}</p> : null}
             </div>
           </div>
           <div className="mt-4 text-center text-xl font-bold">ใบรับเงิน</div>
@@ -151,11 +167,14 @@ const CustomerMoneyReceiptDocument = ({ record, mode, headerConfig }) => {
         </section>
       )}
 
-      <footer className={`${isShort ? 'mt-6' : 'mt-12'} border-t border-black pt-3 text-center text-xs`}>
-        <div className="font-semibold">เอกสารนี้เป็นหลักฐานการรับเงินจริงจากลูกค้า</div>
-        <div className="mt-1">{isFullyAllocated ? 'เงินจากใบรับนี้ถูกนำไปใช้ผ่าน Customer Money workflow ครบแล้ว' : isCancelled ? 'ใบรับเงินนี้ถูกยกเลิกและไม่ใช่ยอดเงินพร้อมใช้' : 'ยอดคงเหลือของใบรับนี้ยังสามารถนำไปใช้ผ่าน Customer Money workflow ได้'}</div>
-        {!isShort && <div className="mt-1">ไม่ใช่ใบกำกับภาษี และไม่ก่อให้เกิดการตัดสต๊อกหรือรายการภาษีจากการรับเงินนี้</div>}
-      </footer>
+      <div className={isShort ? 'mt-6' : 'mt-12'}>
+        <FinanceOperationalPresentationFooter
+          notes={presentation?.notes}
+          customFooter={presentation?.customFooter}
+          systemNotices={systemNotices}
+          compact={isShort}
+        />
+      </div>
     </article>
   );
 };
@@ -205,12 +224,30 @@ const CustomerMoneyReceiptPrintPage = () => {
     return () => window.clearTimeout(timer);
   }, [autoPrint, record, error, id]);
 
-  const a4HeaderConfig = useMemo(() => record ? buildStoreDocumentHeader({ branch: record.branch, documentType: 'CUSTOMER_MONEY_RECEIPT' }) : null, [record]);
+  const presentation = useMemo(() => (
+    record ? resolveCustomerMoneyReceiptPresentation({ record, mode }) : null
+  ), [record, mode]);
+  const headerConfig = useMemo(() => (
+    record && presentation
+      ? buildCustomerMoneyReceiptHeader({
+        record,
+        presentation,
+        presentationSnapshot: presentation.presentationSnapshot,
+      })
+      : null
+  ), [record, presentation]);
 
   if (error) return <div className="p-8 text-center text-rose-700">{error}</div>;
   if (!record) return <div className="p-8 text-center text-slate-500">กำลังโหลดใบรับเงิน...</div>;
 
-  const receiptDocument = <CustomerMoneyReceiptDocument record={record} mode={mode} headerConfig={a4HeaderConfig} />;
+  const receiptDocument = (
+    <CustomerMoneyReceiptDocument
+      record={record}
+      mode={mode}
+      headerConfig={headerConfig}
+      presentation={presentation}
+    />
+  );
 
   return (
     <>
@@ -239,7 +276,7 @@ const CustomerMoneyReceiptPrintPage = () => {
       </div>
       <main className="min-h-screen bg-slate-100 p-4 print:min-h-0 print:bg-white print:p-0">
         <div className="mx-auto w-fit shadow print:shadow-none">
-          {mode === 'SHORT' ? receiptDocument : <StoreDocumentHeaderScope config={a4HeaderConfig}>{receiptDocument}</StoreDocumentHeaderScope>}
+          {mode === 'SHORT' ? receiptDocument : <StoreDocumentHeaderScope config={headerConfig}>{receiptDocument}</StoreDocumentHeaderScope>}
         </div>
       </main>
     </>

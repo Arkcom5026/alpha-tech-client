@@ -105,23 +105,15 @@ const PrintBillListPage = () => {
   }), [documentSearch.rows, sortDir, sortKey]);
 
   const handlePrint = (row) => {
-    if (row.taxDocumentId) {
-      navigate(printFormat === 'full'
-        ? `../tax-document/print-full/${row.taxDocumentId}`
-        : `../tax-document/print-short/${row.taxDocumentId}`);
-      return;
-    }
-
     const sourceType = row.documentSourceType || 'SALE';
     const sourceId = row.documentSourceId ?? row.id;
     const sourceQuery = sourceType === CONSOLIDATED_DOCUMENT_SOURCE_TYPE
       ? `?sourceType=${CONSOLIDATED_DOCUMENT_SOURCE_TYPE}&sourceId=${encodeURIComponent(sourceId)}`
       : '';
 
-    if (sourceType === 'SALE' && printFormat === 'short' && row.receiptPaymentId) {
-      navigate(`../bill/print-short/${row.id}?document=receipt&paymentId=${row.receiptPaymentId}`);
-      return;
-    }
+    // Bill workspace is presentation-first: one paid sale/document source may be
+    // printed in either short thermal or full A4 form. Issued TaxDocument
+    // authority remains enforced only inside dedicated tax-document routes.
     navigate(printFormat === 'full'
       ? `../bill/print-full/${sourceId}${sourceQuery}`
       : `../bill/print-short/${sourceId}${sourceQuery}`);

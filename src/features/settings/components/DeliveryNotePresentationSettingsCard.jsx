@@ -4,6 +4,7 @@ import { Save } from 'lucide-react'
 import { feedback } from '@/design-system/feedback'
 import DeliveryNotePresentationFooter from '@/features/deliveryNote/components/DeliveryNotePresentationFooter'
 import { deliveryNoteTypographyPx } from '@/features/deliveryNote/presentation/deliveryNotePresentation'
+import DocumentPresentationLivePreview from '@/features/settings/documentPreview/DocumentPresentationLivePreview'
 import {
   normalizeDocumentPresentationConfig,
   upsertDocumentPresentationLayer,
@@ -61,6 +62,14 @@ const DeliveryNotePresentationSettingsCard = ({ branch, branchId, updateBranch, 
     customFooter: form.customFooter.trim(),
   }), [form.customFooter, form.deliveryTerms, form.notes])
   const previewPresentation = useMemo(() => ({ resolved: { typography: { footer: form.footerTypography } } }), [form.footerTypography])
+  const previewLayer = useMemo(() => ({
+    typography: { footer: form.footerTypography },
+    blocks: {
+      DELIVERY_TERMS: { visible: Boolean(form.deliveryTerms.trim()), content: form.deliveryTerms },
+      NOTES: { visible: Boolean(form.notes.trim()), content: form.notes },
+      CUSTOM_FOOTER: { visible: Boolean(form.customFooter.trim()), content: form.customFooter },
+    },
+  }), [form.customFooter, form.deliveryTerms, form.footerTypography, form.notes])
 
   return (
     <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm">
@@ -76,7 +85,7 @@ const DeliveryNotePresentationSettingsCard = ({ branch, branchId, updateBranch, 
         </button>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.1fr]">
+      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(440px,1.1fr)]">
         <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
           <div><label className={labelClassName}>เงื่อนไขการส่งมอบ</label><textarea rows={3} value={form.deliveryTerms} onChange={(event) => patch('deliveryTerms', event.target.value)} className={inputClassName} placeholder="เช่น กรุณาตรวจสอบจำนวนและสภาพสินค้าก่อนลงนามรับสินค้า" /></div>
           <div><label className={labelClassName}>หมายเหตุเริ่มต้น</label><textarea rows={3} value={form.notes} onChange={(event) => patch('notes', event.target.value)} className={inputClassName} /></div>
@@ -89,14 +98,19 @@ const DeliveryNotePresentationSettingsCard = ({ branch, branchId, updateBranch, 
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-          <div className="mb-3"><p className="text-xs font-black text-slate-800">ตัวอย่างท้ายใบส่งของ</p><p className="mt-0.5 text-[10px] font-medium text-slate-400">ใช้ renderer primitive เดียวกับหน้าพิมพ์จริง</p></div>
-          <div className="mx-auto min-h-[180px] max-w-[760px] rounded-xl border border-slate-300 bg-white p-4 shadow-inner">
-            <DeliveryNotePresentationFooter content={previewContent} fontSizePx={deliveryNoteTypographyPx(previewPresentation, 'footer', 'md')} />
-            <div className="mt-8 grid grid-cols-3 gap-4 text-center text-[10px] text-slate-400">
-              <div className="border-t border-slate-400 pt-2">ผู้รับของ</div><div className="border-t border-slate-400 pt-2">ผู้ส่งของ</div><div className="border-t border-slate-400 pt-2">ผู้ตรวจสอบ</div>
-            </div>
-          </div>
+        <div className="xl:sticky xl:top-4 xl:self-start">
+          <DocumentPresentationLivePreview
+            branch={branch}
+            documentPurpose="DELIVERY_NOTE"
+            draftLayer={previewLayer}
+            title="ตัวอย่างใบส่งของ"
+            footer={(
+              <DeliveryNotePresentationFooter
+                content={previewContent}
+                fontSizePx={deliveryNoteTypographyPx(previewPresentation, 'footer', 'md')}
+              />
+            )}
+          />
         </div>
       </div>
     </section>

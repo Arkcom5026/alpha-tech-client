@@ -26,11 +26,14 @@ describe('purchase order print workspace behavior contract', () => {
     expect(page).toContain('Promise.resolve(loadAndSetBranchById(Number(branchId)))');
   });
 
-  it('keeps purchase-order loading scoped to the route id with an alive guard', () => {
+  it('keeps purchase-order and presentation loading scoped to the route id with an alive guard', () => {
     expect(page).toContain('const { id } = useParams()');
     expect(page).toContain('let alive = true');
     expect(page).toContain('getPurchaseOrderById(id)');
-    expect(page).toContain('if (alive) setPo(data)');
+    expect(page).toContain('getPurchaseOrderPresentation(id)');
+    expect(page).toContain('if (!alive) return');
+    expect(page).toContain('setPo(data)');
+    expect(page).toContain('setPresentationAuthority(authority || null)');
     expect(page).toContain('alive = false');
   });
 

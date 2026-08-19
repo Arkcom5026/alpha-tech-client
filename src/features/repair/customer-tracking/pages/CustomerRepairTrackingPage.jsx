@@ -115,16 +115,24 @@ const CustomerRepairTrackingPage = () => {
   const stage = Number(status.stage || 0);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-blue-50 via-slate-50 to-white px-4 py-5 sm:px-6 sm:py-10">
+    <main className="min-h-screen bg-slate-50 px-4 py-5 sm:px-6 sm:py-8">
       <div className="mx-auto w-full max-w-2xl space-y-4">
-        <header className="rounded-3xl bg-slate-950 p-6 text-white shadow-lg">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-300">Repair Tracking</p>
-          <h1 className="mt-2 text-2xl font-black">ติดตามงานซ่อม</h1>
-          <p className="mt-1 text-sm text-slate-300">เลขที่งาน {repair.jobNo}</p>
-          <div className="mt-5 rounded-2xl bg-white/10 p-4">
-            <p className="text-xs font-bold text-blue-200">สถานะปัจจุบัน</p>
-            <p className="mt-1 text-xl font-black">{status.label}</p>
-            <p className="mt-1 text-sm leading-6 text-slate-300">{status.description}</p>
+        <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Repair Tracking</p>
+              <h1 className="mt-1 text-2xl font-black text-slate-950">ติดตามงานซ่อม</h1>
+            </div>
+            <div className="rounded-2xl bg-slate-50 px-3 py-2 sm:text-right">
+              <p className="text-[11px] font-black text-slate-400">เลขที่งาน</p>
+              <p className="mt-0.5 break-all text-sm font-black text-slate-800">{repair.jobNo}</p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3.5">
+            <p className="text-xs font-black text-blue-600">สถานะปัจจุบัน</p>
+            <p className="mt-1 text-lg font-black text-slate-950">{status.label}</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">{status.description}</p>
           </div>
         </header>
 

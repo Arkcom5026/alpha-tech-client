@@ -5,6 +5,8 @@ import {
   useSaleDocumentSearch,
 } from '@/features/sales/documents/search';
 import { CONSOLIDATED_DOCUMENT_SOURCE_TYPE } from '@/features/combinedBilling/adapters/consolidatedDocumentAdapter';
+import { issueSaleDeliveryNote } from '@/features/sales/documents/workspace/api/saleDocumentWorkspaceApi';
+import { feedback } from '@/design-system/feedback';
 import BillWorkspaceHeader from '../components/workspace/BillWorkspaceHeader';
 import BillSearchToolbar from '../components/workspace/BillSearchToolbar';
 import BillResultTable from '../components/workspace/BillResultTable';
@@ -41,6 +43,7 @@ const PrintBillListPage = () => {
   const [uiError, setUiError] = useState(null);
   const [sortKey, setSortKey] = useState('createdAt');
   const [sortDir, setSortDir] = useState('desc');
+  const [deliveryBusyId, setDeliveryBusyId] = useState(null);
 
   const documentSearch = useSaleDocumentSearch({
     policy: BILL_DOCUMENT_SEARCH_POLICY,
@@ -119,6 +122,43 @@ const PrintBillListPage = () => {
       : `../bill/print-short/${sourceId}${sourceQuery}`);
   };
 
+  const handleDeliveryNote = useCallback(async (row) => {
+    const sourceType = row?.documentSourceType || 'SALE';
+    const sourceId = row?.documentSourceId ?? row?.id;
+    if (!sourceId) return;
+
+    if (sourceType === CONSOLIDATED_DOCUMENT_SOURCE_TYPE) {
+      navigate(`../delivery-note/print/${sourceId}?sourceType=${CONSOLIDATED_DOCUMENT_SOURCE_TYPE}&sourceId=${encodeURIComponent(sourceId)}`);
+      return;
+    }
+
+    if (row?.officialDocumentNumber) {
+      navigate(`../delivery-note/print/${sourceId}`);
+      return;
+    }
+
+    setDeliveryBusyId(sourceId);
+    setUiError(null);
+    try {
+      const issued = await issueSaleDeliveryNote({ saleId: sourceId });
+      const documentNumber = issued?.documentNumber || `Sale #${sourceId}`;
+      feedback.actionSuccess(
+        `สร้างใบส่งของ ${documentNumber} เรียบร้อย`,
+        `sale:${sourceId}:delivery-note:issue:success`,
+      );
+      navigate(`../delivery-note/print/${sourceId}`);
+    } catch (error) {
+      const message = error?.response?.data?.message
+        || error?.response?.data?.error
+        || error?.message
+        || 'ไม่สามารถสร้างใบส่งของได้';
+      setUiError(message);
+      feedback.actionError(error, message, `sale:${sourceId}:delivery-note:issue:error`);
+    } finally {
+      setDeliveryBusyId(null);
+    }
+  }, [navigate]);
+
   const errorMessage = uiError || documentSearch.error;
 
   return (
@@ -154,6 +194,8 @@ const PrintBillListPage = () => {
         sortDir={sortDir}
         onSort={handleSort}
         onPrint={handlePrint}
+        onDeliveryNote={handleDeliveryNote}
+        deliveryBusyId={deliveryBusyId}
         formatMoney={formatMoney}
         lastSearchedAt={documentSearch.lastSearchedAt}
       />

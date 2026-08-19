@@ -113,7 +113,10 @@ const PrintDeliveryNotePage = () => {
     return () => {
       isMounted = false;
     };
-  }, [documentLineActions, isConsolidated, loadStandardSale, sourceId]);
+    // documentLineActions is intentionally omitted: the hook returns a new actions
+    // object as line-edit state changes, while document loading is keyed only by source.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConsolidated, loadStandardSale, sourceId]);
 
   const preparedSaleItems = useMemo(
     () => prepareDeliveryNoteSaleItems(currentSale),

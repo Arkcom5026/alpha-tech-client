@@ -1,51 +1,28 @@
 import apiClient from '@/utils/apiClient';
 
-// ✅ ดึงใบส่งของที่สามารถรวมบิลได้
 export const getCombinableSales = async () => {
-  try {
-    const res = await apiClient.get('/combined-billing/combinable-sales');
-    return res.data;
-  } catch (error) {
-    console.error('getCombinableSales error:', error);
-    throw error;
-  }
+  const res = await apiClient.get('/combined-billing/combinable-sales');
+  return res.data;
 };
 
-// ✅ สร้าง Combined Billing Document
 export const createCombinedBillingDocument = async (saleIds, note = '') => {
-  try {
-    const res = await apiClient.post('/combined-billing/create', {
-      saleIds,
-      note,
-    });
-    return res.data;
-  } catch (error) {
-    console.error('createCombinedBillingDocument error:', error);
-    throw error;
-  }
+  const res = await apiClient.post('/combined-billing/create', { saleIds, note });
+  return res.data;
 };
 
-// ✅ ดึงรายละเอียด Combined Billing Document
 export const getCombinedBillingById = async (id) => {
-  try {
-    const res = await apiClient.get(`/combined-billing/${id}`);
-    return res.data;
-  } catch (error) {
-    console.error('getCombinedBillingById error:', error);
-    throw error;
-  }
+  const res = await apiClient.get(`/combined-billing/${id}`);
+  return res.data;
 };
 
-// ✅ ดึงรายชื่อลูกค้าที่มีใบส่งของค้างรวมบิล
+export const getCombinedBillingPresentation = async (id) => {
+  const res = await apiClient.get(`/combined-billing/${id}/presentation`);
+  return res.data?.data ?? res.data;
+};
+
 export const getCustomersWithPendingSales = async () => {
-  try {
-    const res = await apiClient.get('/combined-billing/with-pending-sales');
-    console.log('getCustomersWithPendingSales : ',res)
-    return res.data;
-  } catch (error) {
-    console.error('getCustomersWithPendingSales error:', error);
-    throw error;
-  }
+  const res = await apiClient.get('/combined-billing/with-pending-sales');
+  return res.data;
 };
 
 export const getDocumentWorkspace = async (customerId) => {
@@ -61,17 +38,8 @@ export const confirmDocumentWorkspace = async ({ customerId, note, lines }) => {
 export const listConsolidatedDeliveries = async () => (await apiClient.get('/combined-billing/consolidated-deliveries')).data;
 export const getConsolidatedDelivery = async (id) => (await apiClient.get(`/combined-billing/consolidated-deliveries/${id}`)).data;
 export const getConsolidatedDeliveryPrintable = async (id) => (await apiClient.get(`/combined-billing/consolidated-deliveries/${id}/printable`)).data;
-export const updateConsolidatedDeliveryDocumentLine = async ({
-  documentId,
-  lineId,
-  documentPrefix,
-  documentDescription,
-  documentSuffix,
-}) => (
-  await apiClient.put(
-    `/combined-billing/consolidated-deliveries/${documentId}/document-lines/${lineId}`,
-    { documentPrefix, documentDescription, documentSuffix }
-  )
+export const updateConsolidatedDeliveryDocumentLine = async ({ documentId, lineId, documentPrefix, documentDescription, documentSuffix }) => (
+  await apiClient.put(`/combined-billing/consolidated-deliveries/${documentId}/document-lines/${lineId}`, { documentPrefix, documentDescription, documentSuffix })
 ).data;
 export const issueConsolidatedTaxDocument = async ({ branchId, taxDocumentId, taxInvoiceKind, recipient }) => {
   const res = await apiClient.post(`/tax/documents/${taxDocumentId}/issue`, { branchId, taxInvoiceKind, ...(recipient ? { recipient } : {}) });

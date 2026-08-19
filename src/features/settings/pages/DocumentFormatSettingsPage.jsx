@@ -18,6 +18,7 @@ import CustomerReceiptPresentationSettingsCard from '@/features/settings/compone
 import DeliveryNotePresentationSettingsCard from '@/features/settings/components/DeliveryNotePresentationSettingsCard';
 import PurchaseOrderPresentationSettingsCard from '@/features/settings/components/PurchaseOrderPresentationSettingsCard';
 import QuotationPresentationSettingsCard from '@/features/settings/components/QuotationPresentationSettingsCard';
+import StatutoryPresentationSettingsCard from '@/features/settings/components/StatutoryPresentationSettingsCard';
 import StorefrontMediaUploadField from '@/features/storeExperience/components/StorefrontMediaUploadField';
 import { uploadStorefrontMedia } from '@/features/storeExperience/api/storeExperienceApi';
 
@@ -153,6 +154,9 @@ const DocumentFormatSettingsPage = () => {
       <CustomerReceiptPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <PurchaseOrderPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <CombinedBillingPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
+      <StatutoryPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} documentPurpose="FULL_TAX_INVOICE" title="ใบกำกับภาษีเต็มรูป" description="ปรับได้เฉพาะองค์ประกอบด้านภาพและข้อความเสริมที่กฎหมายไม่กำหนด ข้อมูลผู้ออก/ผู้รับ เลขเอกสาร วันที่ รายการ และยอดภาษีใช้ TaxDocument snapshot เท่านั้น" />
+      <StatutoryPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} documentPurpose="CREDIT_NOTE" title="ใบลดหนี้" description="อนุญาตเฉพาะโลโก้ การจัดวาง หมายเหตุ และข้อความท้ายเอกสาร โดยเหตุอ้างอิง เอกสารเดิม ผู้ออก ผู้รับ และยอดลดหนี้ถูกล็อกจาก TaxDocument authority" />
+      <StatutoryPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} documentPurpose="SHORT_TAX_INVOICE" title="ใบกำกับภาษีอย่างย่อ" description="เอกสาร Thermal 80mm จำกัดการปรับแต่งมากที่สุด: โลโก้/แนวหัวเอกสารและข้อความท้ายที่ปลอดภัยเท่านั้น เพื่อรักษาความถูกต้องและความยาวกระดาษ" />
     </div>
   );
 };

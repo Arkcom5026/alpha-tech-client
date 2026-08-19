@@ -3,6 +3,14 @@ import { resolveDocumentPresentation } from '@/features/printing/presentation/pr
 const text = (value) => String(value ?? '').trim()
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 
+const QUOTATION_TYPOGRAPHY_PX = Object.freeze({
+  xs: 9,
+  sm: 10,
+  md: 11,
+  lg: 12,
+  xl: 13,
+})
+
 const getIssuedPresentation = (quotation) => {
   const snapshot = quotation?.issuedSnapshot?.presentation
   if (!isObject(snapshot)) return null
@@ -45,14 +53,30 @@ const resolveQuotationPaymentAccounts = ({ quotation, activeAccounts = [], prese
   return ids.map(Number).map((id) => byId.get(id)).filter(Boolean)
 }
 
+const resolveQuotationPaymentAccountDisplay = (presentation) => {
+  const selection = presentation?.resolved?.paymentAccountSelection
+  return {
+    showBankName: selection?.showBankName !== false,
+    showAccountName: selection?.showAccountName !== false,
+    showAccountNumber: selection?.showAccountNumber !== false,
+  }
+}
+
 const quotationTypographyToken = (presentation, key, fallback = 'md') => {
   const token = presentation?.resolved?.typography?.[key]
   return ['xs', 'sm', 'md', 'lg', 'xl'].includes(token) ? token : fallback
 }
 
+const quotationTypographyPx = (presentation, key, fallback = 'md') => (
+  QUOTATION_TYPOGRAPHY_PX[quotationTypographyToken(presentation, key, fallback)]
+  || QUOTATION_TYPOGRAPHY_PX.md
+)
+
 export {
   getIssuedPresentation,
+  quotationTypographyPx,
   quotationTypographyToken,
+  resolveQuotationPaymentAccountDisplay,
   resolveQuotationPaymentAccounts,
   resolveQuotationPresentation,
   resolveQuotationTerms,

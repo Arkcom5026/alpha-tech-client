@@ -7,6 +7,9 @@ import {
   resolveQuotationPresentation,
   resolveQuotationTerms,
 } from '../src/features/quotation/presentation/quotationPresentation.js'
+import {
+  upsertDocumentPresentationLayer,
+} from '../src/features/printing/presentation/presentationConfig.js'
 
 const branch = {
   documentHeaderConfig: {
@@ -94,6 +97,25 @@ assert.deepEqual(resolveQuotationPaymentAccountDisplay(resolvedIssued), {
   showAccountNumber: true,
 })
 
+const upgraded = upsertDocumentPresentationLayer(
+  {
+    version: 1,
+    default: { showLogo: true, storeName: 'ร้านเดิม' },
+    documents: {},
+  },
+  'QUOTATION',
+  {
+    typography: { footer: 'xl' },
+    blocks: { DELIVERY_TERMS: { visible: true, content: 'ส่งภายใน 7 วัน' } },
+    paymentAccountSelection: { accountIds: [4] },
+  },
+)
+assert.equal(upgraded.version, 2)
+assert.equal(upgraded.shared.header.storeName, 'ร้านเดิม')
+assert.equal(upgraded.documents.QUOTATION.typography.footer, 'xl')
+assert.equal(upgraded.documents.QUOTATION.blocks.DELIVERY_TERMS.content, 'ส่งภายใน 7 วัน')
+assert.deepEqual(upgraded.documents.QUOTATION.paymentAccountSelection.accountIds, [4])
+
 const printPageSource = readFileSync(
   new URL('../src/features/quotation/pages/QuotationPrintPage.jsx', import.meta.url),
   'utf8',
@@ -102,11 +124,24 @@ const footerSource = readFileSync(
   new URL('../src/features/quotation/components/QuotationPresentationFooter.jsx', import.meta.url),
   'utf8',
 )
+const settingsPageSource = readFileSync(
+  new URL('../src/features/settings/pages/DocumentFormatSettingsPage.jsx', import.meta.url),
+  'utf8',
+)
+const settingsCardSource = readFileSync(
+  new URL('../src/features/settings/components/QuotationPresentationSettingsCard.jsx', import.meta.url),
+  'utf8',
+)
 assert.match(printPageSource, /resolveQuotationPresentation/, 'quotation renderer must resolve Draft vs Issued presentation authority')
 assert.match(printPageSource, /listStorePaymentAccounts/, 'draft quotation must resolve selected active store payment accounts')
 assert.match(printPageSource, /QuotationPresentationFooter/, 'quotation renderer must use the semantic presentation footer')
 assert.match(printPageSource, /quotationTerms\.paymentTerms/, 'payment-term display must use document-over-store presentation precedence')
 assert.match(footerSource, /บัญชีรับโอน/, 'semantic footer must render selected payment accounts')
 assert.match(footerSource, /--quotation-footer-font-size/, 'semantic footer must consume constrained typography tokens')
+assert.match(settingsPageSource, /QuotationPresentationSettingsCard/, 'document format settings must remain the single entry point for quotation presentation settings')
+assert.match(settingsPageSource, /onBranchChange=\{setBranch\}/, 'saving quotation settings must update branch authority without resetting unsaved header form state')
+assert.match(settingsCardSource, /upsertDocumentPresentationLayer/, 'quotation settings must write through the V2 compatibility-safe layer writer')
+assert.match(settingsCardSource, /createStorePaymentAccount/, 'quotation settings must create branch-owned payment-account authority instead of free-text account blocks')
+assert.match(settingsCardSource, /บันทึกใบเสนอราคา/, 'quotation settings must expose a dedicated document-type save action')
 
 console.log('quotation-document-presentation-wave1.contract.test.js: PASS')

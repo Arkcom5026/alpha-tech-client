@@ -10,8 +10,8 @@ const nvmrc = readFileSync(new URL('../.nvmrc', import.meta.url), 'utf8').trim()
 assert.equal(nvmrc, '22', 'client Node authority must be Node 22')
 assert.deepEqual(
   vercel.git?.deploymentEnabled,
-  { main: true, '*': false },
-  'automatic Vercel Git deployments must be enabled only for canonical main',
+  { main: true, '**': false },
+  'automatic Vercel Git deployments must be enabled only for canonical main, including slash-named branches',
 )
 assert.equal(vercel.ignoreCommand, 'exit 1', 'Git-triggered Vercel builds must never be skipped by Ignored Build Step')
 assert.match(vercel.buildCommand || '', /npm run build\s*&&\s*node scripts\/generate-release-metadata\.mjs/, 'Vercel build must publish release provenance after Vite build')

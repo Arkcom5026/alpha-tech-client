@@ -46,6 +46,7 @@ on:
       - 'src/features/settings/components/CombinedBillingPresentationSettingsCard.jsx'
       - 'src/features/settings/components/StatutoryPresentationSettingsCard.jsx'
       - 'src/features/settings/components/FinanceOperationalPresentationSettingsCard.jsx'
+      - 'src/features/settings/documentPreview/**'
       - 'src/features/settings/pages/DocumentFormatSettingsPage.jsx'
       - 'tests/document-presentation-v2-foundation.contract.test.js'
       - 'tests/quotation-document-presentation-wave1.contract.test.js'
@@ -55,6 +56,7 @@ on:
       - 'tests/combined-billing-document-presentation-wave3.contract.test.js'
       - 'tests/statutory-document-presentation-wave4.contract.test.js'
       - 'tests/finance-operational-document-presentation-wave5.contract.test.js'
+      - 'tests/document-presentation-live-preview-v1.contract.test.js'
       - '.github/workflows/document-presentation-v2.yml'
   workflow_dispatch:
 
@@ -88,5 +90,7 @@ jobs:
         run: npx vitest run tests/statutory-document-presentation-wave4.contract.test.js
       - name: Run Finance Operational Document Presentation Wave 5 contract
         run: node tests/finance-operational-document-presentation-wave5.contract.test.js
+      - name: Run Document Presentation Live Preview V1 contract
+        run: npx vitest run tests/document-presentation-live-preview-v1.contract.test.js
       - name: Typecheck
         run: npm run typecheck

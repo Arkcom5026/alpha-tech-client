@@ -106,7 +106,9 @@ const PrintBillListPage = () => {
 
   const handlePrint = (row) => {
     if (row.taxDocumentId) {
-      navigate(`../tax-document/print/${row.taxDocumentId}`);
+      navigate(printFormat === 'full'
+        ? `../tax-document/print-full/${row.taxDocumentId}`
+        : `../tax-document/print-short/${row.taxDocumentId}`);
       return;
     }
 

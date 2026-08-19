@@ -13,9 +13,9 @@ describe('Customer Deposit customer mutation authority', () => {
     expect(source).toContain('if (customerMutationRef.current) return');
     expect(source).toContain("setCustomerMutationAction('update')");
     expect(source).toContain("setCustomerMutationAction('create')");
-    expect(source).toContain("'customer-deposit:customer:${customerIdSnapshot}:update:success'");
-    expect(source).toContain("'customer-deposit:customer:${customerIdSnapshot}:update:error'");
-    expect(source).toContain("'customer-deposit:customer:${newCustomer.id}:create:success'");
+    expect(source).toContain('`customer-deposit:customer:${customerIdSnapshot}:update:success`');
+    expect(source).toContain('`customer-deposit:customer:${customerIdSnapshot}:update:error`');
+    expect(source).toContain('`customer-deposit:customer:${newCustomer.id}:create:success`');
     expect(source).toContain("'customer-deposit:customer:create:error'");
     expect(source).toContain('feedback.actionSuccess');
     expect(source).toContain('feedback.actionError');

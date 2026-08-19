@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getPrintableCreditNote } from '@/features/sales/return/api/saleReturnApi';
+import {
+  resolveStatutoryPresentation,
+  visibleStatutoryBlockContent,
+} from '@/features/printing/presentation/statutoryPresentation';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', {
   minimumFractionDigits: 2,
@@ -27,6 +31,16 @@ const PrintCreditNotePage = () => {
       .then(setProjection)
       .catch((err) => setError(err.response?.data?.message || err.message));
   }, [branchId, taxDocumentId]);
+
+  const presentation = useMemo(() => resolveStatutoryPresentation({
+    documentPurpose: 'CREDIT_NOTE',
+    presentationSnapshot: projection?.presentationSnapshot,
+    issuer: projection?.issuer,
+  }), [projection?.issuer, projection?.presentationSnapshot]);
+
+  const legalHeader = presentation.legalHeader;
+  const notes = visibleStatutoryBlockContent(presentation, 'NOTES');
+  const customFooter = visibleStatutoryBlockContent(presentation, 'CUSTOM_FOOTER');
 
   if (error) {
     return <main className="p-6"><div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div></main>;
@@ -117,11 +131,23 @@ const PrintCreditNotePage = () => {
         </div>
 
         <section className="my-4 grid gap-4 text-[14px] leading-tight sm:grid-cols-2">
-          <div className="rounded-[2mm] border border-black p-3">
-            <h2 className="font-black">ผู้ออกเอกสาร</h2>
-            <p>{projection.issuer.legalName}</p>
-            <p>เลขประจำตัวผู้เสียภาษี: {projection.issuer.taxId}</p>
-            <p>{projection.issuer.registeredAddress}</p>
+          <div className="rounded-[2mm] border border-black p-3" style={{ textAlign: legalHeader.textAlign || 'left' }}>
+            <div className="flex items-start gap-3">
+              {legalHeader.showLogo !== false && legalHeader.logoUrl ? (
+                <img
+                  src={legalHeader.logoUrl}
+                  alt="logo"
+                  className="shrink-0 object-contain"
+                  style={{ width: legalHeader.logoSize || 56, height: legalHeader.logoSize || 56 }}
+                />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <h2 className="font-black">ผู้ออกเอกสาร</h2>
+                <p>{projection.issuer.legalName}</p>
+                <p>เลขประจำตัวผู้เสียภาษี: {projection.issuer.taxId}</p>
+                <p>{projection.issuer.registeredAddress}</p>
+              </div>
+            </div>
           </div>
           <div className="rounded-[2mm] border border-black p-3">
             <h2 className="font-black">ผู้รับเอกสาร</h2>
@@ -157,6 +183,13 @@ const PrintCreditNotePage = () => {
           <div className="flex justify-between gap-4"><span>ภาษีมูลค่าเพิ่ม</span><b className="tabular-nums">{money(projection.document.taxAmount)}</b></div>
           <div className="flex justify-between gap-4 border-t border-black pt-2 text-[16px] font-black"><span>รวมใบลดหนี้</span><b className="tabular-nums">{money(projection.document.totalAmount)} บาท</b></div>
         </section>
+
+        {(notes || customFooter) ? (
+          <section data-testid="credit-note-presentation-footer" className="mt-4 max-w-[70%] space-y-1 text-[12px] leading-tight">
+            {notes ? <p><b>หมายเหตุ:</b> {notes}</p> : null}
+            {customFooter ? <p className="whitespace-pre-line">{customFooter}</p> : null}
+          </section>
+        ) : null}
 
         <section className="absolute bottom-[8mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-12 text-center text-[14px]">
           <div className="flex h-[20mm] flex-col justify-end">

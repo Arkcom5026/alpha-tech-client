@@ -4,12 +4,11 @@ import { describe, expect, it } from 'vitest'
 
 const root = process.cwd()
 const pagePath = path.join(root, 'src/features/bill/pages/PrintBillPageShortTax.jsx')
-const runtimePath = path.join(
-  root,
-  'src/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime.js'
-)
+const runtimePath = path.join(root, 'src/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime.js')
+const sourcePath = path.join(root, 'src/features/bill/hooks/useBillDocumentSource.js')
 const page = fs.readFileSync(pagePath, 'utf8')
 const runtime = fs.readFileSync(runtimePath, 'utf8')
+const documentSource = fs.readFileSync(sourcePath, 'utf8')
 
 describe('bill short tax print workspace runtime cutover contract', () => {
   it('cuts thermal browser lifecycle over to the dedicated runtime owner', () => {
@@ -29,11 +28,12 @@ describe('bill short tax print workspace runtime cutover contract', () => {
     expect(page).not.toContain('printedRef.current')
   })
 
-  it('keeps bill hydration, routing, and document-line mutation authority in the page', () => {
+  it('keeps bill hydration, routing, and document-line mutation authority in page/shared source owners', () => {
     expect(page).toContain('useNavigate()')
     expect(page).toContain('useParams()')
-    expect(page).toContain('useBillStore()')
-    expect(page).toContain('loadSaleByIdAction(')
+    expect(page).toContain('useBillDocumentSource')
+    expect(documentSource).toContain('useBillStore()')
+    expect(documentSource).toContain('billStore.loadSaleByIdAction(')
     expect(page).toContain('useSaleDocumentLineEditor')
     expect(page).toContain('documentLineEditor={documentLineEditor}')
   })

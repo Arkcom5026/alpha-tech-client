@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope';
 import {
+  loadSaleDeliveryNoteAuthority,
   loadSaleDocument,
   useSaleDocumentLineEditor,
 } from '@/features/sales/documents/workspace';
@@ -10,7 +11,14 @@ import {
   buildConsolidatedSaleDocument,
   isConsolidatedDocumentSource,
 } from '@/features/combinedBilling/adapters/consolidatedDocumentAdapter';
+import DeliveryNotePresentationFooter from '../components/DeliveryNotePresentationFooter';
 import DeliveryNoteDocumentState from '../components/workspace/DeliveryNoteDocumentState';
+import {
+  applyDeliveryNoteHeaderPresentation,
+  deliveryNoteTypographyPx,
+  resolveDeliveryNoteFooterContent,
+  resolveDeliveryNotePresentation,
+} from '../presentation/deliveryNotePresentation';
 import DeliveryNotePrintShell from '../print/workspace/components/DeliveryNotePrintShell';
 import {
   buildDeliveryNoteBranchConfig,
@@ -28,6 +36,14 @@ const PrintDeliveryNotePage = () => {
   const [pageError, setPageError] = useState('');
   const [hideDate, setHideDate] = useState(false);
 
+  const loadStandardSale = useCallback(async () => {
+    const [sale, deliveryNoteAuthority] = await Promise.all([
+      loadSaleDocument({ saleId: sourceId }),
+      loadSaleDeliveryNoteAuthority({ saleId: sourceId }),
+    ]);
+    return sale ? { ...sale, deliveryNoteAuthority } : sale;
+  }, [sourceId]);
+
   const loadCurrentDocument = useCallback(async () => {
     if (!sourceId) {
       setCurrentSale(null);
@@ -41,10 +57,10 @@ const PrintDeliveryNotePage = () => {
       return sale || null;
     }
 
-    const sale = await loadSaleDocument({ saleId: sourceId });
+    const sale = await loadStandardSale();
     setCurrentSale(sale || null);
     return sale || null;
-  }, [isConsolidated, sourceId]);
+  }, [isConsolidated, loadStandardSale, sourceId]);
 
   const {
     editingLineKey,
@@ -77,7 +93,7 @@ const PrintDeliveryNotePage = () => {
       try {
         const sale = isConsolidated
           ? buildConsolidatedSaleDocument(await getConsolidatedDeliveryPrintable(sourceId))
-          : await loadSaleDocument({ saleId: sourceId });
+          : await loadStandardSale();
         if (isMounted) setCurrentSale(sale || null);
       } catch (error) {
         if (isMounted) {
@@ -97,15 +113,33 @@ const PrintDeliveryNotePage = () => {
     return () => {
       isMounted = false;
     };
-  }, [isConsolidated, sourceId]);
+  }, [documentLineActions, isConsolidated, loadStandardSale, sourceId]);
 
   const preparedSaleItems = useMemo(
     () => prepareDeliveryNoteSaleItems(currentSale),
     [currentSale]
   );
+  const presentation = useMemo(
+    () => resolveDeliveryNotePresentation({
+      authority: currentSale?.deliveryNoteAuthority,
+      branch: currentSale?.branch,
+    }),
+    [currentSale?.branch, currentSale?.deliveryNoteAuthority]
+  );
   const preparedConfig = useMemo(
-    () => buildDeliveryNoteBranchConfig(currentSale),
-    [currentSale]
+    () => applyDeliveryNoteHeaderPresentation({
+      config: buildDeliveryNoteBranchConfig(currentSale),
+      presentation,
+    }),
+    [currentSale, presentation]
+  );
+  const footerContent = useMemo(
+    () => resolveDeliveryNoteFooterContent(presentation),
+    [presentation]
+  );
+  const footerFontSize = useMemo(
+    () => deliveryNoteTypographyPx(presentation, 'footer', 'md'),
+    [presentation]
   );
   const error = pageError || (isConsolidated ? '' : editorError);
 
@@ -129,6 +163,12 @@ const PrintDeliveryNotePage = () => {
         setHideDate={setHideDate}
         saleItems={preparedSaleItems}
         config={preparedConfig}
+        presentationFooter={(
+          <DeliveryNotePresentationFooter
+            content={footerContent}
+            fontSizePx={footerFontSize}
+          />
+        )}
         editableDocumentLines={!isConsolidated}
         editingLineKey={isConsolidated ? null : editingLineKey}
         lineDrafts={isConsolidated ? {} : lineDrafts}

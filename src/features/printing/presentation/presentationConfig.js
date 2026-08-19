@@ -1,9 +1,9 @@
-import { toCanonicalDocumentCode } from './canonicalDocumentIdentity'
+import { toCanonicalDocumentCode } from './canonicalDocumentIdentity.js'
 import {
   BLOCK_TYPES,
   canStoreConfigureBlock,
   getDocumentPresentationCapability,
-} from './presentationCapabilityRegistry'
+} from './presentationCapabilityRegistry.js'
 
 const ALIGNMENTS = new Set(['left', 'center', 'right'])
 const TYPOGRAPHY_TOKENS = new Set(['xs', 'sm', 'md', 'lg', 'xl'])

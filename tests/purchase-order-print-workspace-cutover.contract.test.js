@@ -17,10 +17,11 @@ describe('purchase order print workspace cutover contract', () => {
     expect(page).toContain('PurchaseOrderPrintShell');
   });
 
-  it('keeps branch, purchase-order, and browser authority in the page', () => {
+  it('keeps branch, purchase-order, presentation, and browser authority in the page', () => {
     expect(page).toContain('useBranchStore');
     expect(page).toContain('useAuthStore');
     expect(page).toContain('getPurchaseOrderById(id)');
+    expect(page).toContain('getPurchaseOrderPresentation(id)');
     expect(page).toContain('loadAndSetBranchById');
     expect(page).toContain('useRef()');
     expect(page).toContain('window.print()');
@@ -32,22 +33,24 @@ describe('purchase order print workspace cutover contract', () => {
       expect(source).not.toContain('useBranchStore');
       expect(source).not.toContain('useAuthStore');
       expect(source).not.toContain('getPurchaseOrderById');
+      expect(source).not.toContain('getPurchaseOrderPresentation');
       expect(source).not.toContain('useParams');
       expect(source).not.toContain('window.print');
       expect(source).not.toContain('window.html2pdf');
     }
   });
 
-  it('preserves state, toolbar intents, and printable shell through props', () => {
+  it('preserves state, toolbar intents, and printable shell through resolved presentation props', () => {
     expect(page).toContain('status="loading"');
     expect(page).toContain('status="missing"');
     expect(page).toContain('onPrint={() => window.print()}');
     expect(page).toContain('onDownloadPdf={handleDownloadPDF}');
     expect(page).toContain('printRef={printRef}');
-    expect(page).toContain('branch={branch}');
-    expect(page).toContain('branchId={branchId}');
+    expect(page).toContain('headerConfig={headerConfig}');
     expect(page).toContain('po={po}');
     expect(page).toContain('lines={lines}');
     expect(page).toContain('total={total}');
+    expect(page).toContain('presentationFooterContent={footerContent}');
+    expect(page).toContain('presentationFooterFontSize={footerFontSize}');
   });
 });

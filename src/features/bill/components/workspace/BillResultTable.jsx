@@ -1,7 +1,18 @@
 import React from 'react';
-import { AlertCircle, ChevronDown, ChevronUp, Clock, Printer } from 'lucide-react';
+import { AlertCircle, ChevronDown, ChevronUp, Clock, Printer, Truck } from 'lucide-react';
 
-const BillResultTable = ({ rows, loading, sortKey, sortDir, onSort, onPrint, formatMoney, lastSearchedAt }) => {
+const BillResultTable = ({
+  rows,
+  loading,
+  sortKey,
+  sortDir,
+  onSort,
+  onPrint,
+  onDeliveryNote,
+  deliveryBusyId,
+  formatMoney,
+  lastSearchedAt,
+}) => {
   const indicator = (key) => {
     if (sortKey !== key) return null;
     return sortDir === 'asc' ? <ChevronUp className="inline h-3 w-3" /> : <ChevronDown className="inline h-3 w-3" />;
@@ -10,7 +21,7 @@ const BillResultTable = ({ rows, loading, sortKey, sortDir, onSort, onPrint, for
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="overflow-x-auto">
-        <table className="min-w-[980px] w-full border-collapse text-left">
+        <table className="min-w-[1080px] w-full border-collapse text-left">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs text-slate-600">
             <tr>
               <th className="cursor-pointer px-4 py-3 font-medium" onClick={() => onSort('createdAt')}>วันที่ {indicator('createdAt')}</th>
@@ -23,24 +34,42 @@ const BillResultTable = ({ rows, loading, sortKey, sortDir, onSort, onPrint, for
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.map((row) => (
-              <tr key={row.id} className="transition hover:bg-slate-50">
-                <td className="px-4 py-3 text-sm text-slate-500">{row.createdAt ? new Date(row.createdAt).toLocaleString('th-TH') : '-'}</td>
-                <td className="px-4 py-3 text-sm font-semibold text-slate-900">{row.code || row.id}</td>
-                <td className="px-4 py-3">
-                  <div className="text-sm font-medium text-slate-800">{row.customerName || row.customer?.name || '-'}</div>
-                  <div className="mt-0.5 text-xs text-slate-400">{row.customerPhone || row.customer?.phone || ''}</div>
-                </td>
-                <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">฿{formatMoney(row.grossAmount)}</td>
-                <td className="px-4 py-3 text-right text-sm font-medium text-emerald-700">฿{formatMoney(row.paidAmount)}</td>
-                <td className="px-4 py-3 text-right text-sm text-slate-500">฿{formatMoney(row.changeAmount)}</td>
-                <td className="px-4 py-3 text-center">
-                  <button type="button" onClick={() => onPrint(row)} className="inline-flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800 transition hover:bg-emerald-100 hover:text-emerald-900">
-                    <Printer className="h-3.5 w-3.5" /> พิมพ์
-                  </button>
-                </td>
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const sourceId = row.documentSourceId ?? row.id;
+              const hasDeliveryNote = Boolean(row.officialDocumentNumber)
+                || row.documentSourceType === 'CONSOLIDATED_DELIVERY';
+              const deliveryBusy = String(deliveryBusyId || '') === String(sourceId);
+
+              return (
+                <tr key={row.id} className="transition hover:bg-slate-50">
+                  <td className="px-4 py-3 text-sm text-slate-500">{row.createdAt ? new Date(row.createdAt).toLocaleString('th-TH') : '-'}</td>
+                  <td className="px-4 py-3 text-sm font-semibold text-slate-900">{row.code || row.id}</td>
+                  <td className="px-4 py-3">
+                    <div className="text-sm font-medium text-slate-800">{row.customerName || row.customer?.name || '-'}</div>
+                    <div className="mt-0.5 text-xs text-slate-400">{row.customerPhone || row.customer?.phone || ''}</div>
+                  </td>
+                  <td className="px-4 py-3 text-right text-sm font-semibold text-slate-900">฿{formatMoney(row.grossAmount)}</td>
+                  <td className="px-4 py-3 text-right text-sm font-medium text-emerald-700">฿{formatMoney(row.paidAmount)}</td>
+                  <td className="px-4 py-3 text-right text-sm text-slate-500">฿{formatMoney(row.changeAmount)}</td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="inline-flex flex-wrap items-center justify-center gap-2">
+                      <button type="button" onClick={() => onPrint(row)} className="inline-flex items-center gap-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-xs font-semibold text-teal-800 transition hover:bg-emerald-100 hover:text-emerald-900">
+                        <Printer className="h-3.5 w-3.5" /> พิมพ์
+                      </button>
+                      <button
+                        type="button"
+                        disabled={deliveryBusy}
+                        onClick={() => onDeliveryNote?.(row)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800 transition hover:bg-blue-100 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <Truck className="h-3.5 w-3.5" />
+                        {deliveryBusy ? 'กำลังสร้าง...' : hasDeliveryNote ? 'ใบส่งของ' : 'สร้างใบส่งของ'}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

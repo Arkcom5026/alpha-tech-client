@@ -28,6 +28,11 @@ export const loadSaleDeliveryNoteAuthority = async ({ saleId } = {}) => {
   return apiClient.get(`/sales/${saleId}/delivery-note`).then(unwrap);
 };
 
+export const issueSaleDeliveryNote = async ({ saleId } = {}) => {
+  if (!saleId) throw new Error('saleId is required');
+  return apiClient.post(`/sales/${saleId}/delivery-note`).then(unwrap);
+};
+
 export const saveSaleDocumentLines = async ({ saleId, payload } = {}) => {
   if (!saleId) throw new Error('saleId is required');
   return updateSaleDocumentLines(saleId, payload || {});

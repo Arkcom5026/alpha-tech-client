@@ -1,4 +1,4 @@
-import { resolveDocumentPresentation } from '@/features/printing/presentation/presentationConfig'
+import { resolveDocumentPresentation } from '../../printing/presentation/presentationConfig.js'
 
 const text = (value) => String(value ?? '').trim()
 const isObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)

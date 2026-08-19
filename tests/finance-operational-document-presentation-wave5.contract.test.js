@@ -14,6 +14,7 @@ const footer = read('src/features/printing/presentation/FinanceOperationalPresen
 const receiptResolver = read('src/features/customerMoneyReceive/presentation/customerMoneyReceiptPresentation.js');
 const receiptPrint = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage.jsx');
 const settingsCard = read('src/features/settings/components/FinanceOperationalPresentationSettingsCard.jsx');
+const settingsPage = read('src/features/settings/pages/DocumentFormatSettingsPage.jsx');
 
 for (const code of ['CUSTOMER_MONEY_RECEIPT', 'DELIVERY_CREDIT_SETTLEMENT', 'REFUND_RECEIPT']) {
   assert(capability.includes(`${code}: FINANCE_MIXED`), `${code} must use the shared finance-operational profile.`);
@@ -37,5 +38,8 @@ assert(receiptPrint.includes('FinanceOperationalPresentationFooter'));
 assert(receiptPrint.includes('ไม่ใช่ใบกำกับภาษี และไม่ก่อให้เกิดการตัดสต๊อกหรือรายการภาษีจากการรับเงินนี้'));
 assert(settingsCard.includes('ข้อความระบบด้านล่างเป็นข้อมูล authority ของเอกสาร'));
 assert(settingsCard.includes('SYSTEM_NOTICE') === false, 'settings UI must not write protected SYSTEM_NOTICE content.');
+assert(settingsPage.includes('FinanceOperationalPresentationSettingsCard'));
+assert(settingsPage.includes('documentPurpose="CUSTOMER_MONEY_RECEIPT"'));
+assert(settingsPage.includes('ใบรับเงิน Customer Money'));
 
 console.log('Finance Operational Document Presentation Wave 5 Contract: PASS');

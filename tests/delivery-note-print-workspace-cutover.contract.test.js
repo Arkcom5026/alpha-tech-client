@@ -16,13 +16,17 @@ describe('delivery note print workspace cutover contract', () => {
     expect(page).not.toContain('<DeliveryNoteForm');
   });
 
-  it('keeps fetch and editable-line runtime authority in the page', () => {
+  it('keeps fetch, routing, and editable-line runtime authority in the page', () => {
     expect(page).toContain('loadSaleDocument');
+    expect(page).toContain('loadSaleDeliveryNoteAuthority');
     expect(page).toContain('useSaleDocumentLineEditor');
+    expect(page).toContain('useNavigate');
     expect(page).toContain('documentLineActions.clearError();');
     expect(page).toContain('setCurrentSale');
     expect(shell).not.toContain('loadSaleDocument');
     expect(shell).not.toContain('useSaleDocumentLineEditor');
+    expect(shell).not.toContain('useNavigate');
+    expect(shell).not.toContain('useParams');
   });
 
   it('keeps pure projection authority in the print policy', () => {
@@ -38,12 +42,14 @@ describe('delivery note print workspace cutover contract', () => {
     expect(page).toContain('sale={currentSale}');
     expect(page).toContain('saleItems={preparedSaleItems}');
     expect(page).toContain('config={preparedConfig}');
-    expect(page).toContain('editingLineKey={editingLineKey}');
-    expect(page).toContain('lineDrafts={lineDrafts}');
-    expect(page).toContain('savingLineKey={savingLineKey}');
-    expect(page).toContain('onToggleDocumentLineEdit={documentLineActions.toggle}');
-    expect(page).toContain('onChangeDocumentLineDraft={documentLineActions.change}');
-    expect(page).toContain('onSaveDocumentLine={documentLineActions.save}');
+    expect(page).toContain('sourceQuotationPath={sourceQuotationPath}');
+    expect(page).toContain('onOpenSourceQuotation={openSourceQuotation}');
+    expect(page).toContain('editingLineKey={isConsolidated ? null : editingLineKey}');
+    expect(page).toContain('lineDrafts={isConsolidated ? {} : lineDrafts}');
+    expect(page).toContain('savingLineKey={isConsolidated ? null : savingLineKey}');
+    expect(page).toContain('onToggleDocumentLineEdit={isConsolidated ? undefined : documentLineActions.toggle}');
+    expect(page).toContain('onChangeDocumentLineDraft={isConsolidated ? undefined : documentLineActions.change}');
+    expect(page).toContain('onSaveDocumentLine={isConsolidated ? undefined : documentLineActions.save}');
     expect(shell).toContain('<DeliveryNoteForm');
     expect(shell).toContain('editableDocumentLines');
   });

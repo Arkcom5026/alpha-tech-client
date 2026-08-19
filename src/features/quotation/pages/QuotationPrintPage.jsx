@@ -3,7 +3,7 @@ import { ArrowLeft, Pencil, Plus, Printer, Save, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { getBranchById } from '@/features/branch/api/branchApi';
 import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig';
-import { feedback } from '@/design-system';
+import { ConfirmActionDialog, feedback } from '@/design-system';
 import {
   acceptQuotation,
   addQuotationLine,
@@ -62,6 +62,7 @@ const QuotationPrintPage = () => {
   const [lineDraft, setLineDraft] = useState(null);
   const [savingLine, setSavingLine] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
+  const [pendingLifecycleAction, setPendingLifecycleAction] = useState(null);
 
   const refreshRevisionHistory = async () => {
     const rows = await getQuotationRevisionHistory(quotationId);
@@ -179,7 +180,47 @@ const QuotationPrintPage = () => {
     }
   };
 
-  const runLifecycle = async (action) => {
+  const getLifecycleConfig = (action) => ({
+    issue: {
+      execute: () => issueQuotation(quotationId),
+      title: 'ยืนยันออกใบเสนอราคา',
+      confirm: 'หลังออกเอกสารแล้วฉบับนี้จะถูกล็อก และหากต้องแก้ไขให้สร้าง Revision ใหม่',
+      confirmLabel: 'ออกใบเสนอราคา',
+      success: 'ออกใบเสนอราคาและล็อก snapshot เรียบร้อยแล้ว',
+    },
+    revision: {
+      execute: () => createQuotationRevision(quotationId),
+      title: 'ยืนยันสร้างฉบับแก้ไข',
+      confirm: `สร้าง Rev.${Number(quotation?.revisionNumber || 0) + 1} จากเอกสารฉบับนี้ โดยฉบับเดิมจะไม่ถูกแก้ไข`,
+      confirmLabel: 'สร้างฉบับแก้ไข',
+      success: 'สร้างฉบับแก้ไขใหม่จาก issued snapshot เรียบร้อยแล้ว',
+    },
+    accept: {
+      execute: () => acceptQuotation(quotationId),
+      title: 'ยืนยันการตอบรับใบเสนอราคา',
+      confirm: 'ยืนยันว่าลูกค้าตอบรับใบเสนอราคาฉบับนี้แล้ว?',
+      confirmLabel: 'ยืนยันตอบรับ',
+      success: 'บันทึกการตอบรับใบเสนอราคาฉบับนี้แล้ว',
+    },
+    reject: {
+      execute: () => rejectQuotation(quotationId),
+      title: 'ยืนยันการปฏิเสธใบเสนอราคา',
+      confirm: 'ยืนยันว่าลูกค้าปฏิเสธใบเสนอราคาฉบับนี้?',
+      confirmLabel: 'ยืนยันปฏิเสธ',
+      intent: 'destructive',
+      success: 'บันทึกการปฏิเสธใบเสนอราคาแล้ว',
+    },
+    cancel: {
+      execute: () => cancelQuotation(quotationId),
+      title: 'ยืนยันยกเลิกใบเสนอราคา',
+      confirm: 'ยืนยันยกเลิกใบเสนอราคาฉบับนี้?',
+      confirmLabel: 'ยืนยันยกเลิก',
+      intent: 'destructive',
+      success: 'ยกเลิกใบเสนอราคาแล้ว',
+    },
+  })[action];
+
+  const requestLifecycle = (action) => {
     if (!quotation || transitioning || savingLine) return;
 
     if (action === 'issue') {
@@ -193,41 +234,21 @@ const QuotationPrintPage = () => {
       }
     }
 
-    const config = {
-      issue: {
-        execute: () => issueQuotation(quotationId),
-        confirm: 'ยืนยันออกใบเสนอราคา? หลังออกเอกสารแล้วฉบับนี้จะถูกล็อก และหากต้องแก้ไขให้สร้าง Revision ใหม่',
-        success: 'ออกใบเสนอราคาและล็อก snapshot เรียบร้อยแล้ว',
-      },
-      revision: {
-        execute: () => createQuotationRevision(quotationId),
-        confirm: `สร้าง Rev.${Number(quotation.revisionNumber || 0) + 1} จากเอกสารฉบับนี้? ฉบับเดิมจะไม่ถูกแก้ไข`,
-        success: 'สร้างฉบับแก้ไขใหม่จาก issued snapshot เรียบร้อยแล้ว',
-      },
-      accept: {
-        execute: () => acceptQuotation(quotationId),
-        confirm: 'ยืนยันว่าลูกค้าตอบรับใบเสนอราคาฉบับนี้แล้ว?',
-        success: 'บันทึกการตอบรับใบเสนอราคาฉบับนี้แล้ว',
-      },
-      reject: {
-        execute: () => rejectQuotation(quotationId),
-        confirm: 'ยืนยันว่าลูกค้าปฏิเสธใบเสนอราคาฉบับนี้?',
-        success: 'บันทึกการปฏิเสธใบเสนอราคาแล้ว',
-      },
-      cancel: {
-        execute: () => cancelQuotation(quotationId),
-        confirm: 'ยืนยันยกเลิกใบเสนอราคาฉบับนี้?',
-        success: 'ยกเลิกใบเสนอราคาแล้ว',
-      },
-    }[action];
+    if (!getLifecycleConfig(action)) return;
+    setPendingLifecycleAction(action);
+  };
 
-    if (!config || !window.confirm(config.confirm)) return;
+  const executeLifecycle = async () => {
+    const action = pendingLifecycleAction;
+    const config = getLifecycleConfig(action);
+    if (!action || !config || !quotation || transitioning || savingLine) return;
 
     setTransitioning(true);
     try {
       const updated = await config.execute();
       setEditingLineId(null);
       setLineDraft(null);
+      setPendingLifecycleAction(null);
       if (action === 'revision') {
         feedback.actionSuccess(config.success, `quotation:${quotationId}:revision:create:success`);
         navigate(`${prefix}/${updated.id}/print`);
@@ -317,27 +338,40 @@ const QuotationPrintPage = () => {
   const deliveryAlignedLogoSize = Math.min(92, Math.max(72, configuredLogoSize));
   const revisionNumber = Number(quotation.revisionNumber || 0);
   const canCreateRevision = ['ISSUED', 'ACCEPTED'].includes(quotation.status) && !quotation.revisedTo;
+  const pendingLifecycleConfig = getLifecycleConfig(pendingLifecycleAction);
 
   return (
     <main className="quotation-print-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
+      <ConfirmActionDialog
+        open={Boolean(pendingLifecycleAction)}
+        onClose={() => !transitioning && setPendingLifecycleAction(null)}
+        onConfirm={executeLifecycle}
+        title={pendingLifecycleConfig?.title || 'ยืนยันการดำเนินการ'}
+        description={pendingLifecycleConfig?.confirm || ''}
+        confirmLabel={pendingLifecycleConfig?.confirmLabel || 'ยืนยัน'}
+        intent={pendingLifecycleConfig?.intent}
+        loading={transitioning}
+        loadingLabel="กำลังดำเนินการ..."
+      />
+
       <div className="quotation-print-toolbar mx-auto mb-3 flex max-w-[195mm] items-center justify-between gap-3 print:hidden">
         <button type="button" onClick={() => navigate(`${prefix}/${quotationId}`)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-slate-50"><ArrowLeft className="h-4 w-4" /> กลับไปแก้ไข</button>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {quotation.status === 'DRAFT' ? <>
-            <button type="button" disabled={transitioning} onClick={() => runLifecycle('cancel')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ยกเลิกฉบับร่าง</button>
-            <button type="button" disabled={transitioning || savingLine} onClick={() => runLifecycle('issue')} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50">{transitioning ? 'กำลังดำเนินการ...' : 'ออกใบเสนอราคา'}</button>
+            <button type="button" disabled={transitioning} onClick={() => requestLifecycle('cancel')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ยกเลิกฉบับร่าง</button>
+            <button type="button" disabled={transitioning || savingLine} onClick={() => requestLifecycle('issue')} className="rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-800 disabled:opacity-50">{transitioning ? 'กำลังดำเนินการ...' : 'ออกใบเสนอราคา'}</button>
           </> : null}
           {quotation.status === 'ISSUED' ? <>
-            {canCreateRevision ? <button type="button" disabled={transitioning} onClick={() => runLifecycle('revision')} className="rounded-xl border border-teal-300 bg-white px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50">สร้างฉบับแก้ไข</button> : null}
+            {canCreateRevision ? <button type="button" disabled={transitioning} onClick={() => requestLifecycle('revision')} className="rounded-xl border border-teal-300 bg-white px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50">สร้างฉบับแก้ไข</button> : null}
             {quotation.revisedTo ? <button type="button" onClick={() => navigate(`${prefix}/${quotation.revisedTo.id}/print`)} className="rounded-xl border border-teal-300 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800">ไป Rev.{quotation.revisedTo.revisionNumber}</button> : null}
-            <button type="button" disabled={transitioning} onClick={() => runLifecycle('reject')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ปฏิเสธ</button>
-            <button type="button" disabled={transitioning} onClick={() => runLifecycle('cancel')} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">ยกเลิก</button>
-            <button type="button" disabled={transitioning} onClick={() => runLifecycle('accept')} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">ตอบรับ</button>
+            <button type="button" disabled={transitioning} onClick={() => requestLifecycle('reject')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ปฏิเสธ</button>
+            <button type="button" disabled={transitioning} onClick={() => requestLifecycle('cancel')} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">ยกเลิก</button>
+            <button type="button" disabled={transitioning} onClick={() => requestLifecycle('accept')} className="rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">ตอบรับ</button>
           </> : null}
           {quotation.status === 'ACCEPTED' ? <>
-            {canCreateRevision ? <button type="button" disabled={transitioning} onClick={() => runLifecycle('revision')} className="rounded-xl border border-teal-300 bg-white px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50">สร้างฉบับแก้ไข</button> : null}
+            {canCreateRevision ? <button type="button" disabled={transitioning} onClick={() => requestLifecycle('revision')} className="rounded-xl border border-teal-300 bg-white px-3 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:opacity-50">สร้างฉบับแก้ไข</button> : null}
             {quotation.revisedTo ? <button type="button" onClick={() => navigate(`${prefix}/${quotation.revisedTo.id}/print`)} className="rounded-xl border border-teal-300 bg-teal-50 px-3 py-2 text-sm font-semibold text-teal-800">ไป Rev.{quotation.revisedTo.revisionNumber}</button> : null}
-            <button type="button" disabled={transitioning} onClick={() => runLifecycle('cancel')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ยกเลิก</button>
+            <button type="button" disabled={transitioning} onClick={() => requestLifecycle('cancel')} className="rounded-xl border border-rose-300 bg-white px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">ยกเลิก</button>
           </> : null}
           <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"><Printer className="h-4 w-4" /> พิมพ์ใบเสนอราคา</button>
         </div>

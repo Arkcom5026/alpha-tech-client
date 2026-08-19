@@ -10,10 +10,12 @@ describe('supplier payment mutation authority', () => {
 
     expect(source).toContain('const submittingRef = useRef(false)');
     expect(source).toContain('if (submitting || submittingRef.current) return');
+    expect(source).toContain('const supplierIdSnapshot = supplierId');
     expect(source).toContain('const formSnapshot = {');
     expect(source).toContain('submittingRef.current = true');
     expect(source).toContain('submittingRef.current = false');
-    expect(source).toContain('supplier-payment:advance:history-after-create:error');
+    expect(source).toContain('`supplier-payment:advance:${supplierIdSnapshot}:history-after-create:error`');
+    expect(source).toContain('supplierIdRef.current === supplierIdSnapshot');
     expect(source).toContain('disabled={mutationBusy}');
   });
 

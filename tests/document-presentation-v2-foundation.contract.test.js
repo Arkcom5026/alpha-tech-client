@@ -57,6 +57,23 @@ assert.equal(resolved.documentPurpose, 'QUOTATION')
 assert.equal(resolved.resolved.typography.body, 'xl')
 assert.equal(resolved.resolved.blocks.CUSTOM_FOOTER.content, 'ขอบคุณ')
 
+const statutory = resolveDocumentPresentation({
+  storeConfig: {
+    version: 2,
+    shared: {
+      blocks: {
+        TOTALS: { visible: false, content: 'must never override tax totals' },
+        CUSTOM_FOOTER: { visible: true, content: 'ข้อความร้าน' },
+      },
+      paymentAccountSelection: { accountIds: [9] },
+    },
+  },
+  documentPurpose: 'FULL_TAX_INVOICE',
+})
+assert.equal(statutory.resolved.blocks.TOTALS, undefined)
+assert.equal(statutory.resolved.blocks.CUSTOM_FOOTER.content, 'ข้อความร้าน')
+assert.equal(statutory.resolved.paymentAccountSelection, undefined)
+
 const envelope = createPresentationSnapshotEnvelope({
   businessSnapshot: { documentNo: 'Q-001' },
   presentation: resolved,
@@ -76,5 +93,12 @@ assert.match(headerSource, /Number\(config\?\.version\) === 2/)
 assert.match(headerSource, /config\?\.shared\?\.header/)
 assert.match(headerSource, /currentConfig\?\.version\) === 2/)
 assert.match(headerSource, /toCanonicalDocumentCode/)
+
+const paymentApiSource = fs.readFileSync(
+  path.resolve(__dirname, '../src/features/printing/presentation/storePaymentAccountApi.js'),
+  'utf8',
+)
+assert.match(paymentApiSource, /\/finance\/store-payment-accounts/)
+assert.doesNotMatch(paymentApiSource, /console\.(?:log|error|warn)/)
 
 console.log('document-presentation-v2-foundation.contract.test.js: PASS')

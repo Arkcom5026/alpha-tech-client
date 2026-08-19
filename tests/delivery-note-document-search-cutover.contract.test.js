@@ -39,7 +39,10 @@ assert(!page.includes("from '@/features/sales/store/salesStore'"), 'Delivery Not
 assert(!page.includes('printableSales'), 'Delivery Note list must not read legacy printable rows');
 assert(!page.includes('loadPrintableSalesAction'), 'Delivery Note list must not call legacy printable action');
 assert(page.includes('documentSearch.actions.search'), 'Delivery Note list must search through document search owner');
-assert(page.includes("navigate(`print/${row.id}`)"), 'Delivery Note list must preserve nested print route authority');
+assert(page.includes("const sourceType = row?.documentSourceType || 'SALE'"), 'Delivery Note list must resolve source type for print routing');
+assert(page.includes('const sourceId = row?.documentSourceId ?? row?.id'), 'Delivery Note list must resolve source identity for print routing');
+assert(page.includes('navigate(`print/${sourceId}`)'), 'Delivery Note list must preserve nested print route authority for SALE documents');
+assert(page.includes('?sourceType=${CONSOLIDATED_DOCUMENT_SOURCE_TYPE}&sourceId=${encodeURIComponent(sourceId)}'), 'Delivery Note list must preserve consolidated source identity in print routing');
 
 assert(policy.includes("id: 'DELIVERY_NOTE'"), 'Delivery Note policy identity must remain explicit');
 assert(policy.includes('onlyWithDeliveryNote: 1'), 'Delivery Note policy must preserve delivery-note scoped query semantics');

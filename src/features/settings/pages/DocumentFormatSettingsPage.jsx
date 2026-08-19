@@ -13,6 +13,7 @@ import {
   normalizeLogoSize,
   projectDocumentHeaderFormDefaults,
 } from '@/features/branch/documentHeader/documentHeaderConfig';
+import CustomerReceiptPresentationSettingsCard from '@/features/settings/components/CustomerReceiptPresentationSettingsCard';
 import DeliveryNotePresentationSettingsCard from '@/features/settings/components/DeliveryNotePresentationSettingsCard';
 import QuotationPresentationSettingsCard from '@/features/settings/components/QuotationPresentationSettingsCard';
 import StorefrontMediaUploadField from '@/features/storeExperience/components/StorefrontMediaUploadField';
@@ -193,7 +194,7 @@ const DocumentFormatSettingsPage = () => {
                 </div>
                 <p className="mt-1 text-[10px] font-medium text-slate-400">กำหนดได้ {DOCUMENT_LOGO_SIZE_MIN}–{DOCUMENT_LOGO_SIZE_MAX} px · มาตรฐาน {DOCUMENT_LOGO_SIZE_DEFAULT} px</p>
               </div>
-              <div className="md:col-span-2"><label className={labelClassName}>แนวข้อความหัวเอกสาร</label><select {...register('headerTextAlign')} className={inputClassName}><option value="left">ชิดซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ชิดขวา</option></select></div>
+              <div className="md:col-span-2"><label className={labelClassName}>แนวข้อความหัวเอกสาร</label><select {...register('headerTextAlign')} className={inputClassName}><option value="left">ชิดซ้าย</option><option value="center">กึ่งกลาง</option><option value="right">ขวา</option></select></div>
             </div>
           </section>
 
@@ -252,19 +253,9 @@ const DocumentFormatSettingsPage = () => {
         </aside>
       </div>
 
-      <QuotationPresentationSettingsCard
-        branch={branch}
-        branchId={branchId}
-        updateBranch={updateBranch}
-        onBranchChange={setBranch}
-      />
-
-      <DeliveryNotePresentationSettingsCard
-        branch={branch}
-        branchId={branchId}
-        updateBranch={updateBranch}
-        onBranchChange={setBranch}
-      />
+      <QuotationPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
+      <DeliveryNotePresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
+      <CustomerReceiptPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
     </div>
   );
 };

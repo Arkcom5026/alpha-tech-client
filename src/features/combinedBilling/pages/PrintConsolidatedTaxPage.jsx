@@ -7,7 +7,11 @@ import {
   getOutputTaxPrintable,
   getTaxDocumentPresentation,
 } from '@/features/tax/intake/api/taxIntakeApi';
-import { resolveStatutoryPresentation } from '@/features/printing/presentation/statutoryPresentation';
+import {
+  resolveStatutoryPresentation,
+  visibleStatutoryBlockContent,
+} from '@/features/printing/presentation/statutoryPresentation';
+import StatutoryTaxPresentationFooter from '@/features/printing/presentation/StatutoryTaxPresentationFooter';
 
 const PrintConsolidatedTaxPage = () => {
   const { taxDocumentId } = useParams();
@@ -107,6 +111,10 @@ const PrintConsolidatedTaxPage = () => {
         storeNameSize: legalHeader.storeNameSize,
         vatRate: 7,
       },
+      presentationFooter: {
+        notes: visibleStatutoryBlockContent(presentation, 'NOTES'),
+        customFooter: visibleStatutoryBlockContent(presentation, 'CUSTOM_FOOTER'),
+      },
     };
   }, [data, presentation]);
 
@@ -123,6 +131,12 @@ const PrintConsolidatedTaxPage = () => {
           config={view.config}
           hideContactName
         />
+        <div className="px-2 pb-3 print:px-0">
+          <StatutoryTaxPresentationFooter
+            customFooter={view.presentationFooter.customFooter}
+            compact
+          />
+        </div>
       </div>
     );
   }
@@ -133,6 +147,7 @@ const PrintConsolidatedTaxPage = () => {
       saleItems={view.items}
       payments={[view.payment]}
       config={view.config}
+      presentationFooter={view.presentationFooter}
     />
   );
 };

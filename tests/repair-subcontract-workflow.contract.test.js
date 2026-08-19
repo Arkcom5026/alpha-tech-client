@@ -35,8 +35,10 @@ describe('repair subcontract workflow contract', () => {
     const panel = read('src/features/repair/components/RepairSubcontractPanel.jsx');
 
     expect(panel).toContain('const toIsoOrNull = (value) => (value ? new Date(value).toISOString() : null)');
-    expect(panel).toContain('expectedReturnAt: toIsoOrNull(sendForm.expectedReturnAt)');
-    expect(panel).toContain('expectedReturnAt: toIsoOrNull(updateForm.expectedReturnAt)');
+    expect(panel).toContain('const sendFormSnapshot = { ...sendForm }');
+    expect(panel).toContain('expectedReturnAt: toIsoOrNull(sendFormSnapshot.expectedReturnAt)');
+    expect(panel).toContain('const updateFormSnapshot = { ...updateForm }');
+    expect(panel).toContain('expectedReturnAt: toIsoOrNull(updateFormSnapshot.expectedReturnAt)');
   });
 
   it('requires outsource consent before the send button is enabled', () => {
@@ -45,7 +47,7 @@ describe('repair subcontract workflow contract', () => {
     expect(panel).toContain('const outsourceConsent = Boolean(context?.outsourceConsent)');
     expect(panel).toContain('!outsourceConsent');
     expect(panel).toContain('ลูกค้ายังไม่ได้อนุญาตให้ส่งซ่อมภายนอก');
-    expect(panel).toContain('disabled={loading || !outsourceConsent');
+    expect(panel).toContain('disabled={interactionLocked || !outsourceConsent || !sendForm.expensePayeeId || !sendForm.workScope.trim()}');
   });
 
   it('quick-creates a required ExpensePayee without leaving the repair job and auto-selects it', () => {

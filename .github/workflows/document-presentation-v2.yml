@@ -9,6 +9,8 @@ on:
       - 'src/features/quotation/presentation/**'
       - 'src/features/quotation/components/QuotationPresentationFooter.jsx'
       - 'src/features/quotation/pages/QuotationPrintPage.jsx'
+      - 'src/features/settings/components/QuotationPresentationSettingsCard.jsx'
+      - 'src/features/settings/pages/DocumentFormatSettingsPage.jsx'
       - 'tests/document-presentation-v2-foundation.contract.test.js'
       - 'tests/quotation-document-presentation-wave1.contract.test.js'
       - '.github/workflows/document-presentation-v2.yml'

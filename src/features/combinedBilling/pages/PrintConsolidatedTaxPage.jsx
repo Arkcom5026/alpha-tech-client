@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Printer } from 'lucide-react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useBranchStore } from '@/features/branch/store/branchStore';
 import BillLayoutShortTax from '@/features/bill/components/BillLayoutShortTax';
 import FullTaxA4Document from '../bill/components/FullTaxA4Document';
@@ -13,9 +14,44 @@ import {
 } from '@/features/printing/presentation/statutoryPresentation';
 import StatutoryTaxPresentationFooter from '@/features/printing/presentation/StatutoryTaxPresentationFooter';
 
-const PrintConsolidatedTaxPage = () => {
+const DOCUMENT_TYPE_LABELS = {
+  SHORT_TAX_INVOICE: 'ใบกำกับภาษีอย่างย่อ',
+  FULL_TAX_INVOICE: 'ใบกำกับภาษีเต็มรูป',
+};
+
+const TaxPrintToolbar = ({ documentType, onBack, onPrint }) => (
+  <div className="w-full border-b border-slate-200 bg-white px-4 py-3 print:hidden">
+    <div className="mx-auto flex max-w-[1100px] flex-wrap items-center justify-between gap-3">
+      <div>
+        <div className="text-sm font-semibold text-slate-800">{DOCUMENT_TYPE_LABELS[documentType] || 'เอกสารภาษี'}</div>
+        <div className="text-xs text-slate-500">รูปแบบการพิมพ์ยึดตามชนิดเอกสารภาษีที่ออกจริง</div>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          ย้อนกลับ
+        </button>
+        <button
+          type="button"
+          onClick={onPrint}
+          className="inline-flex items-center gap-2 rounded-xl bg-teal-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
+        >
+          <Printer className="h-4 w-4" />
+          พิมพ์
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+const PrintConsolidatedTaxPage = ({ expectedDocumentType = null }) => {
   const { taxDocumentId } = useParams();
   const [query] = useSearchParams();
+  const navigate = useNavigate();
   const selectedBranchId = useBranchStore((state) => Number(state.selectedBranchId || state.currentBranch?.id || 0));
   const branchId = Number(query.get('branchId') || selectedBranchId);
   const [data, setData] = useState(null);
@@ -118,37 +154,81 @@ const PrintConsolidatedTaxPage = () => {
     };
   }, [data, presentation]);
 
+  const handleBack = () => navigate(-1);
+  const handlePrint = () => window.print();
+
   if (error) return <main className="p-6 text-red-700">{error}</main>;
   if (!view) return <main className="p-6">กำลังเตรียมเอกสาร...</main>;
 
-  if (data.document.type === 'SHORT_TAX_INVOICE') {
+  const actualDocumentType = data.document?.type;
+  const isSupportedDocumentType = actualDocumentType === 'SHORT_TAX_INVOICE'
+    || actualDocumentType === 'FULL_TAX_INVOICE';
+
+  if (!isSupportedDocumentType) {
     return (
-      <div className="bill-print-root mx-auto w-[80mm] bg-white p-4 print:p-0">
-        <BillLayoutShortTax
-          sale={view.sale}
-          saleItems={view.items}
-          payments={[view.payment]}
-          config={view.config}
-          hideContactName
-        />
-        <div className="px-2 pb-3 print:px-0">
-          <StatutoryTaxPresentationFooter
-            customFooter={view.presentationFooter.customFooter}
-            compact
-          />
+      <main className="mx-auto max-w-2xl p-6">
+        <TaxPrintToolbar documentType={actualDocumentType} onBack={handleBack} onPrint={handlePrint} />
+        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-800">
+          ไม่สามารถพิมพ์เอกสารนี้ได้ เนื่องจากชนิดเอกสารภาษีไม่รองรับการพิมพ์จากหน้านี้
         </div>
-      </div>
+      </main>
+    );
+  }
+
+  if (expectedDocumentType && actualDocumentType !== expectedDocumentType) {
+    return (
+      <main className="mx-auto max-w-2xl p-6">
+        <div className="print:hidden">
+          <TaxPrintToolbar documentType={actualDocumentType} onBack={handleBack} onPrint={handlePrint} />
+        </div>
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+          <div className="font-semibold">ชนิดเอกสารไม่ตรงกับรูปแบบที่เลือก</div>
+          <div className="mt-1">
+            เอกสารเลขที่ {data.document?.number || '-'} เป็น {DOCUMENT_TYPE_LABELS[actualDocumentType] || actualDocumentType}
+            {' '}จึงไม่สามารถแสดงเป็น {DOCUMENT_TYPE_LABELS[expectedDocumentType] || expectedDocumentType} ได้
+          </div>
+          <div className="mt-2 text-xs text-amber-800">
+            ระบบจะไม่เปลี่ยนชนิดเอกสารภาษีด้วยการเปลี่ยนรูปแบบหน้าพิมพ์ เพื่อรักษาความถูกต้องของเอกสารที่ออกจริง
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (actualDocumentType === 'SHORT_TAX_INVOICE') {
+    return (
+      <>
+        <TaxPrintToolbar documentType={actualDocumentType} onBack={handleBack} onPrint={handlePrint} />
+        <div className="bill-print-root mx-auto w-[80mm] bg-white p-4 print:p-0">
+          <BillLayoutShortTax
+            sale={view.sale}
+            saleItems={view.items}
+            payments={[view.payment]}
+            config={view.config}
+            hideContactName
+          />
+          <div className="px-2 pb-3 print:px-0">
+            <StatutoryTaxPresentationFooter
+              customFooter={view.presentationFooter.customFooter}
+              compact
+            />
+          </div>
+        </div>
+      </>
     );
   }
 
   return (
-    <FullTaxA4Document
-      sale={view.sale}
-      saleItems={view.items}
-      payments={[view.payment]}
-      config={view.config}
-      presentationFooter={view.presentationFooter}
-    />
+    <>
+      <TaxPrintToolbar documentType={actualDocumentType} onBack={handleBack} onPrint={handlePrint} />
+      <FullTaxA4Document
+        sale={view.sale}
+        saleItems={view.items}
+        payments={[view.payment]}
+        config={view.config}
+        presentationFooter={view.presentationFooter}
+      />
+    </>
   );
 };
 

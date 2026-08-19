@@ -2,8 +2,8 @@ import React from 'react';
 import { RefreshCw, Search } from 'lucide-react';
 
 const formatOptions = [
-  { value: 'short', label: 'ใบเสร็จแบบย่อ' },
-  { value: 'full', label: 'ใบเสร็จแบบเต็ม' },
+  { value: 'short', label: 'ใบกำกับภาษีอย่างย่อ' },
+  { value: 'full', label: 'ใบกำกับภาษีเต็มรูป' },
 ];
 
 const BillSearchToolbar = ({
@@ -54,20 +54,25 @@ const BillSearchToolbar = ({
     </div>
 
     <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="inline-flex w-full rounded-xl border border-teal-100 bg-teal-50 p-1 sm:w-auto">
-        {formatOptions.map((option) => {
-          const active = printFormat === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => onPrintFormatChange(option.value)}
-              className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition sm:flex-none ${active ? 'bg-emerald-100 text-emerald-900 shadow-sm' : 'text-teal-800 hover:bg-white/70'}`}
-            >
-              {option.label}
-            </button>
-          );
-        })}
+      <div>
+        <div className="inline-flex w-full rounded-xl border border-teal-100 bg-teal-50 p-1 sm:w-auto">
+          {formatOptions.map((option) => {
+            const active = printFormat === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => onPrintFormatChange(option.value)}
+                className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium transition sm:flex-none ${active ? 'bg-emerald-100 text-emerald-900 shadow-sm' : 'text-teal-800 hover:bg-white/70'}`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-1.5 text-[11px] text-slate-500">
+          เอกสารภาษีที่ออกแล้วจะพิมพ์ได้เฉพาะชนิดที่ตรงกับ authority ของเอกสารจริง
+        </div>
       </div>
 
       <button type="button" onClick={onSearch} disabled={loading} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-teal-700 px-5 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50">

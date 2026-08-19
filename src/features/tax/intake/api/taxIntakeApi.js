@@ -90,6 +90,14 @@ export const getOutputTaxPrintable = async ({ branchId, taxDocumentId }) => {
   return unwrapData(response);
 };
 
+export const getTaxDocumentPresentation = async ({ branchId, taxDocumentId }) => {
+  const response = await apiClient.get(
+    `/tax/documents/${requirePositiveId(taxDocumentId, 'taxDocumentId')}/presentation`,
+    { params: { branchId: requirePositiveId(branchId, 'branchId') } },
+  );
+  return unwrapData(response);
+};
+
 export const getTaxIssuerProfile = async ({ branchId }) => {
   const response = await apiClient.get('/tax/issuer-profile', {
     params: { branchId: requirePositiveId(branchId, 'branchId') },

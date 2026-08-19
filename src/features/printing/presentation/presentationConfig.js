@@ -1,5 +1,9 @@
 import { toCanonicalDocumentCode } from './canonicalDocumentIdentity'
-import { BLOCK_TYPES } from './presentationCapabilityRegistry'
+import {
+  BLOCK_TYPES,
+  canStoreConfigureBlock,
+  getDocumentPresentationCapability,
+} from './presentationCapabilityRegistry'
 
 const ALIGNMENTS = new Set(['left', 'center', 'right'])
 const TYPOGRAPHY_TOKENS = new Set(['xs', 'sm', 'md', 'lg', 'xl'])
@@ -163,6 +167,29 @@ const mergeObjects = (...sources) => {
   return output
 }
 
+const applyCapabilityPolicy = (documentPurpose, layer) => {
+  const code = toCanonicalDocumentCode(documentPurpose)
+  if (!code || !isObject(layer)) return layer || {}
+  if (!getDocumentPresentationCapability(code)) return layer
+
+  const blocks = {}
+  for (const [blockType, block] of Object.entries(layer.blocks || {})) {
+    if (canStoreConfigureBlock(code, blockType)) blocks[blockType] = block
+  }
+  const blockOrder = Array.isArray(layer.layout?.blockOrder)
+    ? layer.layout.blockOrder.filter((blockType) => canStoreConfigureBlock(code, blockType))
+    : layer.layout?.blockOrder
+
+  return compact({
+    ...layer,
+    blocks,
+    layout: layer.layout ? { ...layer.layout, blockOrder } : undefined,
+    paymentAccountSelection: canStoreConfigureBlock(code, 'PAYMENT_ACCOUNT')
+      ? layer.paymentAccountSelection
+      : undefined,
+  })
+}
+
 const resolveDocumentPresentation = ({ systemDefault, storeConfig, documentPurpose, perDocumentOverride, issuedSnapshot } = {}) => {
   if (isObject(issuedSnapshot?.presentation)) return structuredClone(issuedSnapshot.presentation)
   if (isObject(issuedSnapshot) && Number(issuedSnapshot.version) === 2) return structuredClone(issuedSnapshot)
@@ -170,16 +197,17 @@ const resolveDocumentPresentation = ({ systemDefault, storeConfig, documentPurpo
   const system = normalizeDocumentPresentationConfig(systemDefault) || { version: 2, shared: {}, documents: {} }
   const store = normalizeDocumentPresentationConfig(storeConfig) || { version: 2, shared: {}, documents: {} }
   const code = toCanonicalDocumentCode(documentPurpose)
+  const merged = mergeObjects(
+    system.shared,
+    code ? system.documents?.[code] : null,
+    store.shared,
+    code ? store.documents?.[code] : null,
+    normalizeLayer(perDocumentOverride),
+  )
   return {
     version: 2,
     documentPurpose: code,
-    resolved: mergeObjects(
-      system.shared,
-      code ? system.documents?.[code] : null,
-      store.shared,
-      code ? store.documents?.[code] : null,
-      normalizeLayer(perDocumentOverride),
-    ),
+    resolved: applyCapabilityPolicy(code, merged),
   }
 }
 
@@ -190,6 +218,7 @@ export {
   SPACING_TOKENS,
   TYPOGRAPHY_TOKENS,
   WIDTH_VARIANTS,
+  applyCapabilityPolicy,
   bridgeV1DocumentHeaderConfig,
   mergeObjects,
   normalizeDocumentPresentationConfig,

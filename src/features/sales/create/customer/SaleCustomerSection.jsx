@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PencilLine, UserRound } from 'lucide-react';
+import { PencilLine, UserPlus, UserRound } from 'lucide-react';
 import useSalesStore from '@/features/sales/store/salesStore';
 import useCustomerDepositStore from '@/features/customerDeposit/store/customerDepositStore';
 import useCustomerStore from '@/features/customer/store/customerStore';
@@ -7,6 +7,7 @@ import { useAddressStore } from '@/features/address/store/addressStore';
 import { feedback } from '@/design-system';
 import SaleCustomerSearch from './components/SaleCustomerSearch';
 import SaleCustomerSearchResults from './components/SaleCustomerSearchResults';
+import SaleCustomerCreateDialog from './components/SaleCustomerCreateDialog';
 import SaleCustomerDetailsForm from './components/SaleCustomerDetailsForm';
 import { useSaleCustomerEditor } from './hooks/useSaleCustomerEditor';
 import { useSaleCustomerHydration } from './hooks/useSaleCustomerHydration';
@@ -18,6 +19,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
   const customerMutationRef = useRef(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [pendingCreate, setPendingCreate] = useState(false);
+  const [customerCreateDialogOpen, setCustomerCreateDialogOpen] = useState(false);
   const [editingSelectedCustomer, setEditingSelectedCustomer] = useState(false);
   const [customerMutationAction, setCustomerMutationAction] = useState(null);
   const [formInfo, setFormInfo] = useState('');
@@ -52,6 +54,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     if (!hydrated) return;
     setSelectedCustomer(hydrated);
     setPendingCreate(false);
+    setCustomerCreateDialogOpen(false);
     setEditingSelectedCustomer(false);
     setFormInfo('');
     setFormError('');
@@ -63,11 +66,11 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     setCustomerId(null);
     clearCustomerAndDeposit();
     setPendingCreate(true);
+    setCustomerCreateDialogOpen(false);
     setEditingSelectedCustomer(false);
     editor.clearEditor(mode === 'phone' ? { phone: query } : { name: query });
-    setFormInfo('ไม่พบลูกค้าในร้านนี้ สามารถเพิ่มข้อมูลลูกค้าใหม่ได้');
+    setFormInfo('');
     setFormError('');
-    setTimeout(() => document.getElementById('customer-name-input')?.focus(), 80);
   }, [clearCustomerAndDeposit, editor, setCustomerId]);
 
   const search = useSaleCustomerSearch({
@@ -87,6 +90,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     editor.clearEditor();
     setSelectedCustomer(null);
     setPendingCreate(false);
+    setCustomerCreateDialogOpen(false);
     setEditingSelectedCustomer(false);
     setFormInfo('');
     setFormError('');
@@ -100,6 +104,21 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
     if (customerMutationRef.current) return;
     search.setSelectedResultId(candidate.id);
     await handleFound(candidate);
+  };
+
+  const openCustomerCreateDialog = () => {
+    if (!pendingCreate || customerMutationRef.current) return;
+    setFormError('');
+    setCustomerCreateDialogOpen(true);
+    setTimeout(() => document.getElementById('customer-name-input')?.focus(), 80);
+  };
+
+  const handleCustomerCreateDialogOpenChange = (nextOpen) => {
+    if (customerMutationRef.current) return;
+    setCustomerCreateDialogOpen(nextOpen);
+    if (!nextOpen) {
+      setFormError('');
+    }
   };
 
   const handleCreate = async () => {
@@ -189,10 +208,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
 
   const handleCancelCreate = () => {
     if (customerMutationRef.current) return;
-    setPendingCreate(false);
-    editor.clearEditor();
-    search.clearSearch();
-    setFormInfo('');
+    setCustomerCreateDialogOpen(false);
     setFormError('');
     setTimeout(() => customerSearchRef.current?.focus(), 80);
   };
@@ -234,7 +250,7 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
         </div>
       </div>
 
-      {view.feedback.formError ? (
+      {view.feedback.formError && !customerCreateDialogOpen ? (
         <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
           {view.feedback.formError}
         </div>
@@ -253,6 +269,28 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
           loading={view.search.loading || customerMutationBusy}
           onSelect={customerMutationBusy ? () => {} : handleSelectResult}
         />
+      ) : null}
+
+      {view.selection.pendingCreate && !view.selection.selectedCustomer ? (
+        <div className="flex flex-col gap-2 rounded-xl border border-teal-200 bg-teal-50/70 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-slate-800">
+              ไม่พบลูกค้า{view.search.query ? ` “${view.search.query}”` : ''} ในร้านนี้
+            </p>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              หากเป็นลูกค้าใหม่ สามารถเพิ่มข้อมูลได้โดยไม่ออกจากหน้าขาย
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={customerMutationBusy}
+            onClick={openCustomerCreateDialog}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-teal-700 px-3 text-xs font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+          >
+            <UserPlus className="h-4 w-4" />
+            เพิ่มลูกค้าใหม่
+          </button>
+        </div>
       ) : null}
 
       {view.selection.selectedCustomer && !editingSelectedCustomer ? (
@@ -312,22 +350,33 @@ const SaleCustomerSection = ({ productSearchRef, clearTrigger, onClearFinish, on
         </div>
       ) : null}
 
-      {(view.selection.selectedCustomer && editingSelectedCustomer) || view.selection.pendingCreate ? (
+      {view.selection.selectedCustomer && editingSelectedCustomer ? (
         <SaleCustomerDetailsForm
           editor={view.editor.editor}
           selectedCustomer={view.selection.selectedCustomer}
           isModified={view.editor.isModified}
-          pendingCreate={view.selection.pendingCreate}
+          pendingCreate={false}
           provinceFilter={provinceFilter}
           disabled={customerMutationBusy}
           mutationAction={customerMutationAction}
           onPatch={view.editor.patchEditor}
-          onCreate={handleCreate}
           onUpdate={handleUpdate}
           onCancelUpdate={handleCancelUpdate}
-          onCancelCreate={handleCancelCreate}
         />
       ) : null}
+
+      <SaleCustomerCreateDialog
+        open={customerCreateDialogOpen}
+        disabled={customerMutationBusy}
+        editor={view.editor.editor}
+        provinceFilter={provinceFilter}
+        mutationAction={customerMutationAction}
+        formError={formError}
+        onOpenChange={handleCustomerCreateDialogOpenChange}
+        onPatch={view.editor.patchEditor}
+        onCreate={handleCreate}
+        onCancel={handleCancelCreate}
+      />
     </section>
   );
 };

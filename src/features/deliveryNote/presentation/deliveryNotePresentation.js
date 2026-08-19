@@ -40,6 +40,36 @@ const resolveDeliveryNoteFooterContent = (presentation) => ({
   customFooter: visibleBlockContent(presentation, 'CUSTOM_FOOTER'),
 })
 
+const applyDeliveryNoteHeaderPresentation = ({ config = {}, presentation } = {}) => {
+  const header = presentation?.resolved?.header
+  if (!isObject(header) || !Object.keys(header).length) return config
+
+  const currentStyle = isObject(config?.headerStyle) ? config.headerStyle : {}
+  const storeName = text(header.storeName) || text(currentStyle.storeName) || text(config.branchName)
+  const address = text(header.address) || text(currentStyle.address) || text(config.address)
+  const phone = text(header.phone) || text(currentStyle.phone) || text(config.phone)
+  const taxId = text(header.taxId) || text(currentStyle.taxId) || text(config.taxId)
+  const logoUrl = text(header.logoUrl) || text(currentStyle.logoUrl) || text(config.logoUrl) || null
+
+  return {
+    ...config,
+    branchName: header.showStoreName === false ? '' : storeName,
+    address: header.showAddress === false ? '' : address,
+    phone: header.showPhone === false ? '' : phone,
+    taxId: header.showTaxId === false ? '' : taxId,
+    logoUrl: header.showLogo === false ? null : logoUrl,
+    headerStyle: {
+      ...currentStyle,
+      ...header,
+      storeName,
+      address,
+      phone,
+      taxId,
+      logoUrl,
+    },
+  }
+}
+
 const deliveryNoteTypographyToken = (presentation, key, fallback = 'md') => {
   const token = presentation?.resolved?.typography?.[key]
   return ['xs', 'sm', 'md', 'lg', 'xl'].includes(token) ? token : fallback
@@ -51,6 +81,7 @@ const deliveryNoteTypographyPx = (presentation, key, fallback = 'md') => (
 )
 
 export {
+  applyDeliveryNoteHeaderPresentation,
   deliveryNoteTypographyPx,
   deliveryNoteTypographyToken,
   getDeliveryNoteSnapshotPresentation,

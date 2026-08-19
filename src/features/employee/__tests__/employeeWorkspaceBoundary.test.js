@@ -25,7 +25,8 @@ describe('employee workspace boundary', () => {
     expectThinAdapter('pages/EmployeeFormPage.jsx', 'LegacyEmployeeFormWorkspace');
     const legacyWorkspace = read('workspaces/LegacyEmployeeFormWorkspace.jsx');
     const canonicalEdit = read('workspaces/EmployeeEditWorkspace.jsx');
-    expect(legacyWorkspace).toContain("shopSlug || 'advancetech'");
+    expect(legacyWorkspace).toContain('const shopSlugSnapshot = shopSlug;');
+    expect(legacyWorkspace).toContain("const targetSlug = shopSlugSnapshot || 'advancetech';");
     expect(canonicalEdit).toContain('canEditBranch={isSuperAdmin}');
     expect(canonicalEdit).toContain('branchOptions={branches}');
   });

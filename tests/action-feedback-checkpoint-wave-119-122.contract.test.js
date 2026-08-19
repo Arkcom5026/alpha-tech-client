@@ -26,10 +26,12 @@ describe('action feedback checkpoint wave 119-122', () => {
   it('serializes partner activation and snapshots credentials before request', () => {
     const page = read('src/features/partnerStoreApplication/pages/PartnerStoreActivationPage.jsx');
     expect(page).toContain('const submittingRef = useRef(false)');
-    expect(page).toContain('if (submitting || submittingRef.current) return');
+    expect(page).toContain('if (submittingRef.current) return');
     expect(page).toContain('const activationToken = token');
     expect(page).toContain('const nextPassword = password');
-    expect(page).toContain('disabled={submitting}');
+    expect(page).toContain('const requestId = requestRef.current + 1');
+    expect(page).toContain('const mutationBusy = submitting || submittingRef.current');
+    expect(page).toContain('disabled={mutationBusy}');
   });
 
   it('serializes operational readiness certification with a destination snapshot', () => {
@@ -37,7 +39,9 @@ describe('action feedback checkpoint wave 119-122', () => {
     expect(page).toContain('const submittingRef = useRef(false)');
     expect(page).toContain('if (submitting || submittingRef.current) return');
     expect(page).toContain('const readinessConfirmed = Boolean(assessment.allReady)');
-    expect(page).toContain('const destinationSlug = canonicalSlug');
-    expect(page).toContain('navigate(`/${destinationSlug}/pos/dashboard`');
+    expect(page).toContain("const routeSlugSnapshot = String(shopSlug || '')");
+    expect(page).toContain('const destinationSlug = String(canonicalSlug || routeSlugSnapshot)');
+    expect(page).toContain('navigate(`/${destinationSlug}/pos/dashboard`, { replace: true })');
+    expect(page).toContain('const mutationBusy = submitting || submittingRef.current');
   });
 });

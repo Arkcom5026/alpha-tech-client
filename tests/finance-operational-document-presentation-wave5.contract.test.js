@@ -15,6 +15,10 @@ const receiptResolver = read('src/features/customerMoneyReceive/presentation/cus
 const receiptPrint = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage.jsx');
 const settlementResolver = read('src/features/customerMoneySettlement/presentation/deliveryCreditSettlementPresentation.js');
 const settlementPrint = read('src/features/customerMoneySettlement/pages/DeliveryCreditSettlementPrintPage.jsx');
+const refundResolver = read('src/features/refund/presentation/refundReceiptPresentation.js');
+const refundPage = read('src/features/refund/pages/PrintRefundReceiptPage.jsx');
+const refundPolicy = read('src/features/refund/print/workspace/policies/refundReceiptPrintPolicy.js');
+const refundShell = read('src/features/refund/print/workspace/components/RefundReceiptPrintShell.jsx');
 const settingsCard = read('src/features/settings/components/FinanceOperationalPresentationSettingsCard.jsx');
 const settingsPage = read('src/features/settings/pages/DocumentFormatSettingsPage.jsx');
 
@@ -47,11 +51,21 @@ assert(settlementPrint.includes('buildDeliveryCreditSettlementHeader'));
 assert(settlementPrint.includes('FinanceOperationalPresentationFooter'));
 assert(settlementPrint.includes('ไม่สร้าง stock movement และไม่ตัดสต๊อกซ้ำ'));
 
+assert(refundResolver.includes("const DOCUMENT_PURPOSE = 'REFUND_RECEIPT'"));
+assert(refundResolver.includes('saleReturn?.presentationSnapshots?.[A4_RENDERER]'));
+assert(refundResolver.includes('presentationSnapshot?.businessSnapshot?.storeIdentity'));
+assert(refundPage.includes('resolveRefundReceiptPresentation'));
+assert(refundPage.includes('buildRefundReceiptHeader'));
+assert(refundPolicy.includes('presentationAuthority'));
+assert(refundShell.includes('FinanceOperationalPresentationFooter'));
+assert(refundShell.includes('โปรดเก็บเอกสารนี้ไว้เป็นหลักฐานการคืนเงิน'));
+
 assert(settingsCard.includes('ข้อความระบบด้านล่างเป็นข้อมูล authority ของเอกสาร'));
 assert(settingsCard.includes('SYSTEM_NOTICE') === false, 'settings UI must not write protected SYSTEM_NOTICE content.');
 assert(settingsPage.includes('FinanceOperationalPresentationSettingsCard'));
 assert(settingsPage.includes('documentPurpose="CUSTOMER_MONEY_RECEIPT"'));
 assert(settingsPage.includes('ใบรับเงิน Customer Money'));
 assert(settingsPage.includes('documentPurpose="DELIVERY_CREDIT_SETTLEMENT"'), 'Delivery Credit Settlement must be configurable in the single document design center.');
+assert(settingsPage.includes('documentPurpose="REFUND_RECEIPT"'), 'Refund Receipt must be configurable in the single document design center.');
 
 console.log('Finance Operational Document Presentation Wave 5 Contract: PASS');

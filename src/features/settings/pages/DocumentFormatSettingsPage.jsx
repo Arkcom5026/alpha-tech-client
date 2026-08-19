@@ -167,6 +167,19 @@ const DocumentFormatSettingsPage = () => {
           'ไม่ใช่ใบกำกับภาษี และไม่ก่อให้เกิดการตัดสต๊อกหรือรายการภาษีจากการรับเงินนี้',
         ]}
       />
+      <FinanceOperationalPresentationSettingsCard
+        branch={branch}
+        branchId={branchId}
+        updateBranch={updateBranch}
+        onBranchChange={setBranch}
+        documentPurpose="DELIVERY_CREDIT_SETTLEMENT"
+        title="เอกสารตัดยอดใบส่งของเครดิต"
+        description="กำหนดหมายเหตุและข้อความท้ายเอกสารได้ โดยข้อความเกี่ยวกับ Customer Money และการไม่สร้าง stock movement/ไม่ตัดสต๊อกซ้ำเป็น authority ของระบบและแก้ไขไม่ได้"
+        systemNotices={[
+          'เอกสารนี้บันทึกการนำ Customer Money ไปตัดยอดใบส่งของเครดิตเท่านั้น',
+          'ไม่สร้าง stock movement และไม่ตัดสต๊อกซ้ำ',
+        ]}
+      />
       <PurchaseOrderPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <CombinedBillingPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <StatutoryPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} documentPurpose="FULL_TAX_INVOICE" title="ใบกำกับภาษีเต็มรูป" description="ปรับได้เฉพาะองค์ประกอบด้านภาพและข้อความเสริมที่กฎหมายไม่กำหนด ข้อมูลผู้ออก/ผู้รับ เลขเอกสาร วันที่ รายการ และยอดภาษีใช้ TaxDocument snapshot เท่านั้น" />

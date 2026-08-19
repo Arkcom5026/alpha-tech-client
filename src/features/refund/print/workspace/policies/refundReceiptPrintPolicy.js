@@ -1,4 +1,4 @@
-export const prepareRefundReceiptPrintProjection = (saleReturn, branch) => {
+export const prepareRefundReceiptPrintProjection = (saleReturn, branch, presentationAuthority = {}) => {
   const source = saleReturn || {};
   const refundTransactions = Array.isArray(source.refundTransaction)
     ? source.refundTransaction
@@ -10,6 +10,9 @@ export const prepareRefundReceiptPrintProjection = (saleReturn, branch) => {
     (sum, transaction) => sum + Number(transaction?.amount || 0),
     0,
   );
+
+  const headerConfig = presentationAuthority?.headerConfig || null;
+  const presentation = presentationAuthority?.presentation || null;
 
   return {
     code: source.code,
@@ -23,12 +26,18 @@ export const prepareRefundReceiptPrintProjection = (saleReturn, branch) => {
     totalAmount,
     remainingAmount: totalRefund - totalAmount - deductedAmount,
     branch: {
-      name: branch?.name || '-',
-      address: branch?.address || '-',
-      phone: branch?.phone || '-',
-      taxId: branch?.taxId || '-',
+      name: headerConfig?.branchName || branch?.name || '-',
+      address: headerConfig?.address || branch?.address || '-',
+      phone: headerConfig?.phone || branch?.phone || '-',
+      taxId: headerConfig?.taxId || branch?.taxId || '-',
       email: branch?.email || '-',
       contactName: branch?.contactName || '-',
+      logoUrl: headerConfig?.logoUrl || null,
+      headerStyle: headerConfig?.headerStyle || null,
+    },
+    presentation: {
+      notes: presentation?.notes || '',
+      customFooter: presentation?.customFooter || '',
     },
   };
 };

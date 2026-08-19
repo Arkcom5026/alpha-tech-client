@@ -1,3 +1,5 @@
+import { toCanonicalDocumentCode } from '@/features/printing/presentation/canonicalDocumentIdentity';
+
 const HEADER_ALIGNMENTS = new Set(['left', 'center', 'right']);
 const HEADER_NAME_SIZES = new Set(['sm', 'md', 'lg', 'xl']);
 const DOCUMENT_LOGO_SIZE_MIN = 24;
@@ -50,21 +52,39 @@ const normalizeHeaderProfile = (source = {}, fallback = DEFAULT_DOCUMENT_HEADER_
 
   return {
     showLogo: cleanBoolean(safe.showLogo, fallback.showLogo),
-    logoUrl: cleanString(safe.logoUrl) || fallback.logoUrl,
+    logoUrl: Object.prototype.hasOwnProperty.call(safe, 'logoUrl') ? cleanString(safe.logoUrl) : fallback.logoUrl,
     logoPosition: HEADER_ALIGNMENTS.has(logoPosition) ? logoPosition : fallback.logoPosition,
-    logoSize: normalizeLogoSize(safe.logoSize, fallback.logoSize),
+    logoSize: Object.prototype.hasOwnProperty.call(safe, 'logoSize')
+      ? normalizeLogoSize(safe.logoSize, fallback.logoSize)
+      : fallback.logoSize,
     textAlign: HEADER_ALIGNMENTS.has(textAlign) ? textAlign : fallback.textAlign,
     showStoreName: cleanBoolean(safe.showStoreName, fallback.showStoreName),
-    storeName: cleanString(safe.storeName) || fallback.storeName,
+    storeName: Object.prototype.hasOwnProperty.call(safe, 'storeName') ? cleanString(safe.storeName) : fallback.storeName,
     storeNameSize: HEADER_NAME_SIZES.has(storeNameSize) ? storeNameSize : fallback.storeNameSize,
     showAddress: cleanBoolean(safe.showAddress, fallback.showAddress),
-    address: cleanString(safe.address) || fallback.address,
+    address: Object.prototype.hasOwnProperty.call(safe, 'address') ? cleanString(safe.address) : fallback.address,
     showPhone: cleanBoolean(safe.showPhone, fallback.showPhone),
-    phone: cleanString(safe.phone) || fallback.phone,
+    phone: Object.prototype.hasOwnProperty.call(safe, 'phone') ? cleanString(safe.phone) : fallback.phone,
     showTaxId: cleanBoolean(safe.showTaxId, fallback.showTaxId),
-    taxId: cleanString(safe.taxId) || fallback.taxId,
+    taxId: Object.prototype.hasOwnProperty.call(safe, 'taxId') ? cleanString(safe.taxId) : fallback.taxId,
     showBranchLabel: cleanBoolean(safe.showBranchLabel, fallback.showBranchLabel),
-    headerNote: cleanString(safe.headerNote) || fallback.headerNote,
+    headerNote: Object.prototype.hasOwnProperty.call(safe, 'headerNote') ? cleanString(safe.headerNote) : fallback.headerNote,
+  };
+};
+
+const getHeaderLayers = (config, documentType) => {
+  const canonical = toCanonicalDocumentCode(documentType) || 'DEFAULT';
+  if (Number(config?.version) === 2) {
+    return {
+      base: config?.shared?.header || {},
+      override: config?.documents?.[canonical]?.header || {},
+      isV2: true,
+    };
+  }
+  return {
+    base: config?.default || {},
+    override: config?.documents?.[canonical] || config?.documents?.[cleanString(documentType).toUpperCase()] || {},
+    isV2: false,
   };
 };
 
@@ -74,18 +94,13 @@ const resolveDocumentHeaderProfile = (branch, documentType = 'DEFAULT') => {
     return { ...DEFAULT_DOCUMENT_HEADER_PROFILE };
   }
 
-  const base = normalizeHeaderProfile(config.default);
-  const key = cleanString(documentType).toUpperCase();
-  const override = config?.documents?.[key];
+  const { base: rawBase, override, isV2 } = getHeaderLayers(config, documentType);
+  const base = normalizeHeaderProfile(rawBase);
   const resolved = normalizeHeaderProfile(override, base);
 
-  // Logo sizing is currently a store-wide setting. The settings UI does not expose
-  // per-document logo sizing yet, so hidden legacy overrides must not shadow the
-  // visible value the store just configured.
-  return {
-    ...resolved,
-    logoSize: base.logoSize,
-  };
+  // V1 settings exposed logo size as store-wide only. Preserve that historical
+  // behavior for V1 while allowing explicit per-document V2 overrides.
+  return isV2 ? resolved : { ...resolved, logoSize: base.logoSize };
 };
 
 const buildStoreDocumentHeader = ({ branch, documentType = 'DEFAULT', legacyConfig = {} } = {}) => {
@@ -143,35 +158,54 @@ const projectDocumentHeaderFormDefaults = (branch) => {
   };
 };
 
-const buildDocumentHeaderConfigFromForm = (data = {}, currentConfig = null) => {
-  const currentDefault = normalizeHeaderProfile(currentConfig?.default);
+const buildHeaderFromForm = (data = {}, currentHeader = {}) => ({
+  showLogo: Boolean(data.headerShowLogo),
+  logoUrl: cleanString(data.headerLogoUrl),
+  logoPosition: HEADER_ALIGNMENTS.has(cleanString(data.headerLogoPosition).toLowerCase())
+    ? cleanString(data.headerLogoPosition).toLowerCase()
+    : 'left',
+  logoSize: normalizeLogoSize(data.headerLogoSize),
+  textAlign: HEADER_ALIGNMENTS.has(cleanString(data.headerTextAlign).toLowerCase())
+    ? cleanString(data.headerTextAlign).toLowerCase()
+    : 'left',
+  showStoreName: Boolean(data.headerShowStoreName),
+  storeName: cleanString(data.headerStoreName),
+  storeNameSize: HEADER_NAME_SIZES.has(cleanString(data.headerStoreNameSize).toLowerCase())
+    ? cleanString(data.headerStoreNameSize).toLowerCase()
+    : 'md',
+  showAddress: Boolean(data.headerShowAddress),
+  address: cleanString(data.headerAddress),
+  showPhone: Boolean(data.headerShowPhone),
+  phone: cleanString(data.headerPhone),
+  showTaxId: Boolean(data.headerShowTaxId),
+  taxId: cleanString(data.headerTaxId),
+  showBranchLabel: normalizeHeaderProfile(currentHeader).showBranchLabel,
+  headerNote: cleanString(data.headerNote),
+});
 
+const buildDocumentHeaderConfigFromForm = (data = {}, currentConfig = null) => {
+  if (Number(currentConfig?.version) === 2) {
+    const currentShared = currentConfig?.shared && typeof currentConfig.shared === 'object' && !Array.isArray(currentConfig.shared)
+      ? currentConfig.shared
+      : {};
+    return {
+      ...currentConfig,
+      version: 2,
+      shared: {
+        ...currentShared,
+        header: buildHeaderFromForm(data, currentShared.header),
+      },
+      documents:
+        currentConfig?.documents && typeof currentConfig.documents === 'object' && !Array.isArray(currentConfig.documents)
+          ? currentConfig.documents
+          : {},
+    };
+  }
+
+  const currentDefault = normalizeHeaderProfile(currentConfig?.default);
   return {
     version: 1,
-    default: {
-      showLogo: Boolean(data.headerShowLogo),
-      logoUrl: cleanString(data.headerLogoUrl),
-      logoPosition: HEADER_ALIGNMENTS.has(cleanString(data.headerLogoPosition).toLowerCase())
-        ? cleanString(data.headerLogoPosition).toLowerCase()
-        : 'left',
-      logoSize: normalizeLogoSize(data.headerLogoSize),
-      textAlign: HEADER_ALIGNMENTS.has(cleanString(data.headerTextAlign).toLowerCase())
-        ? cleanString(data.headerTextAlign).toLowerCase()
-        : 'left',
-      showStoreName: Boolean(data.headerShowStoreName),
-      storeName: cleanString(data.headerStoreName),
-      storeNameSize: HEADER_NAME_SIZES.has(cleanString(data.headerStoreNameSize).toLowerCase())
-        ? cleanString(data.headerStoreNameSize).toLowerCase()
-        : 'md',
-      showAddress: Boolean(data.headerShowAddress),
-      address: cleanString(data.headerAddress),
-      showPhone: Boolean(data.headerShowPhone),
-      phone: cleanString(data.headerPhone),
-      showTaxId: Boolean(data.headerShowTaxId),
-      taxId: cleanString(data.headerTaxId),
-      showBranchLabel: currentDefault.showBranchLabel,
-      headerNote: cleanString(data.headerNote),
-    },
+    default: buildHeaderFromForm(data, currentDefault),
     documents:
       currentConfig?.documents && typeof currentConfig.documents === 'object' && !Array.isArray(currentConfig.documents)
         ? currentConfig.documents

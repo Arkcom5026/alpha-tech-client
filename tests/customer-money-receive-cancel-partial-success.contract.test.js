@@ -9,8 +9,10 @@ describe('Customer Money Receive cancel partial-success authority', () => {
   it('keeps synchronous cancellation ownership and snapshots the destructive command', () => {
     expect(source).toContain('const cancellingRef = useRef(false);');
     expect(source).toContain('if (cancelling || cancellingRef.current || !id) return;');
-    expect(source).toContain('const recordId = id;');
+    expect(source).toContain('const recordId = String(id);');
     expect(source).toContain('const reasonSnapshot = reason;');
+    expect(source).toContain('const cancelRequestId = ++cancelRequestRef.current;');
+    expect(source).toContain('const ownsCancelRequest = () => (');
     expect(source).toContain('await cancelCustomerMoneyReceive(recordId, reasonSnapshot);');
   });
 
@@ -25,6 +27,7 @@ describe('Customer Money Receive cancel partial-success authority', () => {
     expect(source).toContain('ยกเลิกเอกสารรับเงินสำเร็จแล้ว แต่โหลดสถานะเอกสารล่าสุดไม่สำเร็จ');
     expect(source).toContain('`customer-money-receive:cancel:${recordId}:refresh:error`');
     expect(source).toContain('`customer-money-receive:cancel:${recordId}:error`');
+    expect(source).toContain('`customer-money-receive:cancel:${recordId}:context-changed:error`');
   });
 
   it('keeps a visible stale-state warning after partial success', () => {

@@ -23,6 +23,11 @@ export const loadSaleDocument = async ({ saleId, paymentId } = {}) => {
   return sale ? { ...sale, sourceQuotation: sourceQuotation || null } : sale;
 };
 
+export const loadSaleDeliveryNoteAuthority = async ({ saleId } = {}) => {
+  if (!saleId) throw new Error('saleId is required');
+  return apiClient.get(`/sales/${saleId}/delivery-note`).then(unwrap);
+};
+
 export const saveSaleDocumentLines = async ({ saleId, payload } = {}) => {
   if (!saleId) throw new Error('saleId is required');
   return updateSaleDocumentLines(saleId, payload || {});

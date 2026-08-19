@@ -21,6 +21,7 @@ const rootStore = read('src/features/sales/store/salesStore.js');
 const documentSlice = read('src/features/sales/documents/store/saleDocumentRuntimeSlice.js');
 const billShort = read('src/features/bill/pages/PrintBillPageShortTax.jsx');
 const billFull = read('src/features/bill/pages/PrintBillPageFullTax.jsx');
+const billDocumentSource = read('src/features/bill/hooks/useBillDocumentSource.js');
 const deliveryNote = read('src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx');
 
 assert(mission.includes('SERVER-REVALIDATED DOCUMENT WORKSPACE'), 'Mission must declare server-revalidated workspace authority');
@@ -57,8 +58,10 @@ assert(editor.includes('}, [saleId]);'), 'Editor state must reset when route sal
 
 assert(documentSlice.includes('updateSaleDocumentLinesAction'), 'Document slice must own document-line action');
 assert(!rootStore.includes('updateSaleDocumentLinesAction'), 'Root Sales Store must not duplicate document-line action');
-assert(billShort.includes('loadSaleByIdAction'), 'Bill Short must retain billStore server hydration authority');
-assert(billFull.includes('loadSaleByIdAction'), 'Bill Full must retain billStore server hydration authority');
+assert(billShort.includes('useBillDocumentSource'), 'Bill Short must hydrate through shared bill document source authority');
+assert(billFull.includes('useBillDocumentSource'), 'Bill Full must hydrate through shared bill document source authority');
+assert(billDocumentSource.includes('useBillStore'), 'Shared bill document source must retain billStore authority for SALE documents');
+assert(billDocumentSource.includes('billStore.loadSaleByIdAction('), 'Shared bill document source must retain billStore server hydration authority');
 assert(deliveryNote.includes('loadSaleDocument({ saleId })'), 'Delivery Note must load through the Workspace command API');
 assert(!deliveryNote.includes('location.state'), 'Delivery Note must not use navigation snapshot authority');
 assert(!deliveryNote.includes('getSaleByIdAction'), 'Delivery Note must not use legacy hydration authority');

@@ -1,4 +1,4 @@
-import { toCanonicalDocumentCode } from './canonicalDocumentIdentity'
+import { toCanonicalDocumentCode } from './canonicalDocumentIdentity.js'
 
 const stableStringify = (value) => {
   if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`

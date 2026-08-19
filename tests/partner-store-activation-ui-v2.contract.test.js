@@ -28,11 +28,13 @@ describe('Partner Store Activation UI v2 contract', () => {
     expect(activation).toContain('const nextPassword = password');
     expect(activation).toContain('nextPassword.length < 8');
     expect(activation).toContain('password: nextPassword');
+    expect(activation).toContain('const requestId = requestRef.current + 1');
     expect(activation).toContain('feedback.actionSuccess(');
     expect(activation).toContain('feedback.actionError(');
-    expect(activation).toContain("'partner-store:activation:success'");
-    expect(activation).toContain("'partner-store:activation:error'");
-    expect(activation).toContain("to=\"/login\"");
+    expect(activation).toContain('`partner-store:activation:${requestId}:success`');
+    expect(activation).toContain('`partner-store:activation:${requestId}:error`');
+    expect(activation).toContain('context-changed:error');
+    expect(activation).toContain('to="/login"');
     expect(activation).not.toContain('useAuthStore');
     expect(activation).not.toContain('setAccessToken');
   });

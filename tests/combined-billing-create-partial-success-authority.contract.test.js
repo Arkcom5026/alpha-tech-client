@@ -20,7 +20,7 @@ describe('Combined Billing create partial-success authority', () => {
     expect(source).toContain('const mutationBusy = loading || confirming;');
     expect(source).toContain('disabled={!ready || mutationBusy}');
     expect(source).toContain('disabled={mutationBusy}');
-    expect(source).toContain("confirming ? 'กำลังสร้างใบส่งของรวม...' : 'ยืนยันสร้างใบส่งของรวม'");
+    expect(source).toContain("confirming ? 'กำลังยืนยันชุดเอกสาร...' : 'ยืนยันชุดเอกสาร'");
   });
 
   it('reports post-create refresh failure as partial success instead of create failure', () => {
@@ -30,6 +30,6 @@ describe('Combined Billing create partial-success authority', () => {
     expect(successIndex).toBeGreaterThan(-1);
     expect(refreshIndex).toBeGreaterThan(successIndex);
     expect(partialIndex).toBeGreaterThan(refreshIndex);
-    expect(source).toContain('สร้างใบส่งของรวมสำเร็จแล้ว แต่รีเฟรชข้อมูลล่าสุดไม่สำเร็จ');
+    expect(source).toContain('ยืนยันชุดเอกสารสำเร็จแล้ว แต่รีเฟรชรายการล่าสุดไม่สำเร็จ กรุณารีเฟรชหน้า');
   });
 });

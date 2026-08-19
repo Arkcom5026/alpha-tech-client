@@ -19,6 +19,8 @@ on:
       - 'src/features/customerReceipt/components/CustomerReceiptA4Document.jsx'
       - 'src/features/customerMoneyReceive/presentation/**'
       - 'src/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage.jsx'
+      - 'src/features/customerMoneySettlement/presentation/**'
+      - 'src/features/customerMoneySettlement/pages/DeliveryCreditSettlementPrintPage.jsx'
       - 'src/features/purchaseOrder/presentation/**'
       - 'src/features/purchaseOrder/components/PurchaseOrderPresentationFooter.jsx'
       - 'src/features/purchaseOrder/api/purchaseOrderApi.js'

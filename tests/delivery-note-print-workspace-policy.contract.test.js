@@ -150,8 +150,8 @@ describe('delivery note print workspace policy contract', () => {
     expect(rows[0].discount).toBe(0);
   });
 
-  it('preserves branch identity, address projection, and tax fallback', () => {
-    expect(buildDeliveryNoteBranchConfig({
+  it('preserves branch identity, address projection, tax fallback, and header presentation compatibility', () => {
+    const config = buildDeliveryNoteBranchConfig({
       branchTaxId: 'fallback-tax',
       branch: {
         companyName: 'บริษัท ทดสอบ จำกัด',
@@ -166,8 +166,17 @@ describe('delivery note print workspace policy contract', () => {
           },
         },
       },
-    })).toEqual({
+    });
+
+    expect(config).toMatchObject({
       branchName: 'บริษัท ทดสอบ จำกัด',
+      address: '99/1 ต.บางรัก อ.บางรัก จ.กรุงเทพมหานคร 10500',
+      phone: '020000000',
+      taxId: 'fallback-tax',
+      logoUrl: null,
+    });
+    expect(config.headerStyle).toMatchObject({
+      storeName: 'บริษัท ทดสอบ จำกัด',
       address: '99/1 ต.บางรัก อ.บางรัก จ.กรุงเทพมหานคร 10500',
       phone: '020000000',
       taxId: 'fallback-tax',

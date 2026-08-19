@@ -12,7 +12,9 @@ describe('refund receipt print workspace transformation cutover contract', () =>
 
   it('cuts refund and branch presentation projection over to the print policy', () => {
     expect(page).toContain('prepareRefundReceiptPrintProjection');
-    expect(page).toContain('prepareRefundReceiptPrintProjection(saleReturn, branch)');
+    expect(page).toContain('prepareRefundReceiptPrintProjection(saleReturn, branch, {');
+    expect(page).toContain('headerConfig,');
+    expect(page).toContain('presentation,');
     expect(policy).toContain('formatRefundReceiptMoney');
     expect(shell).toContain('formatRefundReceiptMoney');
     expect(page).not.toContain('formatRefundReceiptMoney');
@@ -26,11 +28,13 @@ describe('refund receipt print workspace transformation cutover contract', () =>
     expect(page).not.toContain("const branchName = branch?.name || '-'");
   });
 
-  it('keeps route, store, employee-branch, and browser authority in the page', () => {
+  it('keeps route, store, employee-branch, presentation resolution, and browser authority in the page', () => {
     expect(page).toContain('useParams');
     expect(page).toContain('useSaleReturnStore');
     expect(page).toContain('useEmployeeStore');
     expect(page).toContain('getSaleReturnByIdAction(saleReturnId)');
+    expect(page).toContain('resolveRefundReceiptPresentation');
+    expect(page).toContain('buildRefundReceiptHeader');
     expect(page).toContain('window.print()');
   });
 

@@ -11,8 +11,12 @@ describe('Tax Intake transition authority', () => {
     expect(controller).toContain('const transitionRef = useRef(false)');
     expect(controller).toContain('transitioning || transitionRef.current');
     expect(controller).toContain('const taxDocumentId = selectedDocument?.id');
-    expect(controller).toContain('const refreshAfterMutation = useCallback(async (taxDocumentId, successMessage) => {');
-    expect(controller).toContain("toast.warning('ดำเนินการสำเร็จแล้ว แต่โหลดรายละเอียดเอกสารล่าสุดไม่สำเร็จ')");
+    expect(controller).toContain('const refreshAfterMutation = useCallback(async ({');
+    expect(controller).toContain('branchIdSnapshot,');
+    expect(controller).toContain('successMessage,');
+    expect(controller).toContain('eventKey,');
+    expect(controller).toContain("'ดำเนินการเอกสารภาษีสำเร็จแล้ว แต่โหลดรายละเอียดเอกสารล่าสุดไม่สำเร็จ'");
+    expect(controller).toContain('branchIdRef.current !== branchIdSnapshot');
     expect(controller).toContain('transitionRef.current = true');
     expect(controller).toContain('transitionRef.current = false');
   });

@@ -13,14 +13,20 @@ on:
       - 'src/features/deliveryNote/components/DeliveryNotePresentationFooter.jsx'
       - 'src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx'
       - 'src/features/deliveryNote/print/workspace/components/DeliveryNotePrintShell.jsx'
+      - 'src/features/customerReceipt/presentation/**'
+      - 'src/features/customerReceipt/components/CustomerReceiptPresentationFooter.jsx'
+      - 'src/features/customerReceipt/components/CustomerReceiptPrintLayout.jsx'
+      - 'src/features/customerReceipt/components/CustomerReceiptA4Document.jsx'
       - 'src/features/sales/documents/workspace/api/saleDocumentWorkspaceApi.js'
       - 'src/features/sales/documents/workspace/index.js'
       - 'src/features/settings/components/QuotationPresentationSettingsCard.jsx'
       - 'src/features/settings/components/DeliveryNotePresentationSettingsCard.jsx'
+      - 'src/features/settings/components/CustomerReceiptPresentationSettingsCard.jsx'
       - 'src/features/settings/pages/DocumentFormatSettingsPage.jsx'
       - 'tests/document-presentation-v2-foundation.contract.test.js'
       - 'tests/quotation-document-presentation-wave1.contract.test.js'
       - 'tests/delivery-note-document-presentation-wave2.contract.test.js'
+      - 'tests/customer-receipt-document-presentation-wave2.contract.test.js'
       - '.github/workflows/document-presentation-v2.yml'
   workflow_dispatch:
 
@@ -44,5 +50,7 @@ jobs:
         run: node tests/quotation-document-presentation-wave1.contract.test.js
       - name: Run Delivery Note Document Presentation Wave 2 contract
         run: node tests/delivery-note-document-presentation-wave2.contract.test.js
+      - name: Run Customer Receipt Document Presentation Wave 2 contract
+        run: node tests/customer-receipt-document-presentation-wave2.contract.test.js
       - name: Typecheck
         run: npm run typecheck

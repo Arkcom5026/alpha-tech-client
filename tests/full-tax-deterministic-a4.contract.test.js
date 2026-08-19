@@ -29,6 +29,13 @@ assert(
 );
 
 assert(
+  document.includes('const MAX_ROWS_LAST_PAGE_WITH_PRESENTATION_FOOTER = 17;')
+    && document.includes('paginateItemsWithReservedFooter(displayItems)')
+    && document.includes('hasPresentationFooter ? MAX_ROWS_LAST_PAGE_WITH_PRESENTATION_FOOTER : MAX_ROWS_LAST_PAGE'),
+  'Full-tax A4 pagination must preserve legacy 20-row last pages without a presentation footer and reserve three rows only when a footer is visible.'
+);
+
+assert(
   document.includes('const PHYSICAL_PAGE_HEIGHT_MM = 296;')
     && document.includes('const PRINT_PAGE_MARGIN_MM = 4;')
     && document.includes('const PRINT_SHEET_WIDTH_MM = 201;')
@@ -79,6 +86,16 @@ assert(
   document.includes("className=\"absolute bottom-[28mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-5 text-[13px]\"")
     && document.includes("className=\"absolute bottom-[5mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-12 text-center text-[15px]\""),
   'Totals and signatures must occupy reserved last-page zones with visible breathing room below the item table.'
+);
+
+assert(
+  document.includes('data-testid="full-tax-presentation-footer-zone"')
+    && document.includes('bottom-[50mm]')
+    && document.includes('height: `${PRESENTATION_FOOTER_HEIGHT_MM}mm`')
+    && document.includes('<StatutoryTaxPresentationFooter')
+    && document.includes('notes={normalizedPresentationFooter.notes}')
+    && document.includes('customFooter={normalizedPresentationFooter.customFooter}'),
+  'Statutory Notes and Custom Footer content must render only inside the reserved full-tax last-page zone above totals and signatures.'
 );
 
 assert(

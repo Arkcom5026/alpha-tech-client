@@ -114,6 +114,10 @@ const CustomerRepairTrackingPage = () => {
   const status = getCustomerFacingStatus(repair.status || {}, repair.handover);
   const stage = Number(status.stage || 0);
 
+  const deviceSummary = [repairAsset.brand, repairAsset.model, repairAsset.category]
+    .filter(Boolean)
+    .join(' • ');
+
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-5 sm:px-6 sm:py-8">
       <div className="mx-auto w-full max-w-2xl space-y-4">
@@ -156,20 +160,27 @@ const CustomerRepairTrackingPage = () => {
         ) : null}
 
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.15em] text-blue-600">สิ่งที่นำมาซ่อม</p>
+          <p className="text-xs font-black uppercase tracking-[0.15em] text-blue-600">รายการซ่อม</p>
           <h2 className="mt-2 text-xl font-black text-slate-950">{repairAsset.displayName || '-'}</h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <Info label="รุ่น / Model" value={repairAsset.model} />
-            <Info label="ยี่ห้อ" value={repairAsset.brand} />
-            <Info label="ประเภท" value={repairAsset.category} />
-            <Info label="Serial Number" value={repairAsset.serialNumber} />
-            <Info label="IMEI" value={repairAsset.imei} />
-            <Info label="Barcode" value={repairAsset.barcode} />
-          </div>
-          <div className="mt-3 rounded-2xl bg-slate-50 p-4">
+          {deviceSummary ? (
+            <p className="mt-1 text-sm font-bold text-slate-500">{deviceSummary}</p>
+          ) : null}
+
+          <div className="mt-4 rounded-2xl bg-slate-50 p-4">
             <p className="text-xs font-black text-slate-500">อาการที่แจ้ง</p>
             <p className="mt-1 text-sm leading-6 text-slate-800">{repair.reportedSymptoms || '-'}</p>
           </div>
+
+          {repairAsset.serialNumber ? (
+            <details className="mt-3 rounded-2xl border border-slate-100 bg-white px-4 py-3">
+              <summary className="cursor-pointer text-xs font-black text-slate-500">ดูข้อมูลอุปกรณ์เพิ่มเติม</summary>
+              <div className="mt-3 space-y-2 text-sm text-slate-600">
+                <p><span className="font-black text-slate-500">Serial Number:</span> {repairAsset.serialNumber}</p>
+                {repairAsset.imei ? <p><span className="font-black text-slate-500">IMEI:</span> {repairAsset.imei}</p> : null}
+                {repairAsset.barcode ? <p><span className="font-black text-slate-500">Barcode:</span> {repairAsset.barcode}</p> : null}
+              </div>
+            </details>
+          ) : null}
         </section>
 
         {repair.accessories?.length ? (
@@ -257,13 +268,6 @@ const CustomerRepairTrackingPage = () => {
     </main>
   );
 };
-
-const Info = ({ label, value }) => (
-  <div className="rounded-2xl bg-slate-50 px-4 py-3">
-    <p className="text-xs font-black text-slate-400">{label}</p>
-    <p className="mt-1 break-all font-bold text-slate-800">{value || '-'}</p>
-  </div>
-);
 
 const MoneyRow = ({ label, value, strong = false }) => (
   <div className={`flex items-center justify-between gap-4 ${strong ? 'border-t border-slate-200 pt-3 text-base font-black' : ''}`}>

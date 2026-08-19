@@ -15,6 +15,7 @@ const SaleCustomerCreateDialog = ({
   editor,
   provinceFilter,
   mutationAction = null,
+  formError = '',
   onOpenChange,
   onPatch,
   onCreate,
@@ -38,7 +39,13 @@ const SaleCustomerCreateDialog = ({
         </div>
       </DialogHeader>
 
-      <div className="p-4 md:p-5">
+      <div className="space-y-3 p-4 md:p-5">
+        {formError ? (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+            {formError}
+          </div>
+        ) : null}
+
         <SaleCustomerDetailsForm
           editor={editor}
           selectedCustomer={null}

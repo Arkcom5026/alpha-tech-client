@@ -11,6 +11,9 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
 const capability = read('src/features/printing/presentation/presentationCapabilityRegistry.js');
 const resolver = read('src/features/printing/presentation/financeOperationalPresentation.js');
 const footer = read('src/features/printing/presentation/FinanceOperationalPresentationFooter.jsx');
+const receiptResolver = read('src/features/customerMoneyReceive/presentation/customerMoneyReceiptPresentation.js');
+const receiptPrint = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage.jsx');
+const settingsCard = read('src/features/settings/components/FinanceOperationalPresentationSettingsCard.jsx');
 
 for (const code of ['CUSTOMER_MONEY_RECEIPT', 'DELIVERY_CREDIT_SETTLEMENT', 'REFUND_RECEIPT']) {
   assert(capability.includes(`${code}: FINANCE_MIXED`), `${code} must use the shared finance-operational profile.`);
@@ -23,5 +26,16 @@ assert(resolver.includes("blockContent(presentation, 'CUSTOM_FOOTER')"));
 assert(footer.includes('finance-operational-system-notice'));
 assert(footer.includes('finance-operational-custom-footer'));
 assert(footer.includes('systemNotices = []'));
+
+assert(receiptResolver.includes("const DOCUMENT_PURPOSE = 'CUSTOMER_MONEY_RECEIPT'"));
+assert(receiptResolver.includes("record?.presentationSnapshots?.[rendererFamily]"));
+assert(receiptResolver.includes('presentationSnapshot?.businessSnapshot?.storeIdentity'));
+assert(receiptResolver.includes('buildStoreDocumentHeader'));
+assert(receiptPrint.includes('resolveCustomerMoneyReceiptPresentation'));
+assert(receiptPrint.includes('buildCustomerMoneyReceiptHeader'));
+assert(receiptPrint.includes('FinanceOperationalPresentationFooter'));
+assert(receiptPrint.includes('ไม่ใช่ใบกำกับภาษี และไม่ก่อให้เกิดการตัดสต๊อกหรือรายการภาษีจากการรับเงินนี้'));
+assert(settingsCard.includes('ข้อความระบบด้านล่างเป็นข้อมูล authority ของเอกสาร'));
+assert(settingsCard.includes('SYSTEM_NOTICE') === false, 'settings UI must not write protected SYSTEM_NOTICE content.');
 
 console.log('Finance Operational Document Presentation Wave 5 Contract: PASS');

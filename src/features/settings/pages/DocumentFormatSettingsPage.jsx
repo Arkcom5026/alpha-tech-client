@@ -180,6 +180,18 @@ const DocumentFormatSettingsPage = () => {
           'ไม่สร้าง stock movement และไม่ตัดสต๊อกซ้ำ',
         ]}
       />
+      <FinanceOperationalPresentationSettingsCard
+        branch={branch}
+        branchId={branchId}
+        updateBranch={updateBranch}
+        onBranchChange={setBranch}
+        documentPurpose="REFUND_RECEIPT"
+        title="ใบรับเงินคืน"
+        description="กำหนดหมายเหตุและข้อความท้ายใบรับเงินคืนได้ โดยยอดคืน รายการคืน และหลักฐานการคืนเงินเป็นข้อมูลธุรกิจของเอกสารที่ Presentation ไม่สามารถแก้ไขได้"
+        systemNotices={[
+          'โปรดเก็บเอกสารนี้ไว้เป็นหลักฐานการคืนเงิน',
+        ]}
+      />
       <PurchaseOrderPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <CombinedBillingPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <StatutoryPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} documentPurpose="FULL_TAX_INVOICE" title="ใบกำกับภาษีเต็มรูป" description="ปรับได้เฉพาะองค์ประกอบด้านภาพและข้อความเสริมที่กฎหมายไม่กำหนด ข้อมูลผู้ออก/ผู้รับ เลขเอกสาร วันที่ รายการ และยอดภาษีใช้ TaxDocument snapshot เท่านั้น" />

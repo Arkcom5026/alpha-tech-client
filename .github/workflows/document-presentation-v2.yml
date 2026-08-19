@@ -6,7 +6,11 @@ on:
     paths:
       - 'src/features/printing/presentation/**'
       - 'src/features/branch/documentHeader/documentHeaderConfig.js'
+      - 'src/features/quotation/presentation/**'
+      - 'src/features/quotation/components/QuotationPresentationFooter.jsx'
+      - 'src/features/quotation/pages/QuotationPrintPage.jsx'
       - 'tests/document-presentation-v2-foundation.contract.test.js'
+      - 'tests/quotation-document-presentation-wave1.contract.test.js'
       - '.github/workflows/document-presentation-v2.yml'
   workflow_dispatch:
 
@@ -26,5 +30,7 @@ jobs:
       - run: npm ci
       - name: Run Document Presentation V2 foundation contract
         run: node tests/document-presentation-v2-foundation.contract.test.js
+      - name: Run Quotation Document Presentation Wave 1 contract
+        run: node tests/quotation-document-presentation-wave1.contract.test.js
       - name: Typecheck
         run: npm run typecheck

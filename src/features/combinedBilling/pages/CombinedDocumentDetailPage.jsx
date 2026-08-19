@@ -3,16 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom';
 import CombinedDocumentInvoiceShell from '../detail/workspace/components/CombinedDocumentInvoiceShell';
 import CombinedDocumentState from '../detail/workspace/components/CombinedDocumentState';
 import CombinedDocumentToolbar from '../detail/workspace/components/CombinedDocumentToolbar';
-import { useCombinedBillingStore } from '../store/combinedBillingStore';
+import useCombinedBillingStore from '../store/combinedBillingStore';
 
 const CombinedDocumentDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const {
-    documentDetail,
-    isLoadingDetail,
-    errorDetail,
-    fetchDocumentById,
+    combinedBilling: documentDetail,
+    loading: isLoadingDetail,
+    error: errorDetail,
+    loadCombinedBillingByIdAction: fetchDocumentById,
   } = useCombinedBillingStore();
 
   useEffect(() => {
@@ -26,7 +26,6 @@ const CombinedDocumentDetailPage = () => {
   };
 
   const handlePrint = () => {
-    console.log('Printing document...');
     window.print();
   };
 
@@ -42,7 +41,7 @@ const CombinedDocumentDetailPage = () => {
     return <CombinedDocumentState status="empty" />;
   }
 
-  const customer = documentDetail.sales?.[0]?.customer;
+  const customer = documentDetail.customer || documentDetail.sales?.[0]?.customer;
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 bg-gray-100 min-h-screen">

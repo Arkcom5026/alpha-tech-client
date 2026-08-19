@@ -42,3 +42,14 @@ test('staff paperless access remains tokenized QR and share based', () => {
   assert.match(source, /navigator\.share/);
   assert.match(source, /revokeTrackingAccess/);
 });
+
+test('staff tracking QR normalizes module-object interop before React render', () => {
+  const source = read('src/features/repair/customer-access/components/RepairTrackingAccessPanel.jsx');
+
+  assert.match(source, /import QRCodeModule from 'react-qr-code'/);
+  assert.match(
+    source,
+    /const QRCode = QRCodeModule\?\.default\?\.default \?\? QRCodeModule\?\.default \?\? QRCodeModule/,
+  );
+  assert.match(source, /<QRCode value=\{trackingUrl\} size=\{132\} level="M" \/>/);
+});

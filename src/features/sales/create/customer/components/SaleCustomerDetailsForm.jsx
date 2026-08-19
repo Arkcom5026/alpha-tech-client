@@ -63,7 +63,9 @@ const SaleCustomerDetailsForm = ({
                 disabled={disabled}
                 onClick={() => onPatch({
                   customerType: type.value,
-                  ...(type.value === 'INDIVIDUAL' ? { departmentName: '' } : {}),
+                  ...(type.value === 'INDIVIDUAL'
+                    ? { companyName: '', departmentName: '' }
+                    : {}),
                 })}
                 className={`min-h-11 rounded-xl border px-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${
                   active
@@ -136,14 +138,16 @@ const SaleCustomerDetailsForm = ({
         ) : null}
 
         <div>
-          <label className="mb-1.5 block text-xs font-semibold text-slate-700">ชื่อผู้ติดต่อ</label>
+          <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+            {isOrganization ? 'ชื่อผู้ติดต่อ (ถ้ามี)' : 'ชื่อลูกค้า'}
+          </label>
           <input
             type="text"
             id="customer-name-input"
             value={editor.name}
             disabled={disabled}
             onChange={(event) => onPatch({ name: event.target.value })}
-            placeholder="ชื่อ-นามสกุล"
+            placeholder={isOrganization ? 'ชื่อผู้ติดต่อ (ถ้ามี)' : 'ชื่อ-นามสกุล'}
             className={fieldClass}
           />
         </div>

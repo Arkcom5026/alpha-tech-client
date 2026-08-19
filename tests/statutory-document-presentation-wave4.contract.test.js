@@ -9,6 +9,8 @@ describe('Statutory Document Presentation Wave 4', () => {
   const guard = read('src/features/printing/presentation/statutoryPresentation.js')
   const capability = read('src/features/printing/presentation/presentationCapabilityRegistry.js')
   const creditNote = read('src/features/sales/return/pages/PrintCreditNotePage.jsx')
+  const taxApi = read('src/features/tax/intake/api/taxIntakeApi.js')
+  const canonicalPrintPage = read('src/features/combinedBilling/pages/PrintConsolidatedTaxPage.jsx')
 
   it('keeps statutory document classes restricted', () => {
     expect(capability).toContain('FULL_TAX_INVOICE: STATUTORY_A4')
@@ -42,5 +44,27 @@ describe('Statutory Document Presentation Wave 4', () => {
     expect(creditNote).toContain('credit-note-presentation-footer')
     expect(creditNote).not.toContain('{legalHeader.storeName}')
     expect(creditNote).not.toContain('{legalHeader.taxId}')
+  })
+
+  it('loads canonical issued tax facts and presentation authority independently', () => {
+    expect(taxApi).toContain('getTaxDocumentPresentation')
+    expect(taxApi).toContain('/presentation`')
+    expect(canonicalPrintPage).toContain('Promise.all([')
+    expect(canonicalPrintPage).toContain('getOutputTaxPrintable({ branchId, taxDocumentId })')
+    expect(canonicalPrintPage).toContain('getTaxDocumentPresentation({ branchId, taxDocumentId })')
+    expect(canonicalPrintPage).toContain('resolveStatutoryPresentation')
+    expect(canonicalPrintPage).toContain('presentationSnapshot: presentationAuthority?.presentationSnapshot')
+  })
+
+  it('keeps full and short tax legal issuer facts bound to TaxDocument printable authority', () => {
+    expect(canonicalPrintPage).toContain("branchName: issuer.legalName || '-'")
+    expect(canonicalPrintPage).toContain("address: issuer.registeredAddress || '-'")
+    expect(canonicalPrintPage).toContain("taxId: issuer.taxId || '-'")
+    expect(canonicalPrintPage).toContain('data.document.type === \'SHORT_TAX_INVOICE\'')
+    expect(canonicalPrintPage).toContain('<BillLayoutShortTax')
+    expect(canonicalPrintPage).toContain('<FullTaxA4Document')
+    expect(canonicalPrintPage).not.toContain('getConsolidatedTaxPrintable')
+    expect(canonicalPrintPage).not.toContain('branchName: legalHeader.storeName')
+    expect(canonicalPrintPage).not.toContain('taxId: legalHeader.taxId')
   })
 })

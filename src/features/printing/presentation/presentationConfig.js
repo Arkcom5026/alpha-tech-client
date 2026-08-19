@@ -190,6 +190,21 @@ const applyCapabilityPolicy = (documentPurpose, layer) => {
   })
 }
 
+const upsertDocumentPresentationLayer = (config, documentPurpose, patch) => {
+  const code = toCanonicalDocumentCode(documentPurpose)
+  if (!code) return normalizeDocumentPresentationConfig(config)
+  const normalized = normalizeDocumentPresentationConfig(config) || { version: 2, shared: {}, documents: {} }
+  const nextLayer = normalizeLayer(mergeObjects(normalized.documents?.[code], patch))
+  return {
+    version: 2,
+    shared: normalized.shared || {},
+    documents: {
+      ...(normalized.documents || {}),
+      [code]: nextLayer,
+    },
+  }
+}
+
 const resolveDocumentPresentation = ({ systemDefault, storeConfig, documentPurpose, perDocumentOverride, issuedSnapshot } = {}) => {
   if (isObject(issuedSnapshot?.presentation)) return structuredClone(issuedSnapshot.presentation)
   if (isObject(issuedSnapshot) && Number(issuedSnapshot.version) === 2) return structuredClone(issuedSnapshot)
@@ -225,4 +240,5 @@ export {
   normalizeHeader,
   normalizeLayer,
   resolveDocumentPresentation,
+  upsertDocumentPresentationLayer,
 }

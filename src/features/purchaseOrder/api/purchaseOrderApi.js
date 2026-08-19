@@ -3,15 +3,10 @@ import apiClient from '@/utils/apiClient.js';
 
 const buildParams = ({ search, status, page, pageSize } = {}) => {
   const params = {};
-  if (search && typeof search === 'string' && search.trim() !== '') {
-    params.search = search.trim();
-  }
+  if (search && typeof search === 'string' && search.trim() !== '') params.search = search.trim();
   if (status && status !== 'all') {
     const list = Array.isArray(status) ? status : String(status).split(',');
-    params.status = list
-      .map((s) => String(s).trim().toUpperCase())
-      .filter(Boolean)
-      .join(',');
+    params.status = list.map((s) => String(s).trim().toUpperCase()).filter(Boolean).join(',');
   }
   if (Number.isFinite(page)) params.page = page;
   if (Number.isFinite(pageSize)) params.pageSize = pageSize;
@@ -21,7 +16,7 @@ const buildParams = ({ search, status, page, pageSize } = {}) => {
 const unwrapData = (payload) => (
   payload && payload.success && Object.prototype.hasOwnProperty.call(payload, 'data')
     ? payload.data
-    : payload
+    : payload?.data ?? payload
 );
 
 export const getSuppliers = async (params = {}) => {
@@ -31,14 +26,9 @@ export const getSuppliers = async (params = {}) => {
 
 export const getPurchaseOrderDropdowns = async () => {
   const [productTypes, brands] = await Promise.allSettled([
-    apiClient.get('/product-types/dropdowns', {
-      params: { includeInactive: 'false', _ts: Date.now() },
-    }),
-    apiClient.get('/brands/dropdowns', {
-      params: { includeInactive: 'false', _ts: Date.now() },
-    }),
+    apiClient.get('/product-types/dropdowns', { params: { includeInactive: 'false', _ts: Date.now() } }),
+    apiClient.get('/brands/dropdowns', { params: { includeInactive: 'false', _ts: Date.now() } }),
   ]);
-
   return {
     productTypes: productTypes.status === 'fulfilled' ? productTypes.value.data : [],
     brands: brands.status === 'fulfilled' ? brands.value.data : [],
@@ -46,62 +36,41 @@ export const getPurchaseOrderDropdowns = async () => {
 };
 
 export const getPurchaseOrderBrandsByProductType = async (productTypeId) => {
-  const res = await apiClient.get('/brands/dropdowns', {
-    params: {
-      productTypeId,
-      includeInactive: 'false',
-      _ts: Date.now(),
-    },
-  });
+  const res = await apiClient.get('/brands/dropdowns', { params: { productTypeId, includeInactive: 'false', _ts: Date.now() } });
   return res.data;
 };
 
 export const searchPurchaseOrderProducts = async ({ productTypeId, brandId, search } = {}) => {
   const res = await apiClient.get('/products/pos/search', {
-    params: {
-      productTypeId: productTypeId || undefined,
-      brandId: brandId || undefined,
-      search: search || undefined,
-      take: 50,
-      pageSize: 50,
-      activeOnly: 'true',
-      _ts: Date.now(),
-    },
+    params: { productTypeId: productTypeId || undefined, brandId: brandId || undefined, search: search || undefined, take: 50, pageSize: 50, activeOnly: 'true', _ts: Date.now() },
   });
   return res.data;
 };
 
 export const searchPurchaseOrderTemplateProducts = async ({ productTypeId, brandId, search } = {}) => {
   const res = await apiClient.get('/products/template/search', {
-    params: {
-      productTypeId: productTypeId || undefined,
-      brandId: brandId || undefined,
-      search: search || undefined,
-      take: 50,
-      pageSize: 50,
-      includeInactive: 'false',
-      _ts: Date.now(),
-    },
+    params: { productTypeId: productTypeId || undefined, brandId: brandId || undefined, search: search || undefined, take: 50, pageSize: 50, includeInactive: 'false', _ts: Date.now() },
   });
   return res.data;
 };
 
 export const materializePurchaseOrderTemplateProduct = async (templateProductId) => {
-  const res = await apiClient.post('/products/pos/create-from-template', {
-    templateProductId: Number(templateProductId),
-  });
+  const res = await apiClient.post('/products/pos/create-from-template', { templateProductId: Number(templateProductId) });
   return res.data;
 };
 
 export const getPurchaseOrders = async (opts = {}) => {
-  const res = await apiClient.get('/purchase-orders', {
-    params: buildParams(opts),
-  });
+  const res = await apiClient.get('/purchase-orders', { params: buildParams(opts) });
   return res.data;
 };
 
 export const getPurchaseOrderById = async (id) => {
   const res = await apiClient.get(`/purchase-orders/${id}`);
+  return unwrapData(res.data);
+};
+
+export const getPurchaseOrderPresentation = async (id) => {
+  const res = await apiClient.get(`/purchase-orders/${id}/presentation`);
   return unwrapData(res.data);
 };
 

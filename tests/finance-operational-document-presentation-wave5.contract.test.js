@@ -13,6 +13,8 @@ const resolver = read('src/features/printing/presentation/financeOperationalPres
 const footer = read('src/features/printing/presentation/FinanceOperationalPresentationFooter.jsx');
 const receiptResolver = read('src/features/customerMoneyReceive/presentation/customerMoneyReceiptPresentation.js');
 const receiptPrint = read('src/features/customerMoneyReceive/pages/CustomerMoneyReceiptPrintPage.jsx');
+const settlementResolver = read('src/features/customerMoneySettlement/presentation/deliveryCreditSettlementPresentation.js');
+const settlementPrint = read('src/features/customerMoneySettlement/pages/DeliveryCreditSettlementPrintPage.jsx');
 const settingsCard = read('src/features/settings/components/FinanceOperationalPresentationSettingsCard.jsx');
 const settingsPage = read('src/features/settings/pages/DocumentFormatSettingsPage.jsx');
 
@@ -36,10 +38,20 @@ assert(receiptPrint.includes('resolveCustomerMoneyReceiptPresentation'));
 assert(receiptPrint.includes('buildCustomerMoneyReceiptHeader'));
 assert(receiptPrint.includes('FinanceOperationalPresentationFooter'));
 assert(receiptPrint.includes('ไม่ใช่ใบกำกับภาษี และไม่ก่อให้เกิดการตัดสต๊อกหรือรายการภาษีจากการรับเงินนี้'));
+
+assert(settlementResolver.includes("const DOCUMENT_PURPOSE = 'DELIVERY_CREDIT_SETTLEMENT'"));
+assert(settlementResolver.includes('record?.presentationSnapshots?.[rendererFamily]'));
+assert(settlementResolver.includes('presentationSnapshot?.businessSnapshot?.storeIdentity'));
+assert(settlementPrint.includes('resolveDeliveryCreditSettlementPresentation'));
+assert(settlementPrint.includes('buildDeliveryCreditSettlementHeader'));
+assert(settlementPrint.includes('FinanceOperationalPresentationFooter'));
+assert(settlementPrint.includes('ไม่สร้าง stock movement และไม่ตัดสต๊อกซ้ำ'));
+
 assert(settingsCard.includes('ข้อความระบบด้านล่างเป็นข้อมูล authority ของเอกสาร'));
 assert(settingsCard.includes('SYSTEM_NOTICE') === false, 'settings UI must not write protected SYSTEM_NOTICE content.');
 assert(settingsPage.includes('FinanceOperationalPresentationSettingsCard'));
 assert(settingsPage.includes('documentPurpose="CUSTOMER_MONEY_RECEIPT"'));
 assert(settingsPage.includes('ใบรับเงิน Customer Money'));
+assert(settingsPage.includes('documentPurpose="DELIVERY_CREDIT_SETTLEMENT"'), 'Delivery Credit Settlement must be configurable in the single document design center.');
 
 console.log('Finance Operational Document Presentation Wave 5 Contract: PASS');

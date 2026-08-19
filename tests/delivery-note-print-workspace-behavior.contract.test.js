@@ -11,7 +11,9 @@ describe('delivery note print workspace behavior contract', () => {
   const shell = read('src/features/deliveryNote/print/workspace/components/DeliveryNotePrintShell.jsx');
 
   it('keeps sale-document loading and mounted lifecycle intact', () => {
-    expect(page).toContain('const sale = await loadSaleDocument({ saleId: sourceId });');
+    expect(page).toContain('loadSaleDocument({ saleId: sourceId })');
+    expect(page).toContain('loadSaleDeliveryNoteAuthority({ saleId: sourceId })');
+    expect(page).toContain('const loadStandardSale = useCallback(async () =>');
     expect(page).toContain('let isMounted = true;');
     expect(page).toContain('if (isMounted) setCurrentSale(sale || null);');
     expect(page).toContain('isMounted = false;');
@@ -65,6 +67,7 @@ describe('delivery note print workspace behavior contract', () => {
 
   it('keeps branch projection, document states, and printable form composition intact across workspace ownership', () => {
     expect(page).toContain('buildDeliveryNoteBranchConfig(currentSale)');
+    expect(page).toContain('applyDeliveryNoteHeaderPresentation({');
     expect(policy).toContain('const fullAddress = buildDeliveryNoteBranchAddress(branch);');
     expect(policy).toContain('address: fullAddress,');
     expect(policy).toContain("branchName: branch.companyName || branch.name || '-'");
@@ -75,6 +78,7 @@ describe('delivery note print workspace behavior contract', () => {
     expect(page).toContain('hideDate={hideDate}');
     expect(page).toContain('saleItems={preparedSaleItems}');
     expect(page).toContain('config={preparedConfig}');
+    expect(page).toContain('presentationFooter={(');
     expect(shell).toContain('<DeliveryNoteForm');
     expect(shell).toContain('editableDocumentLines');
   });

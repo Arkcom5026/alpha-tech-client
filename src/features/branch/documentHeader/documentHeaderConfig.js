@@ -44,31 +44,40 @@ const normalizeLogoSize = (value, fallback = DOCUMENT_LOGO_SIZE_DEFAULT) => {
   return DOCUMENT_LOGO_SIZE_DEFAULT;
 };
 
-const normalizeHeaderProfile = (source = {}, fallback = DEFAULT_DOCUMENT_HEADER_PROFILE) => {
+const normalizeHeaderProfile = (
+  source = {},
+  fallback = DEFAULT_DOCUMENT_HEADER_PROFILE,
+  { allowExplicitEmpty = false } = {},
+) => {
   const safe = source && typeof source === 'object' && !Array.isArray(source) ? source : {};
   const logoPosition = cleanString(safe.logoPosition).toLowerCase();
   const textAlign = cleanString(safe.textAlign).toLowerCase();
   const storeNameSize = cleanString(safe.storeNameSize).toLowerCase();
+  const textValue = (key) => {
+    if (!Object.prototype.hasOwnProperty.call(safe, key)) return fallback[key];
+    const normalized = cleanString(safe[key]);
+    return allowExplicitEmpty ? normalized : (normalized || fallback[key]);
+  };
 
   return {
     showLogo: cleanBoolean(safe.showLogo, fallback.showLogo),
-    logoUrl: Object.prototype.hasOwnProperty.call(safe, 'logoUrl') ? cleanString(safe.logoUrl) : fallback.logoUrl,
+    logoUrl: textValue('logoUrl'),
     logoPosition: HEADER_ALIGNMENTS.has(logoPosition) ? logoPosition : fallback.logoPosition,
     logoSize: Object.prototype.hasOwnProperty.call(safe, 'logoSize')
       ? normalizeLogoSize(safe.logoSize, fallback.logoSize)
       : fallback.logoSize,
     textAlign: HEADER_ALIGNMENTS.has(textAlign) ? textAlign : fallback.textAlign,
     showStoreName: cleanBoolean(safe.showStoreName, fallback.showStoreName),
-    storeName: Object.prototype.hasOwnProperty.call(safe, 'storeName') ? cleanString(safe.storeName) : fallback.storeName,
+    storeName: textValue('storeName'),
     storeNameSize: HEADER_NAME_SIZES.has(storeNameSize) ? storeNameSize : fallback.storeNameSize,
     showAddress: cleanBoolean(safe.showAddress, fallback.showAddress),
-    address: Object.prototype.hasOwnProperty.call(safe, 'address') ? cleanString(safe.address) : fallback.address,
+    address: textValue('address'),
     showPhone: cleanBoolean(safe.showPhone, fallback.showPhone),
-    phone: Object.prototype.hasOwnProperty.call(safe, 'phone') ? cleanString(safe.phone) : fallback.phone,
+    phone: textValue('phone'),
     showTaxId: cleanBoolean(safe.showTaxId, fallback.showTaxId),
-    taxId: Object.prototype.hasOwnProperty.call(safe, 'taxId') ? cleanString(safe.taxId) : fallback.taxId,
+    taxId: textValue('taxId'),
     showBranchLabel: cleanBoolean(safe.showBranchLabel, fallback.showBranchLabel),
-    headerNote: Object.prototype.hasOwnProperty.call(safe, 'headerNote') ? cleanString(safe.headerNote) : fallback.headerNote,
+    headerNote: textValue('headerNote'),
   };
 };
 
@@ -96,7 +105,7 @@ const resolveDocumentHeaderProfile = (branch, documentType = 'DEFAULT') => {
 
   const { base: rawBase, override, isV2 } = getHeaderLayers(config, documentType);
   const base = normalizeHeaderProfile(rawBase);
-  const resolved = normalizeHeaderProfile(override, base);
+  const resolved = normalizeHeaderProfile(override, base, { allowExplicitEmpty: isV2 });
 
   // V1 settings exposed logo size as store-wide only. Preserve that historical
   // behavior for V1 while allowing explicit per-document V2 overrides.

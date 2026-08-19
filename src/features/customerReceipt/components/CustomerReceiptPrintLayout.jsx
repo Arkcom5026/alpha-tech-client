@@ -1,8 +1,15 @@
 import React from 'react'
 
 import CustomerReceiptA4Document from './CustomerReceiptA4Document'
+import CustomerReceiptPresentationFooter from './CustomerReceiptPresentationFooter'
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope'
 import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig'
+import {
+  applyCustomerReceiptHeaderPresentation,
+  customerReceiptTypographyPx,
+  resolveCustomerReceiptFooterContent,
+  resolveCustomerReceiptPresentation,
+} from '../presentation/customerReceiptPresentation'
 import {
   buildCustomerReceiptLineItems,
   getCustomerReceiptVatSummary,
@@ -49,7 +56,13 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
   const lineItems = buildCustomerReceiptLineItems(allocations)
   const { total, vatRate, vatAmount, beforeVat } = getCustomerReceiptVatSummary(receipt)
   const branch = resolvePrintBranch(receipt, allocations)
-  const config = buildPrintConfig(receipt, branch, vatRate, total, beforeVat, vatAmount)
+  const presentation = resolveCustomerReceiptPresentation({ receipt, branch })
+  const config = applyCustomerReceiptHeaderPresentation({
+    config: buildPrintConfig(receipt, branch, vatRate, total, beforeVat, vatAmount),
+    presentation,
+  })
+  const footerContent = resolveCustomerReceiptFooterContent(presentation)
+  const footerFontSize = customerReceiptTypographyPx(presentation, 'footer', 'md')
   const saleItems = lineItems.map((item, index) => {
     const saleCode = item?.saleCode && item.saleCode !== '-' ? `[${item.saleCode}] ` : ''
     const model = item?.productModel ? ` รุ่น ${item.productModel}` : ''
@@ -80,9 +93,21 @@ const CustomerReceiptPrintLayout = ({ receipt }) => {
     vat: vatAmount,
     vatRate,
   }
+  const presentationFooter = (
+    <CustomerReceiptPresentationFooter
+      content={footerContent}
+      fontSizePx={footerFontSize}
+    />
+  )
+
   return (
     <StoreDocumentHeaderScope config={config}>
-      <CustomerReceiptA4Document sale={sale} saleItems={saleItems} config={config} />
+      <CustomerReceiptA4Document
+        sale={sale}
+        saleItems={saleItems}
+        config={config}
+        presentationFooter={presentationFooter}
+      />
     </StoreDocumentHeaderScope>
   )
 }

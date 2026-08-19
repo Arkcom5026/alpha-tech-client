@@ -36,8 +36,10 @@ describe('combined document detail workspace presentation contract', () => {
 
   it('preserves the current printable invoice surface', () => {
     expect(shell).toContain('ใบแจ้งหนี้ / INVOICE');
-    expect(shell).toContain('บริษัท ตัวอย่าง จำกัด');
-    expect(shell).toContain('เลขประจำตัวผู้เสียภาษี: 0123456789012');
+    expect(shell).toContain('resolveCombinedBillingHeader(documentDetail)');
+    expect(shell).toContain('header.branchName');
+    expect(shell).toContain('header.taxId');
+    expect(shell).toContain('header.logoUrl');
     expect(shell).toContain('สรุปรายการใบส่งของที่รวมในเอกสารนี้');
     expect(shell).toContain('officialDocumentNumber');
     expect(shell).toContain("toLocaleDateString('th-TH')");

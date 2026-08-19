@@ -23,11 +23,11 @@ describe('Barcode SN partial-success authority', () => {
 
   it('owns edit-SN submission synchronously and snapshots the mutation command', () => {
     expect(pageSource).toContain('const editingMutationRef = useRef(false);');
-    expect(pageSource).toContain('if (editingMutationRef.current) return;');
+    expect(pageSource).toContain('if (editingMutationRef.current || workflowMutationRef.current) return;');
     expect(pageSource).toContain('const receiptIdSnapshot = receiptId;');
     expect(pageSource).toContain('const barcodeReceiptIdSnapshot = row?.id ?? null;');
-    expect(pageSource).toContain('const barcodeSnapshot = String(row?.barcode || \'\').trim();');
-    expect(pageSource).toContain('const nextSNSnapshot = String(editingSN || \'\').trim();');
+    expect(pageSource).toContain("const barcodeSnapshot = String(row?.barcode || '').trim();");
+    expect(pageSource).toContain("const nextSNSnapshot = String(editingSN || '').trim();");
   });
 
   it('reports persistence success before a post-success refresh problem', () => {
@@ -39,6 +39,6 @@ describe('Barcode SN partial-success authority', () => {
 
   it('does not issue the previous duplicate delete refresh from the receiving page', () => {
     const deleteBranch = pageSource.slice(pageSource.indexOf(': await deleteSerialNumberAction(barcodeSnapshot);'));
-    expect(deleteBranch).not.toContain('await loadBarcodesAction(receiptId);\n        setPageMessage({ type: \'success\', text: \'ล้าง SN สำเร็จ\' });');
+    expect(deleteBranch).not.toContain("await loadBarcodesAction(receiptId);\n        setPageMessage({ type: 'success', text: 'ล้าง SN สำเร็จ' });");
   });
 });

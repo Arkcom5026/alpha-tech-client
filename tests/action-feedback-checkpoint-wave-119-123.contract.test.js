@@ -16,8 +16,10 @@ describe('Action feedback checkpoint — waves 119-123', () => {
 
     expect(editPage).toContain('const mutationRef = useRef(false)');
     expect(editPage).toContain('if (mutationBusy) return');
-    expect(editPage).toContain('const supplierId = id');
-    expect(editPage).toContain('await deleteSupplierAction(supplierId)');
+    expect(editPage).toContain('const supplierIdSnapshot = id');
+    expect(editPage).toContain('const shopSlugSnapshot = shopSlug');
+    expect(editPage).toContain('const branchIdSnapshot = branchId');
+    expect(editPage).toContain('await deleteSupplierAction(supplierIdSnapshot)');
     expect(editPage).toContain('loading={mutationBusy}');
   });
 

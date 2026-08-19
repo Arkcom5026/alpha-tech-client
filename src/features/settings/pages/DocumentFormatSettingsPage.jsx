@@ -15,6 +15,7 @@ import {
 } from '@/features/branch/documentHeader/documentHeaderConfig';
 import CustomerReceiptPresentationSettingsCard from '@/features/settings/components/CustomerReceiptPresentationSettingsCard';
 import DeliveryNotePresentationSettingsCard from '@/features/settings/components/DeliveryNotePresentationSettingsCard';
+import PurchaseOrderPresentationSettingsCard from '@/features/settings/components/PurchaseOrderPresentationSettingsCard';
 import QuotationPresentationSettingsCard from '@/features/settings/components/QuotationPresentationSettingsCard';
 import StorefrontMediaUploadField from '@/features/storeExperience/components/StorefrontMediaUploadField';
 import { uploadStorefrontMedia } from '@/features/storeExperience/api/storeExperienceApi';
@@ -181,15 +182,7 @@ const DocumentFormatSettingsPage = () => {
               <div>
                 <label className={labelClassName}>ขนาดโลโก้ (px)</label>
                 <div className="flex gap-2">
-                  <input
-                    type="number"
-                    min={DOCUMENT_LOGO_SIZE_MIN}
-                    max={DOCUMENT_LOGO_SIZE_MAX}
-                    step="1"
-                    {...register('headerLogoSize', { valueAsNumber: true })}
-                    className={inputClassName}
-                    aria-label="ขนาดโลโก้เป็นพิกเซล"
-                  />
+                  <input type="number" min={DOCUMENT_LOGO_SIZE_MIN} max={DOCUMENT_LOGO_SIZE_MAX} step="1" {...register('headerLogoSize', { valueAsNumber: true })} className={inputClassName} aria-label="ขนาดโลโก้เป็นพิกเซล" />
                   <button type="button" onClick={resetLogoSize} className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700" title="คืนค่ามาตรฐาน 56 px"><RotateCcw className="h-3.5 w-3.5" />56</button>
                 </div>
                 <p className="mt-1 text-[10px] font-medium text-slate-400">กำหนดได้ {DOCUMENT_LOGO_SIZE_MIN}–{DOCUMENT_LOGO_SIZE_MAX} px · มาตรฐาน {DOCUMENT_LOGO_SIZE_DEFAULT} px</p>
@@ -232,10 +225,7 @@ const DocumentFormatSettingsPage = () => {
             <div className="aspect-[1/1.414] min-h-[480px] overflow-hidden rounded-xl border border-slate-200 bg-white p-7 shadow-inner">
               <div className={previewLogoPosition === 'center' ? 'flex flex-col items-center gap-3' : previewLogoPosition === 'right' ? 'flex flex-row-reverse items-center justify-between gap-4' : 'flex items-center gap-4'}>
                 {form.headerShowLogo && (
-                  <div
-                    className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400"
-                    style={{ width: previewLogoSize, height: previewLogoSize }}
-                  >
+                  <div className="flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-[10px] font-bold text-slate-400" style={{ width: previewLogoSize, height: previewLogoSize }}>
                     {previewLogo ? <img src={previewLogo} alt="ตัวอย่างโลโก้" className="h-full w-full object-contain" /> : 'LOGO'}
                   </div>
                 )}
@@ -256,6 +246,7 @@ const DocumentFormatSettingsPage = () => {
       <QuotationPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <DeliveryNotePresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <CustomerReceiptPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
+      <PurchaseOrderPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
     </div>
   );
 };

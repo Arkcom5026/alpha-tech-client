@@ -56,7 +56,7 @@ describe('refund receipt print workspace policy contract', () => {
     expect(projection.refundTransactions).toBe(refundTransactions);
   });
 
-  it('preserves current branch presentation fallbacks without changing authority', () => {
+  it('preserves branch presentation fallbacks while exposing structured presentation fields', () => {
     const projection = prepareRefundReceiptPrintProjection({}, {
       name: 'Advance Tech',
       address: 'Bangkok',
@@ -66,7 +66,7 @@ describe('refund receipt print workspace policy contract', () => {
       contactName: 'Admin',
     });
 
-    expect(projection.branch).toEqual({
+    expect(projection.branch).toMatchObject({
       name: 'Advance Tech',
       address: 'Bangkok',
       phone: '02-000-0000',
@@ -74,8 +74,11 @@ describe('refund receipt print workspace policy contract', () => {
       email: 'store@example.com',
       contactName: 'Admin',
     });
+    expect(projection.branch).toHaveProperty('logoUrl');
+    expect(projection.branch).toHaveProperty('headerStyle');
 
-    expect(prepareRefundReceiptPrintProjection({}, null).branch).toEqual({
+    const fallback = prepareRefundReceiptPrintProjection({}, null).branch;
+    expect(fallback).toMatchObject({
       name: '-',
       address: '-',
       phone: '-',
@@ -83,6 +86,8 @@ describe('refund receipt print workspace policy contract', () => {
       email: '-',
       contactName: '-',
     });
+    expect(fallback).toHaveProperty('logoUrl');
+    expect(fallback).toHaveProperty('headerStyle');
   });
 
   it('preserves fixed two-decimal money formatting', () => {

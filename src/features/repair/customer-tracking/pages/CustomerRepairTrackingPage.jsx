@@ -89,7 +89,7 @@ const CustomerRepairTrackingPage = () => {
     return (
       <main className="flex min-h-screen items-center justify-center bg-slate-50 px-5">
         <div className="text-center">
-          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600" />
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-emerald-100 border-t-emerald-600" />
           <p className="mt-4 font-bold text-slate-600">กำลังโหลดสถานะงานซ่อม</p>
         </div>
       </main>
@@ -113,98 +113,63 @@ const CustomerRepairTrackingPage = () => {
   const repairAsset = repair.repairAsset || {};
   const status = getCustomerFacingStatus(repair.status || {}, repair.handover);
   const stage = Number(status.stage || 0);
+  const timeline = repair.timeline || [];
+  const recentTimeline = [...timeline].slice(-3).reverse();
+  const olderTimeline = timeline.length > 3 ? timeline.slice(0, -3) : [];
+  const estimate = repair.estimate || {};
+  const hasMeaningfulEstimate = [estimate.amount, estimate.depositPaid, estimate.estimatedBalance]
+    .some((value) => Number(value || 0) > 0);
 
   const deviceSummary = [repairAsset.brand, repairAsset.model, repairAsset.category]
     .filter(Boolean)
     .join(' • ');
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-5 sm:px-6 sm:py-8">
-      <div className="mx-auto w-full max-w-2xl space-y-4">
-        <header className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <main className="min-h-screen bg-slate-50 px-4 py-4 sm:px-6 sm:py-8">
+      <div className="mx-auto w-full max-w-2xl space-y-3">
+        <header className="rounded-3xl border border-emerald-100 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Repair Tracking</p>
-              <h1 className="mt-1 text-2xl font-black text-slate-950">ติดตามงานซ่อม</h1>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Repair Tracking</p>
+              <h1 className="mt-1 text-xl font-black text-slate-950 sm:text-2xl">ติดตามงานซ่อม</h1>
             </div>
-            <div className="rounded-2xl bg-slate-50 px-3 py-2 sm:text-right">
-              <p className="text-[11px] font-black text-slate-400">เลขที่งาน</p>
-              <p className="mt-0.5 break-all text-sm font-black text-slate-800">{repair.jobNo}</p>
+            <div className="min-w-0 rounded-2xl bg-slate-50 px-3 py-2 text-right">
+              <p className="text-[10px] font-black text-slate-400">เลขที่งาน</p>
+              <p className="mt-0.5 max-w-[180px] truncate text-xs font-black text-slate-700 sm:text-sm">{repair.jobNo}</p>
             </div>
           </div>
 
-          <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3.5">
-            <p className="text-xs font-black text-blue-600">สถานะปัจจุบัน</p>
-            <p className="mt-1 text-lg font-black text-slate-950">{status.label}</p>
+          <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 sm:px-5">
+            <p className="text-xs font-black text-emerald-700">ตอนนี้งานของคุณ</p>
+            <p className="mt-1 text-2xl font-black text-slate-950">{status.label}</p>
             <p className="mt-1 text-sm leading-6 text-slate-600">{status.description}</p>
-          </div>
-        </header>
+            <p className="mt-3 text-xs font-bold text-emerald-800/70">
+              อัปเดตล่าสุด {formatDateTime(repair.lastUpdatedAt)}
+            </p>
+          </section>
 
-        {stage > 0 ? (
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="grid grid-cols-4 gap-2">
+          {stage > 0 ? (
+            <div className="mt-4 grid grid-cols-4 gap-2">
               {['รับเครื่อง', 'ดำเนินการ', 'รออะไหล่', 'พร้อมรับ'].map((label, index) => {
                 const step = index + 1;
                 const reached = stage >= step;
+                const current = stage === step;
                 return (
                   <div key={label} className="text-center">
-                    <div className={`mx-auto h-2 rounded-full ${reached ? 'bg-blue-600' : 'bg-slate-200'}`} />
-                    <p className={`mt-2 text-[10px] font-black sm:text-xs ${reached ? 'text-blue-700' : 'text-slate-400'}`}>
+                    <div
+                      className={`mx-auto h-2 rounded-full ${
+                        reached ? 'bg-emerald-500' : 'bg-slate-200'
+                      } ${current ? 'ring-2 ring-emerald-100 ring-offset-1' : ''}`}
+                    />
+                    <p className={`mt-2 text-[10px] font-black sm:text-xs ${reached ? 'text-emerald-700' : 'text-slate-400'}`}>
                       {label}
                     </p>
                   </div>
                 );
               })}
             </div>
-          </section>
-        ) : null}
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <p className="text-xs font-black uppercase tracking-[0.15em] text-blue-600">รายการซ่อม</p>
-          <h2 className="mt-2 text-xl font-black text-slate-950">{repairAsset.displayName || '-'}</h2>
-          {deviceSummary ? (
-            <p className="mt-1 text-sm font-bold text-slate-500">{deviceSummary}</p>
           ) : null}
-
-          <div className="mt-4 rounded-2xl bg-slate-50 p-4">
-            <p className="text-xs font-black text-slate-500">อาการที่แจ้ง</p>
-            <p className="mt-1 text-sm leading-6 text-slate-800">{repair.reportedSymptoms || '-'}</p>
-          </div>
-
-          {repairAsset.serialNumber ? (
-            <details className="mt-3 rounded-2xl border border-slate-100 bg-white px-4 py-3">
-              <summary className="cursor-pointer text-xs font-black text-slate-500">ดูข้อมูลอุปกรณ์เพิ่มเติม</summary>
-              <div className="mt-3 space-y-2 text-sm text-slate-600">
-                <p><span className="font-black text-slate-500">Serial Number:</span> {repairAsset.serialNumber}</p>
-                {repairAsset.imei ? <p><span className="font-black text-slate-500">IMEI:</span> {repairAsset.imei}</p> : null}
-                {repairAsset.barcode ? <p><span className="font-black text-slate-500">Barcode:</span> {repairAsset.barcode}</p> : null}
-              </div>
-            </details>
-          ) : null}
-        </section>
-
-        {repair.accessories?.length ? (
-          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="font-black text-slate-950">อุปกรณ์ที่ฝากไว้กับร้าน</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {repair.accessories.map((item, index) => (
-                <span key={`${item.type}-${index}`} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">
-                  {ACCESSORY_LABELS[item.type] || item.type} × {item.quantity}
-                </span>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="font-black text-slate-950">ค่าใช้จ่ายโดยประมาณ</h2>
-          <div className="mt-3 space-y-2 text-sm">
-            <MoneyRow label="ราคาประเมิน" value={repair.estimate?.amount} />
-            <MoneyRow label="มัดจำแล้ว" value={repair.estimate?.depositPaid} />
-            <MoneyRow label="ยอดคงเหลือโดยประมาณ" value={repair.estimate?.estimatedBalance} strong />
-          </div>
-          <p className="mt-3 text-xs leading-5 text-slate-400">ยอดจริงอาจเปลี่ยนแปลงตามผลตรวจสอบและการยืนยันของลูกค้า</p>
-        </section>
+        </header>
 
         <EstimateDecisionCard
           token={token}
@@ -234,7 +199,7 @@ const CustomerRepairTrackingPage = () => {
 
         {repair.claim ? (
           <section className="rounded-3xl border border-violet-200 bg-violet-50 p-5">
-            <p className="text-xs font-black uppercase tracking-[0.15em] text-violet-700">Warranty Claim</p>
+            <p className="text-xs font-black uppercase tracking-[0.15em] text-violet-700">สถานะเคลม</p>
             <h2 className="mt-1 font-black text-violet-950">{repair.claim.label}</h2>
             <p className="mt-2 text-sm text-violet-800">เลขที่เคลม {repair.claim.claimNo}</p>
             {repair.claim.serviceProvider ? (
@@ -243,26 +208,100 @@ const CustomerRepairTrackingPage = () => {
           </section>
         ) : null}
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="font-black text-slate-950">ความคืบหน้า</h2>
-          <div className="mt-5">
-            <TrackingTimeline items={repair.timeline || []} />
-          </div>
-        </section>
+        {recentTimeline.length ? (
+          <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black text-emerald-700">อัปเดตล่าสุด</p>
+                <h2 className="mt-1 text-lg font-black text-slate-950">ความคืบหน้าของงาน</h2>
+              </div>
+              <span className="rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">
+                ล่าสุด {recentTimeline.length} รายการ
+              </span>
+            </div>
+            <div className="mt-5">
+              <TrackingTimeline items={recentTimeline} />
+            </div>
 
-        <section className="rounded-3xl border border-blue-100 bg-blue-50 p-5">
-          <p className="text-xs font-black text-blue-700">ร้านที่รับผิดชอบ</p>
-          <h2 className="mt-1 font-black text-blue-950">{tracking.branch?.name || '-'}</h2>
-          <p className="mt-2 text-sm leading-6 text-blue-800">{tracking.branch?.address || ''}</p>
+            {olderTimeline.length ? (
+              <details className="mt-4 border-t border-slate-100 pt-4">
+                <summary className="cursor-pointer text-sm font-black text-slate-500">
+                  ดูประวัติก่อนหน้าอีก {olderTimeline.length} รายการ
+                </summary>
+                <div className="mt-4">
+                  <TrackingTimeline items={[...olderTimeline].reverse()} />
+                </div>
+              </details>
+            ) : null}
+          </section>
+        ) : null}
+
+        <details className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <summary className="cursor-pointer list-none px-5 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs font-black text-slate-400">รายละเอียดงาน</p>
+                <p className="mt-1 truncate font-black text-slate-800">{repairAsset.displayName || repair.jobNo}</p>
+              </div>
+              <span className="shrink-0 text-sm font-black text-emerald-700">ดูรายละเอียด</span>
+            </div>
+          </summary>
+
+          <div className="border-t border-slate-100 px-5 pb-5 pt-4">
+            {deviceSummary ? <p className="text-sm font-bold text-slate-500">{deviceSummary}</p> : null}
+
+            <div className="mt-3 rounded-2xl bg-slate-50 p-4">
+              <p className="text-xs font-black text-slate-500">อาการที่แจ้ง</p>
+              <p className="mt-1 text-sm leading-6 text-slate-800">{repair.reportedSymptoms || '-'}</p>
+            </div>
+
+            {repair.accessories?.length ? (
+              <div className="mt-4">
+                <p className="text-xs font-black text-slate-500">อุปกรณ์ที่ฝากไว้กับร้าน</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {repair.accessories.map((item, index) => (
+                    <span key={`${item.type}-${index}`} className="rounded-full bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700">
+                      {ACCESSORY_LABELS[item.type] || item.type} × {item.quantity}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {repairAsset.serialNumber || repairAsset.imei || repairAsset.barcode ? (
+              <div className="mt-4 space-y-1 text-xs text-slate-500">
+                {repairAsset.serialNumber ? <p><span className="font-black">Serial:</span> {repairAsset.serialNumber}</p> : null}
+                {repairAsset.imei ? <p><span className="font-black">IMEI:</span> {repairAsset.imei}</p> : null}
+                {repairAsset.barcode ? <p><span className="font-black">Barcode:</span> {repairAsset.barcode}</p> : null}
+              </div>
+            ) : null}
+
+            {hasMeaningfulEstimate ? (
+              <div className="mt-5 border-t border-slate-100 pt-4">
+                <p className="font-black text-slate-950">ค่าใช้จ่ายโดยประมาณ</p>
+                <div className="mt-3 space-y-2 text-sm">
+                  <MoneyRow label="ราคาประเมิน" value={estimate.amount} />
+                  <MoneyRow label="มัดจำแล้ว" value={estimate.depositPaid} />
+                  <MoneyRow label="ยอดคงเหลือโดยประมาณ" value={estimate.estimatedBalance} strong />
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </details>
+
+        <section className="rounded-3xl border border-emerald-100 bg-emerald-50 p-5">
+          <p className="text-xs font-black text-emerald-700">ร้านที่รับผิดชอบ</p>
+          <h2 className="mt-1 font-black text-slate-950">{tracking.branch?.name || '-'}</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{tracking.branch?.address || ''}</p>
           {tracking.branch?.phone ? (
-            <a href={`tel:${tracking.branch.phone}`} className="mt-4 flex min-h-12 items-center justify-center rounded-2xl bg-blue-700 px-5 font-black text-white">
+            <a href={`tel:${tracking.branch.phone}`} className="mt-4 flex min-h-12 items-center justify-center rounded-2xl bg-emerald-600 px-5 font-black text-white shadow-sm">
               โทร {tracking.branch.phone}
             </a>
           ) : null}
         </section>
 
         <footer className="pb-4 text-center text-xs text-slate-400">
-          อัปเดตล่าสุด {formatDateTime(repair.lastUpdatedAt)}
+          ลิงก์นี้ใช้ติดตามสถานะงานล่าสุดได้โดยไม่ต้องโทรสอบถามร้าน
         </footer>
       </div>
     </main>
@@ -272,7 +311,7 @@ const CustomerRepairTrackingPage = () => {
 const MoneyRow = ({ label, value, strong = false }) => (
   <div className={`flex items-center justify-between gap-4 ${strong ? 'border-t border-slate-200 pt-3 text-base font-black' : ''}`}>
     <span className="text-slate-600">{label}</span>
-    <span className={strong ? 'text-blue-700' : 'font-bold text-slate-900'}>{money(value)}</span>
+    <span className={strong ? 'text-emerald-700' : 'font-bold text-slate-900'}>{money(value)}</span>
   </div>
 );
 

@@ -5,44 +5,38 @@ import { describe, expect, it } from 'vitest'
 
 const root = process.cwd()
 const pagePath = path.join(root, 'src/features/bill/pages/PrintBillPageShortTax.jsx')
-const runtimePath = path.join(
-  root,
-  'src/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime.js'
-)
-const shellPath = path.join(
-  root,
-  'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintShell.jsx'
-)
-const toolbarPath = path.join(
-  root,
-  'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintToolbar.jsx'
-)
+const runtimePath = path.join(root, 'src/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime.js')
+const shellPath = path.join(root, 'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintShell.jsx')
+const toolbarPath = path.join(root, 'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintToolbar.jsx')
 const layoutPath = path.join(root, 'src/features/bill/components/BillLayoutShortTax.jsx')
+const documentSourcePath = path.join(root, 'src/features/bill/hooks/useBillDocumentSource.js')
 const page = fs.readFileSync(pagePath, 'utf8')
 const runtime = fs.readFileSync(runtimePath, 'utf8')
 const shell = fs.readFileSync(shellPath, 'utf8')
 const toolbar = fs.readFileSync(toolbarPath, 'utf8')
 const layout = fs.readFileSync(layoutPath, 'utf8')
+const documentSource = fs.readFileSync(documentSourcePath, 'utf8')
 
 describe('bill short tax print workspace behavior contract', () => {
   it('keeps bill hydration scoped to route sale and optional payment identity', () => {
     expect(page).toContain("const saleId = params.id || params.saleId")
     expect(page).toContain("searchParams.get('paymentId')")
-    expect(page).toContain('loadSaleByIdAction(')
-    expect(page).toContain('resetAction()')
+    expect(page).toContain('useBillDocumentSource({ saleId, sourceType, sourceId, paymentId })')
+    expect(documentSource).toContain('billStore.loadSaleByIdAction(')
+    expect(documentSource).toContain('billStore.resetAction()')
   })
 
   it('keeps editable document-line runtime wired through the shared workspace', () => {
     expect(page).toContain('useSaleDocumentLineEditor')
-    expect(page).toContain('reload: reloadSaleForPrint')
+    expect(page).toContain('reload: reloadForPrint')
     expect(page).toContain('documentLineEditor={documentLineEditor}')
-    expect(shell).toContain('documentLineEditor.actions.save')
+    expect(shell).toContain('documentLineEditor?.actions?.save')
   })
 
   it('preserves dynamic 80mm print-height measurement and cleanup lifecycle across runtime ownership', () => {
     expect(page).toContain('useBillShortTaxPrintRuntime')
     expect(page).toContain('printRootRef={printRuntime.printRootRef}')
-    expect(runtime).toContain("--short-tax-receipt-height")
+    expect(runtime).toContain('--short-tax-receipt-height')
     expect(runtime).toContain('getBoundingClientRect()')
     expect(runtime).toContain('new ResizeObserver(updatePrintHeight)')
     expect(runtime).toContain("window.addEventListener('beforeprint', updatePrintHeight)")

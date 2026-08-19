@@ -26,8 +26,10 @@ describe('refund receipt print workspace behavior contract', () => {
     expect(page).toContain('buildRefundReceiptHeader({');
     expect(page).toContain('presentationSnapshot: presentation.presentationSnapshot');
     expect(page).toContain('prepareRefundReceiptPrintProjection(saleReturn, branch, {');
-    expect(policy).toContain("name: branch?.name || '-'");
-    expect(policy).toContain("taxId: branch?.taxId || '-'");
+    expect(policy).toContain("name: headerConfig?.branchName || branch?.name || '-'");
+    expect(policy).toContain("taxId: headerConfig?.taxId || branch?.taxId || '-'");
+    expect(policy).toContain('logoUrl: headerConfig?.logoUrl || null');
+    expect(policy).toContain('headerStyle: headerConfig?.headerStyle || null');
   });
 
   it('preserves loading and browser print behavior across workspace ownership', () => {

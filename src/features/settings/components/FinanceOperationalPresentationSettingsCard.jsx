@@ -3,6 +3,7 @@ import { Save } from 'lucide-react';
 
 import { feedback } from '@/design-system/feedback';
 import FinanceOperationalPresentationFooter from '@/features/printing/presentation/FinanceOperationalPresentationFooter';
+import DocumentPresentationLivePreview from '@/features/settings/documentPreview/DocumentPresentationLivePreview';
 import {
   normalizeDocumentPresentationConfig,
   upsertDocumentPresentationLayer,
@@ -59,6 +60,13 @@ const FinanceOperationalPresentationSettingsCard = ({
     }
   };
 
+  const previewLayer = useMemo(() => ({
+    blocks: {
+      NOTES: { visible: Boolean(form.notes.trim()), content: form.notes },
+      CUSTOM_FOOTER: { visible: Boolean(form.customFooter.trim()), content: form.customFooter },
+    },
+  }), [form.customFooter, form.notes]);
+
   return (
     <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -71,22 +79,27 @@ const FinanceOperationalPresentationSettingsCard = ({
         </button>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[1fr_1.1fr]">
+      <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,0.9fr)_minmax(440px,1.1fr)]">
         <div className="space-y-4 rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
           <div><label className={labelClassName}>หมายเหตุเริ่มต้น</label><textarea maxLength={240} rows={3} value={form.notes} onChange={(event) => patch('notes', event.target.value)} className={inputClassName} /></div>
           <div><label className={labelClassName}>ข้อความท้ายเอกสาร</label><textarea maxLength={240} rows={3} value={form.customFooter} onChange={(event) => patch('customFooter', event.target.value)} className={inputClassName} placeholder="เช่น ขอบคุณที่ใช้บริการ" /></div>
           <p className="text-[10px] font-medium leading-relaxed text-slate-400">ข้อความระบบด้านล่างเป็นข้อมูล authority ของเอกสาร ระบบเป็นผู้กำหนดและร้านไม่สามารถแก้ไขหรือซ่อนได้</p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
-          <div className="mb-3"><p className="text-xs font-black text-slate-800">ตัวอย่างส่วนท้าย</p><p className="mt-0.5 text-[10px] font-medium text-slate-400">ตัวอย่างแสดงทั้งข้อความร้านและข้อความระบบที่ถูกล็อก</p></div>
-          <div className="mx-auto rounded-xl border border-slate-300 bg-white p-4 shadow-inner">
-            <FinanceOperationalPresentationFooter
-              notes={form.notes.trim()}
-              customFooter={form.customFooter.trim()}
-              systemNotices={systemNotices}
-            />
-          </div>
+        <div className="xl:sticky xl:top-4 xl:self-start">
+          <DocumentPresentationLivePreview
+            branch={branch}
+            documentPurpose={documentPurpose}
+            draftLayer={previewLayer}
+            title={`ตัวอย่าง${title}`}
+            footer={(
+              <FinanceOperationalPresentationFooter
+                notes={form.notes.trim()}
+                customFooter={form.customFooter.trim()}
+                systemNotices={systemNotices}
+              />
+            )}
+          />
         </div>
       </div>
     </section>

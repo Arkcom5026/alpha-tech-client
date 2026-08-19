@@ -4,28 +4,18 @@ import { describe, expect, it } from 'vitest'
 
 const root = process.cwd()
 const pagePath = path.join(root, 'src/features/bill/pages/PrintBillPageShortTax.jsx')
-const statePath = path.join(
-  root,
-  'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintState.jsx'
-)
-const toolbarPath = path.join(
-  root,
-  'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintToolbar.jsx'
-)
-const shellPath = path.join(
-  root,
-  'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintShell.jsx'
-)
-const runtimePath = path.join(
-  root,
-  'src/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime.js'
-)
+const statePath = path.join(root, 'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintState.jsx')
+const toolbarPath = path.join(root, 'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintToolbar.jsx')
+const shellPath = path.join(root, 'src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintShell.jsx')
+const runtimePath = path.join(root, 'src/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime.js')
+const sourcePath = path.join(root, 'src/features/bill/hooks/useBillDocumentSource.js')
 
 const page = fs.readFileSync(pagePath, 'utf8')
 const state = fs.readFileSync(statePath, 'utf8')
 const toolbar = fs.readFileSync(toolbarPath, 'utf8')
 const shell = fs.readFileSync(shellPath, 'utf8')
 const runtime = fs.readFileSync(runtimePath, 'utf8')
+const documentSource = fs.readFileSync(sourcePath, 'utf8')
 
 describe('bill short tax print workspace cutover contract', () => {
   it('composes state, toolbar, and printable shell from workspace owners', () => {
@@ -34,11 +24,12 @@ describe('bill short tax print workspace cutover contract', () => {
     expect(page).toContain('<BillShortTaxPrintShell')
   })
 
-  it('keeps hydration, routing, and document-line authority in the page', () => {
+  it('keeps hydration, routing, and document-line authority in the page/shared source boundary', () => {
     expect(page).toContain('useParams()')
     expect(page).toContain('useNavigate()')
-    expect(page).toContain('useBillStore()')
-    expect(page).toContain('loadSaleByIdAction(')
+    expect(page).toContain('useBillDocumentSource')
+    expect(documentSource).toContain('useBillStore()')
+    expect(documentSource).toContain('billStore.loadSaleByIdAction(')
     expect(page).toContain('useSaleDocumentLineEditor')
   })
 

@@ -139,6 +139,10 @@ const PrintBillPageFullTax = () => {
   return (
     <>
       <style>{`
+        .full-tax-print-shell .full-tax-a4-page tbody td {
+          vertical-align: middle !important;
+        }
+
         @media print {
           html,
           body,

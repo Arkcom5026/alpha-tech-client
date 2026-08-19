@@ -3,10 +3,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const root = process.cwd()
-const componentDir = path.join(
-  root,
-  'src/features/bill/shortTax/print/workspace/components'
-)
+const componentDir = path.join(root, 'src/features/bill/shortTax/print/workspace/components')
 
 const state = fs.readFileSync(path.join(componentDir, 'BillShortTaxPrintState.jsx'), 'utf8')
 const toolbar = fs.readFileSync(path.join(componentDir, 'BillShortTaxPrintToolbar.jsx'), 'utf8')
@@ -46,6 +43,6 @@ describe('bill short tax print workspace presentation contract', () => {
     expect(shell).toContain('<BillLayoutShortTax')
     expect(shell).toContain('payments={[payment]}')
     expect(shell).toContain('editableDocumentLines')
-    expect(shell).toContain('documentLineEditor.actions.save')
+    expect(shell).toContain('documentLineEditor?.actions?.save')
   })
 })

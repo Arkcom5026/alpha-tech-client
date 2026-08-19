@@ -18,7 +18,7 @@ test('Delivery Note consumes the shared document line editor', () => {
   const page = read(pagePath);
 
   assert.match(page, /useSaleDocumentLineEditor/);
-  assert.match(page, /saleId,\s*reload:\s*reloadSaleDocument/);
+  assert.match(page, /saleId:\s*isConsolidated \? null : saleId,\s*reload:\s*loadCurrentDocument/);
   assert.match(page, /documentLineActions\.toggle/);
   assert.match(page, /documentLineActions\.change/);
   assert.match(page, /documentLineActions\.save/);
@@ -40,7 +40,8 @@ test('server authority uses the workspace command shape and preserves the render
   const workspaceApi = read(workspaceApiPath);
   const printShell = read(printShellPath);
 
-  assert.match(page, /loadSaleDocument\(\{ saleId \}\)/);
+  assert.match(page, /loadSaleDocument\(\{ saleId: sourceId \}\)/);
+  assert.match(page, /loadSaleDeliveryNoteAuthority\(\{ saleId: sourceId \}\)/);
   assert.doesNotMatch(page, /loadSaleDocument\(saleId\)/);
   assert.match(workspaceApi, /loadSaleDocument = async \(\{ saleId, paymentId \} = \{\}\)/);
   assert.match(page, /setCurrentSale\(sale \|\| null\)/);

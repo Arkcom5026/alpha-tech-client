@@ -48,7 +48,9 @@ describe('employee workspace behavior lock', () => {
     expect(detailWorkspace).toContain("status === 'pending'");
     expect(detailWorkspace).toContain('ConfirmActionDialog');
     expect(detailWorkspace).toContain('pendingStatusChange');
-    expect(detailWorkspace).toContain("status: nextActive ? 'active' : 'inactive'");
+    expect(detailWorkspace).toContain("const nextActiveSnapshot = status !== 'active';");
+    expect(detailWorkspace).toContain("status: nextActiveSnapshot ? 'active' : 'inactive'");
+    expect(detailWorkspace).toContain('statusMutationRef.current = true');
     expect(detailWorkspace).toContain('/pos/settings/employee/edit/');
     expectThinAdapter('pages/ViewEmployeePage.jsx', 'EmployeeDetailWorkspace');
   });
@@ -68,7 +70,8 @@ describe('employee workspace behavior lock', () => {
     const legacyWorkspace = read('workspaces/LegacyEmployeeFormWorkspace.jsx');
     expect(legacyWorkspace).toContain('getEmployeeById');
     expect(legacyWorkspace).toContain('updateEmployee');
-    expect(legacyWorkspace).toContain("shopSlug || 'advancetech'");
+    expect(legacyWorkspace).toContain("const shopSlugSnapshot = shopSlug;");
+    expect(legacyWorkspace).toContain("const targetSlug = shopSlugSnapshot || 'advancetech';");
     expect(legacyWorkspace).toContain('showUserSearch={false}');
     expectThinAdapter('pages/EmployeeFormPage.jsx', 'LegacyEmployeeFormWorkspace');
   });

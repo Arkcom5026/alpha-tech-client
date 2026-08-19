@@ -54,7 +54,9 @@ describe('Quick Receipt executable vertical-slice contract', () => {
   });
 
   it('resumes a server draft from full receipt and tax detail', () => {
-    expect(controllerSource).toMatch(/const detail = await getQuickReceipt\(draft\.id\)/);
+    expect(controllerSource).toContain('const draftIdSnapshot = draft?.id');
+    expect(controllerSource).toContain('if (!draftIdSnapshot) return false');
+    expect(controllerSource).toMatch(/const detail = await getQuickReceipt\(draftIdSnapshot\)/);
     expect(controllerSource).toMatch(/setReceipt\(detail\)/);
     expect(controllerSource).toMatch(/setHeader\(toHeader\(detail\)\)/);
     expect(controllerSource).toContain('documentSubtotal');
@@ -64,7 +66,9 @@ describe('Quick Receipt executable vertical-slice contract', () => {
 
   it('allows persisted lines to be removed before finalization', () => {
     expect(controllerSource).toContain('deleteQuickReceiptItem');
-    expect(controllerSource).toMatch(/await deleteQuickReceiptItem\(receipt\.id, itemId\)/);
+    expect(controllerSource).toContain('const receiptIdSnapshot = receipt?.id');
+    expect(controllerSource).toContain('const itemIdSnapshot = itemId');
+    expect(controllerSource).toMatch(/await deleteQuickReceiptItem\(receiptIdSnapshot, itemIdSnapshot\)/);
     expect(lineSummarySource).toContain('onRemoveServerLine');
   });
 
@@ -72,7 +76,7 @@ describe('Quick Receipt executable vertical-slice contract', () => {
     expect(controllerSource).toContain('cancelQuickReceipt');
     expect(controllerSource).toContain('const receiptId = receipt.id');
     expect(controllerSource).toMatch(/await cancelQuickReceipt\(receiptId,/);
-    expect(controllerSource).toContain('if (!receipt?.id || receipt.status !== \'DRAFT\' || isBusy) return false');
+    expect(controllerSource).toContain("if (!receipt?.id || receipt.status !== 'DRAFT' || isBusy || busyRef.current) return false");
     expect(workflowSource).toContain('ยกเลิกใบรับนี้');
     expect(panelSource).toContain('เริ่มใบรับใหม่');
     expect(controllerSource).toMatch(/setHeader\(emptyHeader\)/);

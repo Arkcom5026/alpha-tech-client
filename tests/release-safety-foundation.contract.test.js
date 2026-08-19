@@ -13,7 +13,11 @@ assert.deepEqual(
   { main: true, '*': false },
   'automatic Vercel Git deployments must be enabled only for canonical main',
 )
-assert.equal(vercel.ignoreCommand, 'exit 1', 'Git-triggered Vercel builds must never be skipped by Ignored Build Step')
+assert.equal(
+  vercel.ignoreCommand,
+  'if [ "$VERCEL_ENV" = "production" ]; then exit 1; else exit 0; fi',
+  'Vercel ignored-build gate must allow Production and skip Preview builds',
+)
 assert.match(vercel.buildCommand || '', /npm run build\s*&&\s*node scripts\/generate-release-metadata\.mjs/, 'Vercel build must publish release provenance after Vite build')
 assert.match(ciWorkflow, /node-version:\s*22\b/, 'GitHub CI must use Node 22')
 assert.match(ciWorkflow, /branches:\s*\[\s*"main"\s*\]/, 'GitHub CI must protect canonical main authority')

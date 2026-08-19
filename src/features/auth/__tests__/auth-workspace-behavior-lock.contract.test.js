@@ -39,7 +39,9 @@ describe('authentication workspace behavior lock', () => {
   });
 
   it('preserves customer registration contract and partner-portal cutover', () => {
-    expect(registerWorkspace).toContain("registerUser({ name, phone, email, password, role: 'customer' })");
+    expect(registerWorkspace).toContain("const payloadSnapshot = { name, phone, email, password, role: 'customer' };");
+    expect(registerWorkspace).toContain('await registerUser(payloadSnapshot);');
+    expect(registerWorkspace).toContain('submittingRef.current = true');
     expect(registerWorkspace).toContain("navigate('/partner-portal', { replace: true });");
     expect(registerWorkspace).toContain('resolver: zodResolver(registerSchema)');
   });

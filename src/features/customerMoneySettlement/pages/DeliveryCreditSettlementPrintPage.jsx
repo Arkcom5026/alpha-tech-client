@@ -3,11 +3,18 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { feedback } from '@/design-system/feedback';
 import { getCustomerDisplayName } from '@/features/customer/utils/customerDisplayName';
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope';
-import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig';
+import FinanceOperationalPresentationFooter from '@/features/printing/presentation/FinanceOperationalPresentationFooter';
 import { getDeliveryCreditSettlement } from '../api/deliveryCreditSettlementApi';
+import {
+  buildDeliveryCreditSettlementHeader,
+  resolveDeliveryCreditSettlementPresentation,
+} from '../presentation/deliveryCreditSettlementPresentation';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const customerLabel = getCustomerDisplayName;
+const SYSTEM_NOTICES = Object.freeze([
+  'เอกสารนี้บันทึกการนำ Customer Money ไปตัดยอดใบส่งของเครดิตเท่านั้น ไม่สร้าง stock movement และไม่ตัดสต๊อกซ้ำ',
+]);
 
 const DeliveryCreditSettlementPrintPage = () => {
   const { id } = useParams();
@@ -42,10 +49,17 @@ const DeliveryCreditSettlementPrintPage = () => {
     };
   }, [id]);
 
-  const a4HeaderConfig = useMemo(() => record ? buildStoreDocumentHeader({
-    branch: record.branch,
-    documentType: 'DELIVERY_CREDIT_SETTLEMENT',
-  }) : null, [record]);
+  const presentation = useMemo(() => (
+    record ? resolveDeliveryCreditSettlementPresentation({ record, mode }) : null
+  ), [mode, record]);
+
+  const headerConfig = useMemo(() => (
+    record && presentation ? buildDeliveryCreditSettlementHeader({
+      record,
+      presentation,
+      presentationSnapshot: presentation.presentationSnapshot,
+    }) : null
+  ), [presentation, record]);
 
   if (error) return <div className="p-5 text-rose-700">{error}</div>;
   if (!record) return <div className="p-8 text-center text-slate-500">กำลังโหลด...</div>;
@@ -57,19 +71,23 @@ const DeliveryCreditSettlementPrintPage = () => {
     <article className={`mx-auto bg-white text-slate-950 ${isShort ? 'w-[72mm] p-3 text-[11px]' : 'credit-collection-a4 max-w-[190mm] p-8 text-sm'} print:w-auto print:max-w-none print:p-0`}>
       {isShort ? (
         <header className="border-b border-slate-900 pb-3 text-center">
-          <h1 className="text-lg font-bold">เอกสารตัดยอดใบส่งของเครดิต</h1>
+          {headerConfig?.branchName ? <div className="font-bold">{headerConfig.branchName}</div> : null}
+          {[headerConfig?.phone && `โทร ${headerConfig.phone}`, headerConfig?.taxId && `เลขประจำตัวผู้เสียภาษี ${headerConfig.taxId}`].filter(Boolean).length ? (
+            <div className="mt-1 text-[10px]">{[headerConfig?.phone && `โทร ${headerConfig.phone}`, headerConfig?.taxId && `เลขประจำตัวผู้เสียภาษี ${headerConfig.taxId}`].filter(Boolean).join(' · ')}</div>
+          ) : null}
+          <h1 className="mt-3 text-lg font-bold">เอกสารตัดยอดใบส่งของเครดิต</h1>
           <div>CUSTOMER MONEY DELIVERY CREDIT SETTLEMENT</div>
           {isCancelled && <div className="mt-2 border-y-2 border-slate-900 py-1 text-lg font-black">ยกเลิกแล้ว / CANCELLED</div>}
         </header>
       ) : (
         <header className="credit-collection-header border-b border-slate-900 pb-3">
           <div className="credit-collection-store-header flex items-start gap-4">
-            {a4HeaderConfig?.logoUrl ? <img className="credit-collection-store-logo shrink-0 object-contain" src={a4HeaderConfig.logoUrl} alt="โลโก้ร้าน" /> : null}
+            {headerConfig?.logoUrl ? <img className="credit-collection-store-logo shrink-0 object-contain" src={headerConfig.logoUrl} alt="โลโก้ร้าน" /> : null}
             <div className="credit-collection-store-copy min-w-0 flex-1">
-              {a4HeaderConfig?.branchName ? <h1 className="credit-collection-store-name font-bold">{a4HeaderConfig.branchName}</h1> : null}
-              {a4HeaderConfig?.address ? <p className="credit-collection-store-address mt-1">{a4HeaderConfig.address}</p> : null}
-              {a4HeaderConfig?.phone ? <p className="credit-collection-store-phone mt-1">โทร {a4HeaderConfig.phone}</p> : null}
-              {a4HeaderConfig?.taxId ? <p className="credit-collection-store-tax mt-1">เลขประจำตัวผู้เสียภาษี {a4HeaderConfig.taxId}</p> : null}
+              {headerConfig?.branchName ? <h1 className="credit-collection-store-name font-bold">{headerConfig.branchName}</h1> : null}
+              {headerConfig?.address ? <p className="credit-collection-store-address mt-1">{headerConfig.address}</p> : null}
+              {headerConfig?.phone ? <p className="credit-collection-store-phone mt-1">โทร {headerConfig.phone}</p> : null}
+              {headerConfig?.taxId ? <p className="credit-collection-store-tax mt-1">เลขประจำตัวผู้เสียภาษี {headerConfig.taxId}</p> : null}
             </div>
           </div>
           <div className="mt-4 text-center">
@@ -89,8 +107,15 @@ const DeliveryCreditSettlementPrintPage = () => {
       {isCancelled && <div className="mt-3 border border-slate-500 p-2"><b>เหตุผลการยกเลิก:</b> {record.cancelReason || '-'}{record.cancelledAt && <div><b>ยกเลิกเมื่อ:</b> {new Date(record.cancelledAt).toLocaleString('th-TH')}</div>}</div>}
       <div className="mt-4 space-y-3">{record.lines.map((line) => <div key={line.id} className="border-b border-dashed border-slate-300 pb-2"><div className="font-semibold">{line.saleCode} · {line.description}</div><div className="flex justify-between"><span>{line.saleItemType} #{line.saleItemId}</span><span>฿{money(line.appliedAmount)}</span></div></div>)}</div>
       <div className={`mt-4 flex justify-between border-y border-slate-900 py-3 text-lg font-bold ${isCancelled ? 'line-through' : ''}`}><span>ยอดตัดรวม</span><span>฿{money(record.totalAmount)}</span></div>
-      {record.note && <div className="mt-3"><b>หมายเหตุ:</b> {record.note}</div>}
-      <footer className="mt-6 text-center text-[10px] text-slate-600">เอกสารนี้บันทึกการนำ Customer Money ไปตัดยอดใบส่งของเครดิตเท่านั้น ไม่สร้าง stock movement และไม่ตัดสต๊อกซ้ำ</footer>
+      {record.note && <div className="mt-3"><b>หมายเหตุรายการ:</b> {record.note}</div>}
+      <div className={isShort ? 'mt-5' : 'mt-6'}>
+        <FinanceOperationalPresentationFooter
+          notes={presentation?.notes}
+          customFooter={presentation?.customFooter}
+          systemNotices={SYSTEM_NOTICES}
+          compact={isShort}
+        />
+      </div>
     </article>
   );
 
@@ -103,7 +128,7 @@ const DeliveryCreditSettlementPrintPage = () => {
         <button type="button" onClick={() => setMode('SHORT')} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm">80mm</button>
         <button type="button" onClick={() => window.print()} className="rounded-lg bg-indigo-700 px-4 py-2 text-sm font-semibold text-white">พิมพ์</button>
       </div>
-      {isShort ? settlementDocument : <StoreDocumentHeaderScope config={a4HeaderConfig}>{settlementDocument}</StoreDocumentHeaderScope>}
+      {isShort ? settlementDocument : <StoreDocumentHeaderScope config={headerConfig}>{settlementDocument}</StoreDocumentHeaderScope>}
     </div>
   );
 };

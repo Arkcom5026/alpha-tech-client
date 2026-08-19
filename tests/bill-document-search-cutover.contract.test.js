@@ -37,8 +37,11 @@ assert(!page.includes("from '@/features/sales/store/salesStore'"), 'Bill list mu
 assert(!page.includes('printableSales'), 'Bill list must not read legacy printable rows');
 assert(!page.includes('loadPrintableSalesAction'), 'Bill list must not call legacy printable action');
 assert(page.includes('documentSearch.actions.search'), 'Bill list must search through document search owner');
-assert(page.includes("../bill/print-short/${row.id}"), 'Bill list must preserve short print route authority');
-assert(page.includes("../bill/print-full/${row.id}"), 'Bill list must preserve full print route authority');
+assert(page.includes("`../bill/print-short/${sourceId}${sourceQuery}`"), 'Bill list must preserve source-aware short print route authority');
+assert(page.includes("`../bill/print-full/${sourceId}${sourceQuery}`"), 'Bill list must preserve source-aware full print route authority');
+assert(page.includes('CONSOLIDATED_DOCUMENT_SOURCE_TYPE'), 'Bill list must preserve consolidated document source identity');
+assert(page.includes("?sourceType=${CONSOLIDATED_DOCUMENT_SOURCE_TYPE}&sourceId=${encodeURIComponent(sourceId)}"), 'Bill list must preserve consolidated source query authority');
+assert(page.includes("../bill/print-short/${row.id}?document=receipt&paymentId=${row.receiptPaymentId}"), 'Bill list must preserve payment-scoped short receipt route');
 
 assert(policy.includes("id: 'BILL'"), 'Bill policy identity must remain explicit');
 assert(policy.includes('onlyPaid: 1'), 'Bill policy must preserve paid-only query semantics');

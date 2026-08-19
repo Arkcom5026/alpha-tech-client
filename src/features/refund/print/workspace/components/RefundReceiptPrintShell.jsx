@@ -1,5 +1,10 @@
 import React from 'react';
+import FinanceOperationalPresentationFooter from '@/features/printing/presentation/FinanceOperationalPresentationFooter';
 import { formatRefundReceiptMoney } from '../policies/refundReceiptPrintPolicy';
+
+const REFUND_SYSTEM_NOTICES = Object.freeze([
+  'โปรดเก็บเอกสารนี้ไว้เป็นหลักฐานการคืนเงิน',
+]);
 
 const RefundReceiptPrintShell = ({ projection, toolbar }) => {
   const {
@@ -13,18 +18,22 @@ const RefundReceiptPrintShell = ({ projection, toolbar }) => {
     totalAmount,
     remainingAmount,
     branch,
+    presentation,
   } = projection;
 
   return (
     <div className="w-[794px] h-[1123px] mx-auto p-8 bg-white text-black text-sm print:block" style={{ fontFamily: 'TH Sarabun New' }}>
       <div className="flex justify-between items-start mb-6">
-        <div>
-          <h1 className="text-lg font-bold">{branch.name}</h1>
-          <p>{branch.address}</p>
-          <p>โทร: {branch.phone}</p>
-          <p>เลขผู้เสียภาษี: {branch.taxId}</p>
-          <p>อีเมล: {branch.email}</p>
-          <p>ผู้ติดต่อ: {branch.contactName}</p>
+        <div className="flex items-start gap-3">
+          {branch.logoUrl ? <img src={branch.logoUrl} alt="โลโก้ร้าน" className="h-14 w-14 shrink-0 object-contain" /> : null}
+          <div>
+            <h1 className="text-lg font-bold">{branch.name}</h1>
+            <p>{branch.address}</p>
+            <p>โทร: {branch.phone}</p>
+            <p>เลขผู้เสียภาษี: {branch.taxId}</p>
+            {branch.email && branch.email !== '-' ? <p>อีเมล: {branch.email}</p> : null}
+            {branch.contactName && branch.contactName !== '-' ? <p>ผู้ติดต่อ: {branch.contactName}</p> : null}
+          </div>
         </div>
         {toolbar}
       </div>
@@ -83,7 +92,13 @@ const RefundReceiptPrintShell = ({ projection, toolbar }) => {
         </div>
       </div>
 
-      <p className="mt-10 text-xs text-center">โปรดเก็บเอกสารนี้ไว้เป็นหลักฐานการคืนเงิน</p>
+      <div className="mt-8">
+        <FinanceOperationalPresentationFooter
+          notes={presentation?.notes}
+          customFooter={presentation?.customFooter}
+          systemNotices={REFUND_SYSTEM_NOTICES}
+        />
+      </div>
     </div>
   );
 };

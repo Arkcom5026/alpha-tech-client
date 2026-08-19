@@ -29,7 +29,7 @@ test('customer tracking is status-first and keeps secondary job data on demand',
   const source = read('src/features/repair/customer-tracking/pages/CustomerRepairTrackingPage.jsx');
 
   assert.match(source, /ตอนนี้งานของคุณ/);
-  assert.match(source, /อัปเดตล่าสุด \{formatDateTime\(repair\.lastUpdatedAt\)\}/);
+  assert.match(source, /อัปเดตล่าสุด \{formatDateTime\(headline\.updatedAt\)\}/);
   assert.match(source, /const recentTimeline = \[\.\.\.timeline\]\.slice\(-3\)\.reverse\(\)/);
   assert.match(source, /ดูประวัติก่อนหน้าอีก/);
   assert.match(source, /<details className="rounded-3xl border border-slate-200 bg-white shadow-sm">/);
@@ -37,6 +37,18 @@ test('customer tracking is status-first and keeps secondary job data on demand',
   assert.match(source, /const hasMeaningfulEstimate/);
   assert.match(source, /hasMeaningfulEstimate \? \(/);
   assert.match(source, /ลิงก์นี้ใช้ติดตามสถานะงานล่าสุดได้โดยไม่ต้องโทรสอบถามร้าน/);
+});
+
+test('customer headline follows latest customer-visible progress without changing workflow stage', () => {
+  const source = read('src/features/repair/customer-tracking/pages/CustomerRepairTrackingPage.jsx');
+
+  assert.match(source, /const getCustomerHeadline = \(\{ status, handover, timeline, fallbackUpdatedAt \}\) =>/);
+  assert.match(source, /const latestVisibleEvent = timeline\.length \? timeline\[timeline\.length - 1\] : null/);
+  assert.match(source, /label: latestVisibleEvent\.title \|\| resolvedStatus\.label/);
+  assert.match(source, /description: latestVisibleEvent\.description \|\| resolvedStatus\.description/);
+  assert.match(source, /updatedAt: latestVisibleEvent\.occurredAt \|\| fallbackUpdatedAt/);
+  assert.match(source, /const stage = Number\(headline\.stage \|\| 0\)/);
+  assert.match(source, /status=\{headline\}/);
 });
 
 test('customer tracking surfaces follow the mint-green system standard', () => {

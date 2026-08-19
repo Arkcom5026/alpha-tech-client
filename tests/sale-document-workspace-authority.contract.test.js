@@ -62,7 +62,9 @@ assert(billShort.includes('useBillDocumentSource'), 'Bill Short must hydrate thr
 assert(billFull.includes('useBillDocumentSource'), 'Bill Full must hydrate through shared bill document source authority');
 assert(billDocumentSource.includes('useBillStore'), 'Shared bill document source must retain billStore authority for SALE documents');
 assert(billDocumentSource.includes('billStore.loadSaleByIdAction('), 'Shared bill document source must retain billStore server hydration authority');
-assert(deliveryNote.includes('loadSaleDocument({ saleId })'), 'Delivery Note must load through the Workspace command API');
+assert(deliveryNote.includes('loadSaleDocument({ saleId: sourceId })'), 'Delivery Note must load SALE sources through the Workspace command API');
+assert(deliveryNote.includes('loadSaleDeliveryNoteAuthority({ saleId: sourceId })'), 'Delivery Note must load presentation authority alongside the SALE document');
+assert(deliveryNote.includes('getConsolidatedDeliveryPrintable(sourceId)'), 'Delivery Note must support consolidated document sources explicitly');
 assert(!deliveryNote.includes('location.state'), 'Delivery Note must not use navigation snapshot authority');
 assert(!deliveryNote.includes('getSaleByIdAction'), 'Delivery Note must not use legacy hydration authority');
 assert(deliveryNote.includes('useSaleDocumentLineEditor'), 'Delivery Note must use the shared editor');

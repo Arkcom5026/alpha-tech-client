@@ -9,10 +9,18 @@ on:
       - 'src/features/quotation/presentation/**'
       - 'src/features/quotation/components/QuotationPresentationFooter.jsx'
       - 'src/features/quotation/pages/QuotationPrintPage.jsx'
+      - 'src/features/deliveryNote/presentation/**'
+      - 'src/features/deliveryNote/components/DeliveryNotePresentationFooter.jsx'
+      - 'src/features/deliveryNote/pages/PrintDeliveryNotePage.jsx'
+      - 'src/features/deliveryNote/print/workspace/components/DeliveryNotePrintShell.jsx'
+      - 'src/features/sales/documents/workspace/api/saleDocumentWorkspaceApi.js'
+      - 'src/features/sales/documents/workspace/index.js'
       - 'src/features/settings/components/QuotationPresentationSettingsCard.jsx'
+      - 'src/features/settings/components/DeliveryNotePresentationSettingsCard.jsx'
       - 'src/features/settings/pages/DocumentFormatSettingsPage.jsx'
       - 'tests/document-presentation-v2-foundation.contract.test.js'
       - 'tests/quotation-document-presentation-wave1.contract.test.js'
+      - 'tests/delivery-note-document-presentation-wave2.contract.test.js'
       - '.github/workflows/document-presentation-v2.yml'
   workflow_dispatch:
 
@@ -34,5 +42,7 @@ jobs:
         run: node tests/document-presentation-v2-foundation.contract.test.js
       - name: Run Quotation Document Presentation Wave 1 contract
         run: node tests/quotation-document-presentation-wave1.contract.test.js
+      - name: Run Delivery Note Document Presentation Wave 2 contract
+        run: node tests/delivery-note-document-presentation-wave2.contract.test.js
       - name: Typecheck
         run: npm run typecheck

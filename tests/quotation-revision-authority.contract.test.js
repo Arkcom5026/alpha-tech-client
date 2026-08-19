@@ -31,7 +31,8 @@ for (const token of [
 for (const token of [
   'getQuotationRevisionHistory',
   'createQuotationRevision',
-  "runLifecycle('revision')",
+  "requestLifecycle('revision')",
+  'const executeLifecycle = async () =>',
   'สร้างฉบับแก้ไข',
   'ฉบับเดิมจะไม่ถูกแก้ไข',
   'data-testid="quotation-revision-history"',

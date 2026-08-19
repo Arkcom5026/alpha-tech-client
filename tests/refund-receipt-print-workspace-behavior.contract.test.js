@@ -19,10 +19,13 @@ describe('refund receipt print workspace behavior contract', () => {
     expect(page).toContain('setSaleReturn(result)');
   });
 
-  it('preserves the current branch presentation source before authority modernization', () => {
+  it('preserves branch source while layering resolved presentation authority', () => {
     expect(page).toContain("useEmployeeStore from '@/features/employee/store/employeeStore'");
     expect(page).toContain('const { branch } = useEmployeeStore()');
-    expect(page).toContain('prepareRefundReceiptPrintProjection(saleReturn, branch)');
+    expect(page).toContain('resolveRefundReceiptPresentation({ saleReturn, branch })');
+    expect(page).toContain('buildRefundReceiptHeader({');
+    expect(page).toContain('presentationSnapshot: presentation.presentationSnapshot');
+    expect(page).toContain('prepareRefundReceiptPrintProjection(saleReturn, branch, {');
     expect(policy).toContain("name: branch?.name || '-'");
     expect(policy).toContain("taxId: branch?.taxId || '-'");
   });
@@ -36,7 +39,7 @@ describe('refund receipt print workspace behavior contract', () => {
   });
 
   it('preserves refund aggregation and remaining-amount semantics across policy ownership', () => {
-    expect(page).toContain('prepareRefundReceiptPrintProjection(saleReturn, branch)');
+    expect(page).toContain('prepareRefundReceiptPrintProjection(saleReturn, branch, {');
     expect(policy).toContain('refundTransactions.reduce');
     expect(policy).toContain('Number(transaction?.amount || 0)');
     expect(policy).toContain('remainingAmount: totalRefund - totalAmount - deductedAmount');

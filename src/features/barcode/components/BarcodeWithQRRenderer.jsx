@@ -1,5 +1,8 @@
 import React from 'react';
-import QRCode from 'react-qr-code';
+import * as QRCodeModule from 'react-qr-code';
+import resolveQrCodeComponent from '../../repair/customer-access/utils/resolveQrCodeComponent';
+
+const QRCode = resolveQrCodeComponent(QRCodeModule);
 
 const BarcodeWithQRRenderer = ({
   barcodeValue,
@@ -53,7 +56,7 @@ const BarcodeWithQRRenderer = ({
         </div>
       ) : null}
 
-      {qrValue ? (
+      {qrValue && QRCode ? (
         <div className="mt-1">
           <QRCode value={qrValue} size={60} />
         </div>

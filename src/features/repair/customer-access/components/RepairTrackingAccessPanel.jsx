@@ -1,7 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import QRCode from 'react-qr-code';
+import * as QRCodeModule from 'react-qr-code';
 import repairApi from '../../api/repairApi';
+import resolveQrCodeComponent from '../utils/resolveQrCodeComponent';
 import { ConfirmActionDialog, feedback } from '@/design-system';
+
+const QRCode = resolveQrCodeComponent(QRCodeModule);
 
 const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
   const [access, setAccess] = useState(null);
@@ -107,7 +110,13 @@ const RepairTrackingAccessPanel = ({ repairJobId, jobNo }) => {
       {access && trackingUrl ? (
         <div className="mt-5 grid gap-5 rounded-2xl border border-blue-100 bg-white p-4 md:grid-cols-[160px_1fr] md:items-center">
           <div className="mx-auto rounded-2xl border border-slate-200 bg-white p-3">
-            <QRCode value={trackingUrl} size={132} level="M" />
+            {QRCode ? (
+              <QRCode value={trackingUrl} size={132} level="M" />
+            ) : (
+              <div className="flex h-[132px] w-[132px] items-center justify-center rounded-xl bg-slate-50 p-3 text-center text-xs font-bold text-slate-500">
+                QR ไม่พร้อมใช้งาน กรุณาใช้ลิงก์ด้านข้าง
+              </div>
+            )}
           </div>
           <div className="min-w-0">
             <p className="text-xs font-black text-slate-500">ลิงก์สำหรับส่งให้ลูกค้า</p>

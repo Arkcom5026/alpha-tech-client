@@ -9,8 +9,7 @@ export const resolveSaleDocumentRoute = ({ shopSlug, saleId, option, paymentId }
   if (option === 'RECEIPT') return `/${slug}/pos/sales/print-short/${id}`;
   if (option === 'TAX_INVOICE') return `/${slug}/pos/sales/print-full/${id}`;
   if (option === 'DELIVERY_NOTE') return `/${slug}/pos/sales/delivery-note/print/${id}`;
-  if (option === 'TAX_DOCUMENT_SHORT' || option === 'TAX_DOCUMENT_FULL') {
-    return `/${slug}/pos/sales/tax-document/print/${id}`;
-  }
+  if (option === 'TAX_DOCUMENT_SHORT') return `/${slug}/pos/sales/tax-document/print-short/${id}`;
+  if (option === 'TAX_DOCUMENT_FULL') return `/${slug}/pos/sales/tax-document/print-full/${id}`;
   return null;
 };

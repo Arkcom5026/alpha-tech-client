@@ -44,6 +44,26 @@ const getCustomerFacingStatus = (status = {}, handover = null) => {
   return status;
 };
 
+const getCustomerHeadline = ({ status, handover, timeline, fallbackUpdatedAt }) => {
+  const resolvedStatus = getCustomerFacingStatus(status, handover);
+  const handoverOwnsHeadline = handover?.status === 'DELIVERED' || Boolean(handover?.customerConfirmedAt);
+  const latestVisibleEvent = timeline.length ? timeline[timeline.length - 1] : null;
+
+  if (!latestVisibleEvent || handoverOwnsHeadline) {
+    return {
+      ...resolvedStatus,
+      updatedAt: fallbackUpdatedAt,
+    };
+  }
+
+  return {
+    ...resolvedStatus,
+    label: latestVisibleEvent.title || resolvedStatus.label,
+    description: latestVisibleEvent.description || resolvedStatus.description,
+    updatedAt: latestVisibleEvent.occurredAt || fallbackUpdatedAt,
+  };
+};
+
 const ACCESSORY_LABELS = {
   CHARGER: 'ที่ชาร์จ',
   POWER_ADAPTER: 'อะแดปเตอร์',
@@ -111,9 +131,14 @@ const CustomerRepairTrackingPage = () => {
 
   const repair = tracking.repair;
   const repairAsset = repair.repairAsset || {};
-  const status = getCustomerFacingStatus(repair.status || {}, repair.handover);
-  const stage = Number(status.stage || 0);
   const timeline = repair.timeline || [];
+  const headline = getCustomerHeadline({
+    status: repair.status || {},
+    handover: repair.handover,
+    timeline,
+    fallbackUpdatedAt: repair.lastUpdatedAt,
+  });
+  const stage = Number(headline.stage || 0);
   const recentTimeline = [...timeline].slice(-3).reverse();
   const olderTimeline = timeline.length > 3 ? timeline.slice(0, -3) : [];
   const estimate = repair.estimate || {};
@@ -141,10 +166,10 @@ const CustomerRepairTrackingPage = () => {
 
           <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 sm:px-5">
             <p className="text-xs font-black text-emerald-700">ตอนนี้งานของคุณ</p>
-            <p className="mt-1 text-2xl font-black text-slate-950">{status.label}</p>
-            <p className="mt-1 text-sm leading-6 text-slate-600">{status.description}</p>
+            <p className="mt-1 text-2xl font-black text-slate-950">{headline.label}</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">{headline.description}</p>
             <p className="mt-3 text-xs font-bold text-emerald-800/70">
-              อัปเดตล่าสุด {formatDateTime(repair.lastUpdatedAt)}
+              อัปเดตล่าสุด {formatDateTime(headline.updatedAt)}
             </p>
           </section>
 
@@ -186,7 +211,7 @@ const CustomerRepairTrackingPage = () => {
         />
         <PickupConfirmationCard
           token={token}
-          status={status}
+          status={headline}
           handover={repair.handover}
           defaultReceiverName={repair.pickupDefaults?.receiverName || ''}
           onChanged={(handover) =>

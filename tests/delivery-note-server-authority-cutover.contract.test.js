@@ -14,14 +14,16 @@ describe('Delivery Note server authority cutover contract', () => {
   it('uses the shared document workspace boundary with the required command shape', () => {
     expect(page).toContain("from '@/features/sales/documents/workspace'");
     expect(page).toContain('loadSaleDocument({ saleId: sourceId })');
+    expect(page).toContain('loadSaleDeliveryNoteAuthority({ saleId: sourceId })');
     expect(page).not.toContain('loadSaleDocument(saleId)');
     expect(workspaceApi).toContain('loadSaleDocument = async ({ saleId, paymentId } = {})');
     expect(workspaceApi).toContain('getSaleById');
   });
 
   it('uses route saleId as the normal sale document identity authority while allowing consolidated source routing', () => {
-    expect(page).toContain('const { saleId } = useParams()');
+    expect(page).toContain('const { saleId, shopSlug } = useParams()');
     expect(page).toContain("const sourceId = searchParams.get('sourceId') || saleId");
+    expect(page).toContain("const sourceType = String(searchParams.get('sourceType') || 'SALE').toUpperCase()");
     expect(routes).toContain("{ path: 'print/:saleId', element: <PrintDeliveryNotePage /> }");
   });
 

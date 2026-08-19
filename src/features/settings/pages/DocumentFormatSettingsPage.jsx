@@ -16,6 +16,7 @@ import {
 import CombinedBillingPresentationSettingsCard from '@/features/settings/components/CombinedBillingPresentationSettingsCard';
 import CustomerReceiptPresentationSettingsCard from '@/features/settings/components/CustomerReceiptPresentationSettingsCard';
 import DeliveryNotePresentationSettingsCard from '@/features/settings/components/DeliveryNotePresentationSettingsCard';
+import FinanceOperationalPresentationSettingsCard from '@/features/settings/components/FinanceOperationalPresentationSettingsCard';
 import PurchaseOrderPresentationSettingsCard from '@/features/settings/components/PurchaseOrderPresentationSettingsCard';
 import QuotationPresentationSettingsCard from '@/features/settings/components/QuotationPresentationSettingsCard';
 import StatutoryPresentationSettingsCard from '@/features/settings/components/StatutoryPresentationSettingsCard';
@@ -152,6 +153,20 @@ const DocumentFormatSettingsPage = () => {
       <QuotationPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <DeliveryNotePresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <CustomerReceiptPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
+      <FinanceOperationalPresentationSettingsCard
+        branch={branch}
+        branchId={branchId}
+        updateBranch={updateBranch}
+        onBranchChange={setBranch}
+        documentPurpose="CUSTOMER_MONEY_RECEIPT"
+        title="ใบรับเงิน Customer Money"
+        description="กำหนดหมายเหตุและข้อความท้ายใบรับเงินจริง โดยสถานะ Customer Money ข้อความว่าไม่ใช่ใบกำกับภาษี และผลต่อสต๊อก/ภาษีเป็นข้อความระบบที่ถูกล็อก"
+        systemNotices={[
+          'เอกสารนี้เป็นหลักฐานการรับเงินจริงจากลูกค้า',
+          'ยอดคงเหลือของใบรับนี้ยังสามารถนำไปใช้ผ่าน Customer Money workflow ได้',
+          'ไม่ใช่ใบกำกับภาษี และไม่ก่อให้เกิดการตัดสต๊อกหรือรายการภาษีจากการรับเงินนี้',
+        ]}
+      />
       <PurchaseOrderPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <CombinedBillingPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} />
       <StatutoryPresentationSettingsCard branch={branch} branchId={branchId} updateBranch={updateBranch} onBranchChange={setBranch} documentPurpose="FULL_TAX_INVOICE" title="ใบกำกับภาษีเต็มรูป" description="ปรับได้เฉพาะองค์ประกอบด้านภาพและข้อความเสริมที่กฎหมายไม่กำหนด ข้อมูลผู้ออก/ผู้รับ เลขเอกสาร วันที่ รายการ และยอดภาษีใช้ TaxDocument snapshot เท่านั้น" />

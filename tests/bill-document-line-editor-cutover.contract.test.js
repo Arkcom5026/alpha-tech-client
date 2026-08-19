@@ -9,46 +9,49 @@ const shortPage = read('src/features/bill/pages/PrintBillPageShortTax.jsx');
 const shortRuntime = read('src/features/bill/shortTax/print/workspace/runtime/useBillShortTaxPrintRuntime.js');
 const shortShell = read('src/features/bill/shortTax/print/workspace/components/BillShortTaxPrintShell.jsx');
 const fullPage = read('src/features/bill/pages/PrintBillPageFullTax.jsx');
+const billDocumentSource = read('src/features/bill/hooks/useBillDocumentSource.js');
 const rootStore = read('src/features/sales/store/salesStore.js');
 const documentSlice = read('src/features/sales/documents/store/saleDocumentRuntimeSlice.js');
 const workspaceIndex = read('src/features/sales/documents/workspace/index.js');
 
-const billPages = [shortPage, fullPage];
-
 describe('Bill document-line editor atomic cutover contract', () => {
-  it('cuts both Bill workspaces over to the shared workspace boundary', () => {
-    for (const source of billPages) {
-      expect(source).toContain("from '@/features/sales/documents/workspace'");
-      expect(source).toContain('useSaleDocumentLineEditor');
-      expect(source).not.toContain("from '@/features/sales/store/salesStore'");
-      expect(source).not.toContain('updateSaleDocumentLinesAction');
-    }
+  it('keeps SALE and consolidated Bill editors behind certified workspace boundaries', () => {
+    expect(shortPage).toContain("from '@/features/sales/documents/workspace'");
+    expect(shortPage).toContain('useSaleDocumentLineEditor');
+    expect(fullPage).toContain('useBillDocumentLineEditor');
+    expect(fullPage).toContain('executeSaleDocumentLineUpdate');
+    expect(fullPage).toContain('executeConsolidatedDocumentLineUpdate');
+    expect(shortPage).not.toContain("from '@/features/sales/store/salesStore'");
+    expect(fullPage).not.toContain("from '@/features/sales/store/salesStore'");
+    expect(shortPage).not.toContain('updateSaleDocumentLinesAction');
+    expect(fullPage).not.toContain('updateSaleDocumentLinesAction');
   });
 
-  it('preserves billStore as the server hydration and print projection owner', () => {
-    for (const source of billPages) {
-      expect(source).toContain('useBillStore');
-      expect(source).toContain('loadSaleByIdAction');
-      expect(source).toContain('resetAction()');
-      expect(source).toContain('reload: reloadSaleForPrint');
-    }
+  it('preserves billStore as SALE server hydration authority through shared document source', () => {
+    expect(shortPage).toContain('useBillDocumentSource');
+    expect(fullPage).toContain('useBillDocumentSource');
+    expect(billDocumentSource).toContain('useBillStore()');
+    expect(billDocumentSource).toContain('billStore.loadSaleByIdAction(');
+    expect(billDocumentSource).toContain('billStore.resetAction()');
+    expect(shortPage).toContain('reload: reloadForPrint');
+    expect(fullPage).toContain('reload: reloadForPrint');
   });
 
-  it('projects the shared editor contract into the existing renderers', () => {
+  it('projects the editor contracts into the existing renderers', () => {
     expect(shortPage).toContain('documentLineEditor={documentLineEditor}');
-    expect(shortShell).toContain('editingLineKey={documentLineEditor.editingLineKey}');
-    expect(shortShell).toContain('lineDrafts={documentLineEditor.lineDrafts}');
-    expect(shortShell).toContain('savingLineKey={documentLineEditor.savingLineKey}');
-    expect(shortShell).toContain('onToggleDocumentLineEdit={documentLineEditor.actions.toggle}');
-    expect(shortShell).toContain('onChangeDocumentLineDraft={documentLineEditor.actions.change}');
-    expect(shortShell).toContain('onSaveDocumentLine={documentLineEditor.actions.save}');
+    expect(shortShell).toContain('editingLineKey={editableDocumentLines ? documentLineEditor?.editingLineKey : null}');
+    expect(shortShell).toContain('lineDrafts={editableDocumentLines ? documentLineEditor?.lineDrafts : {}}');
+    expect(shortShell).toContain('savingLineKey={editableDocumentLines ? documentLineEditor?.savingLineKey : null}');
+    expect(shortShell).toContain('onToggleDocumentLineEdit={editableDocumentLines ? documentLineEditor?.actions?.toggle : undefined}');
+    expect(shortShell).toContain('onChangeDocumentLineDraft={editableDocumentLines ? documentLineEditor?.actions?.change : undefined}');
+    expect(shortShell).toContain('onSaveDocumentLine={editableDocumentLines ? documentLineEditor?.actions?.save : undefined}');
 
-    expect(fullPage).toContain('editingLineKey={documentLineEditor.editingLineKey}');
-    expect(fullPage).toContain('lineDrafts={documentLineEditor.lineDrafts}');
-    expect(fullPage).toContain('savingLineKey={documentLineEditor.savingLineKey}');
-    expect(fullPage).toContain('onToggleDocumentLineEdit={documentLineEditor.actions.toggle}');
-    expect(fullPage).toContain('onChangeDocumentLineDraft={documentLineEditor.actions.change}');
-    expect(fullPage).toContain('onSaveDocumentLine={documentLineEditor.actions.save}');
+    expect(fullPage).toContain('editingLineKey={canEditDocumentLines ? documentLineEditor.editingLineKey : null}');
+    expect(fullPage).toContain('lineDrafts={canEditDocumentLines ? documentLineEditor.lineDrafts : {}}');
+    expect(fullPage).toContain('savingLineKey={canEditDocumentLines ? documentLineEditor.savingLineKey : null}');
+    expect(fullPage).toContain('onToggleDocumentLineEdit={canEditDocumentLines ? documentLineEditor.actions.toggle : undefined}');
+    expect(fullPage).toContain('onChangeDocumentLineDraft={canEditDocumentLines ? documentLineEditor.actions.change : undefined}');
+    expect(fullPage).toContain('onSaveDocumentLine={canEditDocumentLines ? documentLineEditor.actions.save : undefined}');
   });
 
   it('preserves document-specific renderers and print behavior across workspace ownership', () => {
@@ -58,7 +61,7 @@ describe('Bill document-line editor atomic cutover contract', () => {
     expect(shortRuntime).toContain("window.addEventListener('afterprint'");
     expect(shortRuntime).toContain('printAndReturnToSale');
 
-    expect(fullPage).toContain('BillLayoutFullTax');
+    expect(fullPage).toContain('FullTaxA4Document');
     expect(fullPage).toContain('window.print?.()');
     expect(fullPage).toContain('autoPrint');
   });

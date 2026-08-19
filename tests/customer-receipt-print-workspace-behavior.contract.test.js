@@ -60,7 +60,7 @@ describe('customer receipt print workspace behavior contract', () => {
 
   it('keeps full and short receipt layouts plus print media semantics intact across workspace ownership', () => {
     expect(runtime).toContain("printMode === 'SHORT' ? '80mm auto' : 'A4'");
-    expect(runtime).toContain("printMode === 'SHORT' ? '0' : '10mm'");
+    expect(runtime).toContain("printMode === 'SHORT' ? '0' : '4mm'");
     expect(runtime).toContain('CustomerReceiptShortPrintLayout receipt={receipt}');
     expect(runtime).toContain('CustomerReceiptPrintLayout receipt={receipt}');
     expect(runtime).toContain("onChangeMode?.('FULL')");

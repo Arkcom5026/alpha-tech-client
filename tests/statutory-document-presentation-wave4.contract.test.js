@@ -11,6 +11,7 @@ describe('Statutory Document Presentation Wave 4', () => {
   const creditNote = read('src/features/sales/return/pages/PrintCreditNotePage.jsx')
   const taxApi = read('src/features/tax/intake/api/taxIntakeApi.js')
   const canonicalPrintPage = read('src/features/combinedBilling/pages/PrintConsolidatedTaxPage.jsx')
+  const canonicalFullTaxRenderer = read('src/features/combinedBilling/bill/components/FullTaxA4Document.jsx')
   const statutorySettings = read('src/features/settings/components/StatutoryPresentationSettingsCard.jsx')
   const settingsPage = read('src/features/settings/pages/DocumentFormatSettingsPage.jsx')
 
@@ -68,6 +69,31 @@ describe('Statutory Document Presentation Wave 4', () => {
     expect(canonicalPrintPage).not.toContain('getConsolidatedTaxPrintable')
     expect(canonicalPrintPage).not.toContain('branchName: legalHeader.storeName')
     expect(canonicalPrintPage).not.toContain('taxId: legalHeader.taxId')
+  })
+
+  it('reserves bounded last-page geometry in the canonical full-tax renderer only when a footer is visible', () => {
+    expect(canonicalPrintPage).toContain('presentationFooter={view.presentationFooter}')
+    expect(canonicalFullTaxRenderer).toContain('const MAX_ROWS_LAST_PAGE = 20;')
+    expect(canonicalFullTaxRenderer).toContain('const MAX_ROWS_NORMAL_PAGE = 24;')
+    expect(canonicalFullTaxRenderer).toContain('const MAX_ROWS_LAST_PAGE_WITH_PRESENTATION_FOOTER = 17;')
+    expect(canonicalFullTaxRenderer).toContain('const PRESENTATION_FOOTER_HEIGHT_MM = 18;')
+    expect(canonicalFullTaxRenderer).toContain('paginateItemsWithReservedFooter(displayItems)')
+    expect(canonicalFullTaxRenderer).toContain('hasPresentationFooter ? MAX_ROWS_LAST_PAGE_WITH_PRESENTATION_FOOTER : MAX_ROWS_LAST_PAGE')
+    expect(canonicalFullTaxRenderer).toContain('data-testid="full-tax-presentation-footer-zone"')
+    expect(canonicalFullTaxRenderer).toContain('bottom-[50mm]')
+    expect(canonicalFullTaxRenderer).toContain('overflow-hidden')
+    expect(canonicalFullTaxRenderer).toContain('height: `${PRESENTATION_FOOTER_HEIGHT_MM}mm`')
+    expect(canonicalFullTaxRenderer).toContain('className="absolute bottom-[28mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-5 text-[13px]"')
+    expect(canonicalFullTaxRenderer).toContain('className="absolute bottom-[5mm] left-[6mm] right-[6mm] grid grid-cols-2 gap-12 text-center text-[15px]"')
+  })
+
+  it('keeps statutory footer content structured and never enables arbitrary markup or style injection', () => {
+    expect(canonicalFullTaxRenderer).toContain('<StatutoryTaxPresentationFooter')
+    expect(canonicalFullTaxRenderer).toContain('notes={normalizedPresentationFooter.notes}')
+    expect(canonicalFullTaxRenderer).toContain('customFooter={normalizedPresentationFooter.customFooter}')
+    expect(canonicalFullTaxRenderer).not.toContain('dangerouslySetInnerHTML')
+    expect(canonicalFullTaxRenderer).not.toContain('presentationFooter?.html')
+    expect(canonicalFullTaxRenderer).not.toContain('presentationFooter?.css')
   })
 
   it('exposes statutory settings without legal identity edit fields', () => {

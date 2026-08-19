@@ -13,6 +13,7 @@ import {
   normalizeLogoSize,
   projectDocumentHeaderFormDefaults,
 } from '@/features/branch/documentHeader/documentHeaderConfig';
+import DeliveryNotePresentationSettingsCard from '@/features/settings/components/DeliveryNotePresentationSettingsCard';
 import QuotationPresentationSettingsCard from '@/features/settings/components/QuotationPresentationSettingsCard';
 import StorefrontMediaUploadField from '@/features/storeExperience/components/StorefrontMediaUploadField';
 import { uploadStorefrontMedia } from '@/features/storeExperience/api/storeExperienceApi';
@@ -252,6 +253,13 @@ const DocumentFormatSettingsPage = () => {
       </div>
 
       <QuotationPresentationSettingsCard
+        branch={branch}
+        branchId={branchId}
+        updateBranch={updateBranch}
+        onBranchChange={setBranch}
+      />
+
+      <DeliveryNotePresentationSettingsCard
         branch={branch}
         branchId={branchId}
         updateBranch={updateBranch}

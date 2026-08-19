@@ -59,4 +59,11 @@ describe('Tax document print authority and controls contract', () => {
     expect(toolbar).toContain('รายการขายเดียวกันได้ทั้งแบบย่อและเต็มรูป');
     expect(toolbar).toContain('ไม่เปลี่ยนชนิดเอกสารภาษีที่ออกจริง');
   });
+
+  it('keeps full-tax line content vertically centered within each table row', () => {
+    const fullTaxPage = read('src/features/bill/pages/PrintBillPageFullTax.jsx');
+
+    expect(fullTaxPage).toContain('.full-tax-print-shell .full-tax-a4-page tbody td');
+    expect(fullTaxPage).toContain('vertical-align: middle !important;');
+  });
 });

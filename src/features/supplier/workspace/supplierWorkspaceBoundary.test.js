@@ -45,7 +45,10 @@ describe('supplier workspace boundary', () => {
     expect(edit).toContain('deleteSupplierAction');
     expect(edit).toContain('navigate(paths.view(id))');
     expect(legacyUpdate).toContain('sanitizeLegacySupplierUpdatePayload');
-    expect(legacyUpdate).toContain('updateSupplier(id,');
+    expect(legacyUpdate).toContain('const supplierIdSnapshot = id;');
+    expect(legacyUpdate).toContain('const payloadSnapshot = sanitizeLegacySupplierUpdatePayload(formData);');
+    expect(legacyUpdate).toContain('await updateSupplier(supplierIdSnapshot, payloadSnapshot);');
+    expect(legacyUpdate).toContain('supplierContextRef.current');
     expect(legacyUpdate).not.toContain('deleteSupplierAction');
   });
 });

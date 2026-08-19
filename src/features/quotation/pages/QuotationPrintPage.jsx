@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { getBranchById } from '@/features/branch/api/branchApi';
 import { buildStoreDocumentHeader } from '@/features/branch/documentHeader/documentHeaderConfig';
 import { ConfirmActionDialog, feedback } from '@/design-system';
+import { listStorePaymentAccounts } from '@/features/printing/presentation/storePaymentAccountApi';
 import {
   acceptQuotation,
   addQuotationLine,
@@ -15,6 +16,14 @@ import {
   rejectQuotation,
   updateQuotationLine,
 } from '../api/quotationApi';
+import QuotationPresentationFooter from '../components/QuotationPresentationFooter';
+import {
+  quotationTypographyPx,
+  resolveQuotationPaymentAccountDisplay,
+  resolveQuotationPaymentAccounts,
+  resolveQuotationPresentation,
+  resolveQuotationTerms,
+} from '../presentation/quotationPresentation';
 import { calculateQuotationTotals, isVatInclusiveQuotation } from '../utils/quotationPricing';
 
 const money = (value) => Number(value || 0).toLocaleString('th-TH', {
@@ -57,6 +66,7 @@ const QuotationPrintPage = () => {
   const [quotation, setQuotation] = useState(null);
   const [revisionHistory, setRevisionHistory] = useState([]);
   const [draftBranch, setDraftBranch] = useState(null);
+  const [draftPaymentAccounts, setDraftPaymentAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingLineId, setEditingLineId] = useState(null);
   const [lineDraft, setLineDraft] = useState(null);
@@ -88,13 +98,25 @@ const QuotationPrintPage = () => {
         if (!alive) return;
         setQuotation(document);
         setRevisionHistory(Array.isArray(history) ? history : []);
+
         if (!document?.documentHeaderSnapshot && document?.branchId) {
           try {
-            const currentBranch = unwrapBranch(await getBranchById(document.branchId));
-            if (alive) setDraftBranch(currentBranch);
+            const [branchPayload, accounts] = await Promise.all([
+              getBranchById(document.branchId),
+              listStorePaymentAccounts().catch(() => []),
+            ]);
+            if (!alive) return;
+            setDraftBranch(unwrapBranch(branchPayload));
+            setDraftPaymentAccounts(Array.isArray(accounts) ? accounts : []);
           } catch (_) {
-            if (alive) setDraftBranch(null);
+            if (alive) {
+              setDraftBranch(null);
+              setDraftPaymentAccounts([]);
+            }
           }
+        } else {
+          setDraftBranch(null);
+          setDraftPaymentAccounts([]);
         }
       } catch (error) {
         feedback.actionError(error, 'โหลดใบเสนอราคาสำหรับพิมพ์ไม่สำเร็จ', `quotation:${quotationId}:print:error`);
@@ -117,6 +139,28 @@ const QuotationPrintPage = () => {
       taxId: branch?.taxId || '-',
     },
   }), [branch]);
+
+  const presentation = useMemo(
+    () => resolveQuotationPresentation({ quotation, branch }),
+    [quotation, branch],
+  );
+  const quotationTerms = useMemo(
+    () => resolveQuotationTerms({ quotation, presentation }),
+    [quotation, presentation],
+  );
+  const paymentAccounts = useMemo(
+    () => resolveQuotationPaymentAccounts({
+      quotation,
+      activeAccounts: draftPaymentAccounts,
+      presentation,
+    }),
+    [quotation, draftPaymentAccounts, presentation],
+  );
+  const paymentAccountDisplay = useMemo(
+    () => resolveQuotationPaymentAccountDisplay(presentation),
+    [presentation],
+  );
+  const footerFontSizePx = quotationTypographyPx(presentation, 'footer', 'md');
 
   const editable = quotation?.status === 'DRAFT';
   const items = quotation?.items || [];
@@ -255,7 +299,10 @@ const QuotationPrintPage = () => {
         return;
       }
       setQuotation(updated);
-      if (action === 'issue') setDraftBranch(null);
+      if (action === 'issue') {
+        setDraftBranch(null);
+        setDraftPaymentAccounts([]);
+      }
       await refreshRevisionHistory().catch(() => null);
       feedback.actionSuccess(config.success, `quotation:${quotationId}:lifecycle:${action}:success`);
     } catch (error) {
@@ -321,7 +368,6 @@ const QuotationPrintPage = () => {
     && normalizedContactName !== normalizedCustomerName,
   );
   const fillerHeight = tableFillerHeightMm(items);
-  const hasTerms = Boolean(quotation.closingNote || quotation.notes || quotation.paymentTerms);
   const adjustedSubtotal = items.reduce(
     (sum, item) => sum + Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.unitPrice || 0)),
     0,
@@ -410,7 +456,7 @@ const QuotationPrintPage = () => {
             <p><strong>โทร:</strong> {quotation.customerPhone || '-'}</p>
             <p><strong>เลขประจำตัวผู้เสียภาษี:</strong> {quotation.customerTaxId || '-'}</p>
           </section>
-          <section className="quotation-info-panel rounded-[2mm] border border-slate-500 px-2.5 py-2"><div className="grid grid-cols-[28mm_1fr] gap-x-1"><span className="font-semibold">วันที่:</span><span>{date(quotation.issueDate || quotation.createdAt)}</span><span className="font-semibold">เลขที่:</span><span className="font-semibold">{quotation.code}</span><span className="font-semibold">Revision:</span><span className="font-semibold">Rev.{revisionNumber}</span><span className="font-semibold">ยืนราคาถึง:</span><span>{date(quotation.validUntil)}</span><span className="font-semibold">เงื่อนไขชำระเงิน:</span><span>{quotation.paymentTerms || '-'}</span></div></section>
+          <section className="quotation-info-panel rounded-[2mm] border border-slate-500 px-2.5 py-2"><div className="grid grid-cols-[28mm_1fr] gap-x-1"><span className="font-semibold">วันที่:</span><span>{date(quotation.issueDate || quotation.createdAt)}</span><span className="font-semibold">เลขที่:</span><span className="font-semibold">{quotation.code}</span><span className="font-semibold">Revision:</span><span className="font-semibold">Rev.{revisionNumber}</span><span className="font-semibold">ยืนราคาถึง:</span><span>{date(quotation.validUntil)}</span><span className="font-semibold">เงื่อนไขชำระเงิน:</span><span>{quotationTerms.paymentTerms || '-'}</span></div></section>
         </div>
 
         {(quotation.subject || quotation.introduction) ? <section className="quotation-message mt-2.5 text-[10.5px] leading-[1.55]">{quotation.subject ? <p><strong>เรื่อง:</strong> {quotation.subject}</p> : null}{quotation.introduction ? <p className={`${quotation.subject ? 'mt-1' : ''} whitespace-pre-wrap`}>{quotation.introduction}</p> : null}</section> : null}
@@ -433,7 +479,12 @@ const QuotationPrintPage = () => {
         </div>
 
         <div className="quotation-settlement grid min-h-[19mm] grid-cols-[1.6fr_1fr] break-inside-avoid text-[10px] leading-[1.45]">
-          <section className="border-x border-b border-slate-500 px-2.5 py-1.5"><p className="font-semibold">เงื่อนไข / หมายเหตุ</p>{quotation.closingNote ? <div className="mt-0.5 whitespace-pre-wrap">{quotation.closingNote}</div> : null}{quotation.notes ? <div className={`${quotation.closingNote ? 'mt-0.5' : ''} whitespace-pre-wrap`}>{quotation.notes}</div> : null}{!hasTerms ? <p className="mt-0.5">-</p> : null}</section>
+          <QuotationPresentationFooter
+            terms={quotationTerms}
+            paymentAccounts={paymentAccounts}
+            paymentDisplay={paymentAccountDisplay}
+            fontSizePx={footerFontSizePx}
+          />
           <section className="border-b border-r border-slate-500"><div className="flex justify-between gap-3 border-b border-slate-400 px-2.5 py-1"><span>มูลค่าก่อนภาษี</span><span className="tabular-nums">{money(taxableBase)}</span></div>{quotation.vatEnabled ? <div className="flex justify-between gap-3 border-b border-slate-400 px-2.5 py-1"><span>ภาษีมูลค่าเพิ่ม {Number(quotation.vatRate || 0)}%{vatInclusive ? ' (รวมในราคา)' : ''}</span><span className="tabular-nums">{money(vatAmount)}</span></div> : null}<div className="flex justify-between gap-3 bg-slate-50 px-2.5 py-1.5 text-[13px] font-extrabold print:bg-white"><span>ยอดสุทธิ</span><span className="tabular-nums">{money(grandTotal)} บาท</span></div></section>
         </div>
 
@@ -451,6 +502,7 @@ const QuotationPrintPage = () => {
         .quotation-table-wrap thead span { font-size: 9px !important; }
         .quotation-table-wrap tbody td > div + div { font-size: 10px !important; }
         .quotation-settlement { font-size: 11px !important; }
+        .quotation-presentation-footer { font-size: var(--quotation-footer-font-size, 11px) !important; }
         .quotation-settlement section:last-child > div:last-child { font-size: 14px !important; }
         .quotation-signatures { font-size: 11px !important; }
         .quotation-signatures p:last-child { font-size: 10px !important; }

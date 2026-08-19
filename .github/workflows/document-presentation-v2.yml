@@ -37,6 +37,7 @@ on:
       - 'src/features/settings/components/CustomerReceiptPresentationSettingsCard.jsx'
       - 'src/features/settings/components/PurchaseOrderPresentationSettingsCard.jsx'
       - 'src/features/settings/components/CombinedBillingPresentationSettingsCard.jsx'
+      - 'src/features/settings/components/StatutoryPresentationSettingsCard.jsx'
       - 'src/features/settings/pages/DocumentFormatSettingsPage.jsx'
       - 'tests/document-presentation-v2-foundation.contract.test.js'
       - 'tests/quotation-document-presentation-wave1.contract.test.js'

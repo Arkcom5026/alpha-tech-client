@@ -52,6 +52,8 @@ const salesRoutes = {
     { path: 'print-short/:saleId', element: <PrintBillPageShortTax /> },
     { path: 'print-full/:saleId', element: <PrintBillPageFullTax /> },
     { path: 'tax-document/print/:taxDocumentId', element: <PrintConsolidatedTaxPage /> },
+    { path: 'tax-document/print-short/:taxDocumentId', element: <PrintConsolidatedTaxPage expectedDocumentType="SHORT_TAX_INVOICE" /> },
+    { path: 'tax-document/print-full/:taxDocumentId', element: <PrintConsolidatedTaxPage expectedDocumentType="FULL_TAX_INVOICE" /> },
     {
       path: 'delivery-note',
       children: [

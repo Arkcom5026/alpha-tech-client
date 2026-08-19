@@ -10,14 +10,18 @@ export const createCombinedBillingDocument = async (saleIds, note = '') => {
   return res.data;
 };
 
-export const getCombinedBillingById = async (id) => {
-  const res = await apiClient.get(`/combined-billing/${id}`);
-  return res.data;
-};
-
 export const getCombinedBillingPresentation = async (id) => {
   const res = await apiClient.get(`/combined-billing/${id}/presentation`);
   return res.data?.data ?? res.data;
+};
+
+export const getCombinedBillingById = async (id) => {
+  const [detailResponse, presentationAuthority] = await Promise.all([
+    apiClient.get(`/combined-billing/${id}`),
+    getCombinedBillingPresentation(id),
+  ]);
+  const detail = detailResponse.data;
+  return detail ? { ...detail, presentationAuthority: presentationAuthority || null } : detail;
 };
 
 export const getCustomersWithPendingSales = async () => {

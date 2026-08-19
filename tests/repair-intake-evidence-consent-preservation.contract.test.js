@@ -24,10 +24,13 @@ describe('repair intake evidence consent preservation contract', () => {
 
     expect(panel).toContain('const consentChanged = (draft, evidence) =>');
     expect(panel).toContain('const shouldWriteConsent = consentChanged(draft, evidence)');
-    expect(panel).toContain("? draft\n        : { ...draft, confirmed: false }");
+    expect(panel).toContain('const draftSnapshot = { ...draft, photos: [...draft.photos] }');
+    expect(panel).toContain('const shouldWriteConsentSnapshot = consentChanged(draftSnapshot, evidence)');
+    expect(panel).toContain('? draftSnapshot');
+    expect(panel).toContain(': { ...draftSnapshot, confirmed: false }');
     expect(panel).toContain('draft.photos.length ||');
     expect(panel).toContain('shouldWriteConsent && draft.confirmed && draft.customerSignature.trim()');
-    expect(panel).toContain('disabled={loading || !canSave}');
+    expect(panel).toContain('disabled={interactionLocked || !canSave}');
   });
 
   it('continues to submit explicit permission values through the repair evidence API', () => {
@@ -55,7 +58,8 @@ describe('repair intake evidence consent preservation contract', () => {
     expect(panel).toContain('const [editing, setEditing] = useState(retryPending)');
     expect(panel).toContain('retryPending ? retryDraft : emptyDraft');
     expect(panel).toContain('กดบันทึกอีกครั้งได้โดยไม่สร้างใบงานซ้ำ');
-    expect(panel).toContain("await repairApi.saveIntakeEvidence(repairJobId, payload)");
+    expect(panel).toContain('const repairJobIdSnapshot = repairJobId');
+    expect(panel).toContain('await repairApi.saveIntakeEvidence(repairJobIdSnapshot, payload)');
     expect(panel).not.toContain('createJob(');
   });
 });

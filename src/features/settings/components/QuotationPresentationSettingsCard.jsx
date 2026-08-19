@@ -10,6 +10,8 @@ import {
   normalizeDocumentPresentationConfig,
   upsertDocumentPresentationLayer,
 } from '@/features/printing/presentation/presentationConfig'
+import QuotationPresentationFooter from '@/features/quotation/components/QuotationPresentationFooter'
+import { quotationTypographyPx } from '@/features/quotation/presentation/quotationPresentation'
 
 const inputClassName = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100'
 const labelClassName = 'mb-1.5 block text-xs font-black text-slate-600'
@@ -83,6 +85,24 @@ const QuotationPresentationSettingsCard = ({ branch, branchId, updateBranch, onB
 
   const patch = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   const patchAccountDraft = (key, value) => setAccountDraft((current) => ({ ...current, [key]: value }))
+
+  const selectedAccounts = useMemo(() => {
+    const byId = new Map(accounts.map((account) => [Number(account.id), account]))
+    return form.accountIds.map(Number).map((id) => byId.get(id)).filter(Boolean)
+  }, [accounts, form.accountIds])
+
+  const previewTerms = useMemo(() => ({
+    commercialTerms: form.commercialTerms.trim(),
+    paymentTerms: form.paymentTerms.trim(),
+    deliveryTerms: form.deliveryTerms.trim(),
+    notes: form.notes.trim(),
+    closingNote: '',
+    customFooter: form.customFooter.trim(),
+  }), [form.commercialTerms, form.customFooter, form.deliveryTerms, form.notes, form.paymentTerms])
+
+  const previewPresentation = useMemo(() => ({
+    resolved: { typography: { footer: form.footerTypography } },
+  }), [form.footerTypography])
 
   const toggleAccount = (id) => {
     const normalizedId = Number(id)
@@ -255,6 +275,32 @@ const QuotationPresentationSettingsCard = ({ branch, branchId, updateBranch, onB
                 {label}
               </label>
             ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+        <div className="mb-3">
+          <p className="text-xs font-black text-slate-800">ตัวอย่างท้ายใบเสนอราคา</p>
+          <p className="mt-0.5 text-[10px] font-medium text-slate-400">ใช้ block renderer เดียวกับหน้าพิมพ์ เพื่อให้ตัวอย่างและเอกสารจริงใช้ semantics ชุดเดียวกัน</p>
+        </div>
+        <div className="mx-auto max-w-[760px] overflow-hidden rounded-xl border border-slate-300 bg-white p-4 shadow-inner">
+          <div className="grid grid-cols-[1.6fr_1fr] text-slate-800">
+            <QuotationPresentationFooter
+              terms={previewTerms}
+              paymentAccounts={selectedAccounts}
+              paymentDisplay={{
+                showBankName: form.showBankName,
+                showAccountName: form.showAccountName,
+                showAccountNumber: form.showAccountNumber,
+              }}
+              fontSizePx={quotationTypographyPx(previewPresentation, 'footer', 'md')}
+            />
+            <div className="border-b border-r border-slate-500">
+              <div className="flex justify-between border-b border-slate-300 px-2.5 py-1 text-[11px]"><span>มูลค่าก่อนภาษี</span><span>10,000.00</span></div>
+              <div className="flex justify-between border-b border-slate-300 px-2.5 py-1 text-[11px]"><span>ภาษีมูลค่าเพิ่ม 7%</span><span>700.00</span></div>
+              <div className="flex justify-between px-2.5 py-1.5 text-[13px] font-extrabold"><span>ยอดสุทธิ</span><span>10,700.00 บาท</span></div>
+            </div>
           </div>
         </div>
       </div>

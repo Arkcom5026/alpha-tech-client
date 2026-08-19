@@ -11,6 +11,8 @@ describe('Statutory Document Presentation Wave 4', () => {
   const creditNote = read('src/features/sales/return/pages/PrintCreditNotePage.jsx')
   const taxApi = read('src/features/tax/intake/api/taxIntakeApi.js')
   const canonicalPrintPage = read('src/features/combinedBilling/pages/PrintConsolidatedTaxPage.jsx')
+  const statutorySettings = read('src/features/settings/components/StatutoryPresentationSettingsCard.jsx')
+  const settingsPage = read('src/features/settings/pages/DocumentFormatSettingsPage.jsx')
 
   it('keeps statutory document classes restricted', () => {
     expect(capability).toContain('FULL_TAX_INVOICE: STATUTORY_A4')
@@ -66,5 +68,26 @@ describe('Statutory Document Presentation Wave 4', () => {
     expect(canonicalPrintPage).not.toContain('getConsolidatedTaxPrintable')
     expect(canonicalPrintPage).not.toContain('branchName: legalHeader.storeName')
     expect(canonicalPrintPage).not.toContain('taxId: legalHeader.taxId')
+  })
+
+  it('exposes statutory settings without legal identity edit fields', () => {
+    expect(statutorySettings).toContain('getDocumentPresentationCapability')
+    expect(statutorySettings).toContain("capability?.storeBlocks?.includes('NOTES')")
+    expect(statutorySettings).toContain("capability?.storeBlocks?.includes('CUSTOM_FOOTER')")
+    expect(statutorySettings).toContain('header: {')
+    expect(statutorySettings).toContain('showLogo: form.showLogo')
+    expect(statutorySettings).toContain('logoPosition: form.logoPosition')
+    expect(statutorySettings).toContain('textAlign: form.textAlign')
+    expect(statutorySettings).not.toContain('headerStoreName')
+    expect(statutorySettings).not.toContain('headerTaxId')
+    expect(statutorySettings).not.toContain('headerAddress')
+    expect(statutorySettings).toContain('ข้อมูลภาษีถูกล็อกโดยระบบ')
+  })
+
+  it('mounts full tax, credit note, and short tax controls in the single document settings surface', () => {
+    expect(settingsPage).toContain('StatutoryPresentationSettingsCard')
+    expect(settingsPage).toContain('documentPurpose="FULL_TAX_INVOICE"')
+    expect(settingsPage).toContain('documentPurpose="CREDIT_NOTE"')
+    expect(settingsPage).toContain('documentPurpose="SHORT_TAX_INVOICE"')
   })
 })

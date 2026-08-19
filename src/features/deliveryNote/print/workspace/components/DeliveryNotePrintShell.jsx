@@ -8,6 +8,7 @@ const DeliveryNotePrintShell = ({
   setHideDate,
   saleItems,
   config,
+  presentationFooter = null,
   editingLineKey,
   lineDrafts,
   savingLineKey,
@@ -43,7 +44,7 @@ const DeliveryNotePrintShell = ({
           ) : null}
         </div>
       ) : null}
-      <section className="a4-standard-delivery-frame mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
+      <section className="a4-standard-delivery-frame relative mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
         <DeliveryNoteForm
           sale={sale}
           hideDate={hideDate}
@@ -58,6 +59,11 @@ const DeliveryNotePrintShell = ({
           onChangeDocumentLineDraft={onChangeDocumentLineDraft}
           onSaveDocumentLine={onSaveDocumentLine}
         />
+        {presentationFooter ? (
+          <div className="dn-presentation-footer-slot pointer-events-none absolute left-5 right-5 bottom-[104px]">
+            {presentationFooter}
+          </div>
+        ) : null}
         <style>{`
           .a4-standard-delivery-frame .dn-print-page {
             font-family: var(--document-font-family) !important;
@@ -93,8 +99,7 @@ const DeliveryNotePrintShell = ({
               transform: none !important;
             }
 
-            .a4-standard-delivery-shell,
-            .a4-standard-delivery-frame {
+            .a4-standard-delivery-shell {
               display: block !important;
               position: static !important;
               width: auto !important;
@@ -106,6 +111,29 @@ const DeliveryNotePrintShell = ({
               background: white !important;
               box-shadow: none !important;
               overflow: visible !important;
+            }
+
+            .a4-standard-delivery-frame {
+              display: block !important;
+              position: relative !important;
+              width: auto !important;
+              max-width: none !important;
+              min-height: 0 !important;
+              height: auto !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              background: white !important;
+              box-shadow: none !important;
+              overflow: visible !important;
+            }
+
+            .dn-presentation-footer-slot {
+              position: absolute !important;
+              left: 5mm !important;
+              right: 5mm !important;
+              bottom: 24mm !important;
+              z-index: 2 !important;
+              pointer-events: none !important;
             }
 
             body .a4-standard-delivery-frame .dn-print-page {

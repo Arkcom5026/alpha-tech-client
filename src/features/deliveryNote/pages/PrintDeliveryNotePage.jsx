@@ -6,6 +6,8 @@ import {
   loadSaleDocument,
   useSaleDocumentLineEditor,
 } from '@/features/sales/documents/workspace';
+import { useSaleDocumentPreparation } from '@/features/sales/documents/preparation/hooks/useSaleDocumentPreparation';
+import { buildPreparationPrintableItems } from '@/features/sales/documents/preparation/adapters/saleDocumentPreparationAdapter';
 import { getConsolidatedDeliveryPrintable } from '@/features/combinedBilling/api/combinedBillingApi';
 import {
   buildConsolidatedSaleDocument,
@@ -13,6 +15,7 @@ import {
 } from '@/features/combinedBilling/adapters/consolidatedDocumentAdapter';
 import DeliveryNotePresentationFooter from '../components/DeliveryNotePresentationFooter';
 import DeliveryNoteDocumentState from '../components/workspace/DeliveryNoteDocumentState';
+import DeliveryNotePreparationPanel from '../components/workspace/DeliveryNotePreparationPanel';
 import {
   applyDeliveryNoteHeaderPresentation,
   deliveryNoteTypographyPx,
@@ -64,13 +67,26 @@ const PrintDeliveryNotePage = () => {
   }, [isConsolidated, loadStandardSale, sourceId]);
 
   const {
+    preparation,
+    taxProjectionResult,
+    loading: preparationLoading,
+    saving: preparationSaving,
+    error: preparationError,
+    actions: preparationActions,
+  } = useSaleDocumentPreparation({
+    saleId: isConsolidated ? null : sourceId,
+    enabled: !isConsolidated,
+  });
+
+  const legacyEditorEnabled = !isConsolidated && !preparation;
+  const {
     editingLineKey,
     lineDrafts,
     savingLineKey,
     error: editorError,
     actions: documentLineActions,
   } = useSaleDocumentLineEditor({
-    saleId: isConsolidated ? null : saleId,
+    saleId: legacyEditorEnabled ? saleId : null,
     reload: loadCurrentDocument,
   });
 
@@ -119,9 +135,15 @@ const PrintDeliveryNotePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isConsolidated, loadStandardSale, sourceId]);
 
-  const preparedSaleItems = useMemo(
+  const legacySaleItems = useMemo(
     () => prepareDeliveryNoteSaleItems(currentSale),
     [currentSale]
+  );
+  const preparedSaleItems = useMemo(
+    () => preparation
+      ? buildPreparationPrintableItems(preparation)
+      : legacySaleItems,
+    [legacySaleItems, preparation]
   );
   const presentation = useMemo(
     () => resolveDeliveryNotePresentation({
@@ -154,7 +176,7 @@ const PrintDeliveryNotePage = () => {
   const openSourceQuotation = useCallback(() => {
     if (sourceQuotationPath) navigate(sourceQuotationPath);
   }, [navigate, sourceQuotationPath]);
-  const error = pageError || (isConsolidated ? '' : editorError);
+  const error = pageError || preparationError || (legacyEditorEnabled ? editorError : '');
 
   if (isLoading) {
     return <DeliveryNoteDocumentState status="loading" message="ระบบกำลังโหลดข้อมูลและจัดเตรียมเอกสารสำหรับพิมพ์" />;
@@ -170,6 +192,18 @@ const PrintDeliveryNotePage = () => {
 
   return (
     <StoreDocumentHeaderScope config={preparedConfig}>
+      {!isConsolidated ? (
+        <DeliveryNotePreparationPanel
+          preparation={preparation}
+          taxProjectionResult={taxProjectionResult}
+          sourceSaleItems={legacySaleItems}
+          saving={preparationLoading || preparationSaving}
+          onCreate={preparationActions.ensure}
+          onSave={preparationActions.saveLines}
+          onLock={preparationActions.lock}
+          onProjectTaxDrafts={preparationActions.projectTaxDrafts}
+        />
+      ) : null}
       <DeliveryNotePrintShell
         sale={currentSale}
         hideDate={hideDate}
@@ -184,13 +218,13 @@ const PrintDeliveryNotePage = () => {
             fontSizePx={footerFontSize}
           />
         )}
-        editableDocumentLines={!isConsolidated}
-        editingLineKey={isConsolidated ? null : editingLineKey}
-        lineDrafts={isConsolidated ? {} : lineDrafts}
-        savingLineKey={isConsolidated ? null : savingLineKey}
-        onToggleDocumentLineEdit={isConsolidated ? undefined : documentLineActions.toggle}
-        onChangeDocumentLineDraft={isConsolidated ? undefined : documentLineActions.change}
-        onSaveDocumentLine={isConsolidated ? undefined : documentLineActions.save}
+        editableDocumentLines={legacyEditorEnabled}
+        editingLineKey={legacyEditorEnabled ? editingLineKey : null}
+        lineDrafts={legacyEditorEnabled ? lineDrafts : {}}
+        savingLineKey={legacyEditorEnabled ? savingLineKey : null}
+        onToggleDocumentLineEdit={legacyEditorEnabled ? documentLineActions.toggle : undefined}
+        onChangeDocumentLineDraft={legacyEditorEnabled ? documentLineActions.change : undefined}
+        onSaveDocumentLine={legacyEditorEnabled ? documentLineActions.save : undefined}
       />
     </StoreDocumentHeaderScope>
   );

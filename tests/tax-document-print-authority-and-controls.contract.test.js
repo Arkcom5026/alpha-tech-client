@@ -18,14 +18,17 @@ describe('Tax document print authority and controls contract', () => {
     expect(salesRoutes).toContain('expectedDocumentType="SHORT_TAX_INVOICE"');
     expect(salesRoutes).toContain('tax-document/print-full/:taxDocumentId');
     expect(salesRoutes).toContain('expectedDocumentType="FULL_TAX_INVOICE"');
+    expect(salesRoutes).toContain("path: 'tax-document/print/:taxDocumentId'");
   });
 
-  it('keeps bill workspace presentation-first for one sale/document source', () => {
+  it('keeps sale print-format routing while dispatching issued tax rows to tax authority', () => {
     const listPage = read('src/features/bill/pages/PrintBillListPage.jsx');
 
     expect(listPage).toContain('../bill/print-full/');
     expect(listPage).toContain('../bill/print-short/');
-    expect(listPage).toContain('one paid sale/document source may be');
+    expect(listPage).toContain("TAX_DOCUMENT_SOURCE_TYPE = 'TAX_DOCUMENT'");
+    expect(listPage).toContain("navigate(`../tax-document/print/${sourceId}`)");
+    expect(listPage).toContain('finance/tax-intake?taxDocumentId=');
     expect(listPage).not.toContain('if (row.taxDocumentId)');
     expect(listPage).not.toContain('../tax-document/print-full/${row.taxDocumentId}');
     expect(listPage).not.toContain('../tax-document/print-short/${row.taxDocumentId}');
@@ -51,13 +54,13 @@ describe('Tax document print authority and controls contract', () => {
     expect(printPage).toContain('<FullTaxA4Document');
   });
 
-  it('explains the selector as a sale print-format choice, not an authority mutation', () => {
+  it('explains the selector as a legacy sale print-format choice, not tax-document authority', () => {
     const toolbar = read('src/features/bill/components/workspace/BillSearchToolbar.jsx');
 
-    expect(toolbar).toContain('ใบกำกับภาษีอย่างย่อ');
-    expect(toolbar).toContain('ใบกำกับภาษีเต็มรูป');
-    expect(toolbar).toContain('รายการขายเดียวกันได้ทั้งแบบย่อและเต็มรูป');
-    expect(toolbar).toContain('ไม่เปลี่ยนชนิดเอกสารภาษีที่ออกจริง');
+    expect(toolbar).toContain('พิมพ์รายการขายแบบย่อ');
+    expect(toolbar).toContain('พิมพ์รายการขายแบบเต็ม');
+    expect(toolbar).toContain('ตัวเลือกนี้ใช้กับรายการขาย/ใบเสร็จเดิมเท่านั้น');
+    expect(toolbar).toContain('เอกสารภาษีที่ออกเลขแล้วจะพิมพ์ตามชนิดเอกสารจริงโดยอัตโนมัติ');
   });
 
   it('keeps full-tax line content vertically centered within each table row', () => {

@@ -41,7 +41,9 @@ assert(page.includes("`../bill/print-short/${sourceId}${sourceQuery}`"), 'Bill l
 assert(page.includes("`../bill/print-full/${sourceId}${sourceQuery}`"), 'Bill list must preserve source-aware full print route authority');
 assert(page.includes('CONSOLIDATED_DOCUMENT_SOURCE_TYPE'), 'Bill list must preserve consolidated document source identity');
 assert(page.includes("?sourceType=${CONSOLIDATED_DOCUMENT_SOURCE_TYPE}&sourceId=${encodeURIComponent(sourceId)}"), 'Bill list must preserve consolidated source query authority');
-assert(page.includes("../bill/print-short/${row.id}?document=receipt&paymentId=${row.receiptPaymentId}"), 'Bill list must preserve payment-scoped short receipt route');
+assert(page.includes("TAX_DOCUMENT_SOURCE_TYPE = 'TAX_DOCUMENT'"), 'Bill list must recognize tax-document rows explicitly');
+assert(page.includes("navigate(`../tax-document/print/${sourceId}`)"), 'Registered tax-document rows must print through dedicated tax authority route');
+assert(page.includes('finance/tax-intake?taxDocumentId='), 'Draft tax-document rows must deep-link to Tax Intake by exact document id');
 
 assert(policy.includes("id: 'BILL'"), 'Bill policy identity must remain explicit');
 assert(policy.includes('onlyPaid: 1'), 'Bill policy must preserve paid-only query semantics');
@@ -58,6 +60,7 @@ assert(!rootStore.includes('printableSales:'), 'Root Sales Store must not duplic
 assert(!rootStore.includes('loadPrintableSalesAction'), 'Root Sales Store must not duplicate printable loading');
 assert(routes.includes("path: 'bill/print-short/:saleId'"), 'Short bill route must exist');
 assert(routes.includes("path: 'bill/print-full/:saleId'"), 'Full bill route must exist');
+assert(routes.includes("path: 'tax-document/print/:taxDocumentId'"), 'Issued tax document print route must exist');
 
 console.log('Bill document search cutover contract: PASS');
 });

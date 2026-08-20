@@ -9,8 +9,8 @@ const BillWorkspaceHeader = ({ count = 0 }) => (
           <FileText className="h-5 w-5" />
         </div>
         <div>
-          <h1 className="text-lg font-semibold text-slate-950">ค้นหาและพิมพ์ใบเสร็จ</h1>
-          <p className="mt-1 text-sm text-slate-500">ค้นหารายการขายย้อนหลัง แล้วเลือกพิมพ์ใบเสร็จแบบย่อหรือแบบเต็ม</p>
+          <h1 className="text-lg font-semibold text-slate-950">ค้นหาและจัดการเอกสารขาย</h1>
+          <p className="mt-1 text-sm text-slate-500">ค้นหาเอกสารย้อนหลัง พิมพ์เอกสารที่ออกแล้ว หรือเข้าสู่ขั้นตอนออกใบกำกับภาษีจากรายการเดียวกัน</p>
         </div>
       </div>
       <span className="w-fit rounded-full border border-teal-100 bg-teal-50 px-3 py-1 text-xs font-medium text-teal-800">

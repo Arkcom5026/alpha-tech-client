@@ -198,6 +198,7 @@ const PrintDeliveryNotePage = () => {
           saving={preparationLoading || preparationSaving}
           onCreate={preparationActions.ensure}
           onSave={preparationActions.saveLines}
+          onLock={preparationActions.lock}
         />
       ) : null}
       <DeliveryNotePrintShell

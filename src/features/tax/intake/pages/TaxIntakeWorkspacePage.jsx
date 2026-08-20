@@ -33,6 +33,7 @@ const TaxIntakeWorkspacePage = () => {
     handleDocumentTypeChange,
     loadData,
     openDocument,
+    handleRefreshRecipient,
     handleTransition,
     handleIssue,
   } = useTaxIntakeWorkspaceController();
@@ -80,6 +81,7 @@ const TaxIntakeWorkspacePage = () => {
           document={selectedDocument}
           transitioning={transitioning}
           transitionError={transitionError}
+          onRefreshRecipient={handleRefreshRecipient}
           onTransition={handleTransition}
           onIssue={handleIssue}
         />

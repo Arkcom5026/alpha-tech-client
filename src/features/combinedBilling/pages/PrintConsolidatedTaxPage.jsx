@@ -48,6 +48,23 @@ const TaxPrintToolbar = ({ documentType, onBack, onPrint }) => (
   </div>
 );
 
+const TaxReplacementNotice = ({ replacement }) => {
+  if (!replacement) return null;
+  return (
+    <div className="mx-auto mt-3 max-w-[1100px] px-4 print:hidden">
+      <div className="rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-900">
+        <div className="font-semibold">กำลังแสดงรายการเอกสารฉบับทดแทน #{replacement.replacementNumber || '-'}</div>
+        <div className="mt-1 text-xs text-teal-800">
+          ระบบเปลี่ยนเฉพาะรายการสำหรับการพิมพ์ ยอดก่อนภาษี ภาษีมูลค่าเพิ่ม ยอดรวม ชนิดใบกำกับ เลขที่เอกสาร และรอบภาษียังคงยึดตามใบกำกับภาษีที่ออกจริง
+        </div>
+        {replacement.reason ? (
+          <div className="mt-1 text-xs text-teal-700">เหตุผล: {replacement.reason}</div>
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
 const PrintConsolidatedTaxPage = ({ expectedDocumentType = null }) => {
   const { taxDocumentId } = useParams();
   const [query] = useSearchParams();
@@ -124,7 +141,7 @@ const PrintConsolidatedTaxPage = ({ expectedDocumentType = null }) => {
         productName: line.description,
         documentDescription: line.description,
         quantity: line.quantity,
-        unit: 'ชิ้น',
+        unit: line.unitName || 'ชิ้น',
         unitPrice: line.unitAmount,
         amount: line.lineAmount,
       })),
@@ -135,7 +152,7 @@ const PrintConsolidatedTaxPage = ({ expectedDocumentType = null }) => {
       },
       config: {
         // Statutory legal identity always comes from the immutable TaxDocument
-        // issuer snapshot. Presentation may decorate it but may never replace it.
+        // issuer snapshot. Replacement projection may change printable lines only.
         branchName: issuer.legalName || '-',
         address: issuer.registeredAddress || '-',
         phone: issuer.phone || '-',
@@ -199,6 +216,7 @@ const PrintConsolidatedTaxPage = ({ expectedDocumentType = null }) => {
     return (
       <>
         <TaxPrintToolbar documentType={actualDocumentType} onBack={handleBack} onPrint={handlePrint} />
+        <TaxReplacementNotice replacement={data.replacementProjection} />
         <div className="bill-print-root mx-auto w-[80mm] bg-white p-4 print:p-0">
           <BillLayoutShortTax
             sale={view.sale}
@@ -221,6 +239,7 @@ const PrintConsolidatedTaxPage = ({ expectedDocumentType = null }) => {
   return (
     <>
       <TaxPrintToolbar documentType={actualDocumentType} onBack={handleBack} onPrint={handlePrint} />
+      <TaxReplacementNotice replacement={data.replacementProjection} />
       <FullTaxA4Document
         sale={view.sale}
         saleItems={view.items}

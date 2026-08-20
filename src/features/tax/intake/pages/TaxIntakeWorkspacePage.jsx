@@ -52,12 +52,10 @@ const TaxIntakeWorkspacePage = () => {
 
     const focusKey = `${branchId}:${focusedTaxDocumentId}`;
     if (focusedDocumentRef.current === focusKey) return;
-    const document = documents.find((item) => Number(item?.id) === focusedTaxDocumentId);
-    if (!document) return;
 
     focusedDocumentRef.current = focusKey;
-    openDocument(document);
-  }, [branchId, documents, focusedTaxDocumentId, loading, openDocument, selectedDocument?.id]);
+    openDocument({ id: focusedTaxDocumentId });
+  }, [branchId, focusedTaxDocumentId, loading, openDocument, selectedDocument?.id]);
 
   if (!branchId) {
     return (

@@ -4,6 +4,7 @@ import {
   createSaleDocumentPreparation,
   getSaleDocumentPreparation,
   lockSaleDocumentPreparation,
+  projectSaleDocumentPreparationTaxDrafts,
   replaceSaleDocumentPreparationLines,
 } from '../api/saleDocumentPreparationApi';
 
@@ -16,6 +17,7 @@ const errorMessage = (error) => (
 
 export const useSaleDocumentPreparation = ({ saleId, enabled = true } = {}) => {
   const [preparation, setPreparation] = useState(null);
+  const [taxProjectionResult, setTaxProjectionResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -24,6 +26,7 @@ export const useSaleDocumentPreparation = ({ saleId, enabled = true } = {}) => {
   const load = useCallback(async ({ reportError = false } = {}) => {
     if (!enabled || !saleId) {
       setPreparation(null);
+      setTaxProjectionResult(null);
       return null;
     }
 
@@ -46,6 +49,7 @@ export const useSaleDocumentPreparation = ({ saleId, enabled = true } = {}) => {
 
   useEffect(() => {
     setPreparation(null);
+    setTaxProjectionResult(null);
     setError('');
     if (enabled && saleId) load();
   }, [enabled, load, saleId]);
@@ -76,6 +80,7 @@ export const useSaleDocumentPreparation = ({ saleId, enabled = true } = {}) => {
     try {
       const next = await replaceSaleDocumentPreparationLines(saleId, lines);
       setPreparation(next);
+      setTaxProjectionResult(null);
       toast.actionSuccess('บันทึกแบบร่างเอกสารแล้ว', `sale-document-preparation:${saleId}:lines:success`);
       return next;
     } catch (requestError) {
@@ -107,8 +112,28 @@ export const useSaleDocumentPreparation = ({ saleId, enabled = true } = {}) => {
     }
   }, [enabled, saleId, saving]);
 
+  const projectTaxDrafts = useCallback(async () => {
+    if (!enabled || !saleId || saving || preparation?.status !== 'LOCKED') return null;
+    setSaving(true);
+    setError('');
+    try {
+      const result = await projectSaleDocumentPreparationTaxDrafts(saleId);
+      setTaxProjectionResult(result);
+      toast.actionSuccess('สร้างร่างใบกำกับภาษีแล้ว', `sale-document-preparation:${saleId}:tax-drafts:success`);
+      return result;
+    } catch (requestError) {
+      const message = errorMessage(requestError);
+      setError(message);
+      toast.actionError(requestError, message, `sale-document-preparation:${saleId}:tax-drafts:error`);
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  }, [enabled, preparation?.status, saleId, saving]);
+
   return {
     preparation,
+    taxProjectionResult,
     loading,
     saving,
     error,
@@ -117,6 +142,7 @@ export const useSaleDocumentPreparation = ({ saleId, enabled = true } = {}) => {
       ensure,
       saveLines,
       lock,
+      projectTaxDrafts,
       clearError: () => setError(''),
     },
   };

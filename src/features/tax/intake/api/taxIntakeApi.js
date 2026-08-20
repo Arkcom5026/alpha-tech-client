@@ -58,6 +58,14 @@ export const getTaxDocumentDetail = async ({ branchId, taxDocumentId }) => {
   return unwrapData(response);
 };
 
+export const refreshDraftTaxRecipient = async ({ branchId, taxDocumentId }) => {
+  const response = await apiClient.post(
+    `/tax/documents/${requirePositiveId(taxDocumentId, 'taxDocumentId')}/recipient/refresh`,
+    { branchId: requirePositiveId(branchId, 'branchId') },
+  );
+  return unwrapData(response);
+};
+
 export const transitionTaxDocument = async ({ branchId, taxDocumentId, targetStatus, reason }) => {
   const response = await apiClient.post(
     `/tax/documents/${requirePositiveId(taxDocumentId, 'taxDocumentId')}/transition`,
@@ -128,6 +136,9 @@ export const getTaxIntakeErrorMessage = (error) => {
     TAX_ADMINISTRATIVE_BRANCH_FORBIDDEN: 'ไม่สามารถเข้าถึงข้อมูลภาษีของสาขาอื่นได้',
     TAX_DOCUMENT_NOT_FOUND: 'ไม่พบเอกสารภาษีที่เลือก',
     TAX_DOCUMENT_IDENTITY_CONFLICT: 'มีเอกสารภาษีเลขที่นี้อยู่แล้ว',
+    TAX_DRAFT_RECIPIENT_REFRESH_FORBIDDEN: 'อัปเดตข้อมูลผู้รับได้เฉพาะเอกสารภาษีขายแบบร่างที่ยังไม่ออกเลข',
+    TAX_DRAFT_RECIPIENT_SOURCE_UNSUPPORTED: 'เอกสารนี้ไม่รองรับการดึงข้อมูลผู้รับจากข้อมูลลูกค้า',
+    TAX_RECIPIENT_CUSTOMER_REQUIRED: 'เอกสารต้นทางยังไม่มีลูกค้าที่ใช้เป็นข้อมูลผู้รับภาษี',
     TAX_PERIOD_NOT_FOUND: 'ไม่พบรอบภาษีที่เลือก กรุณาโหลดรอบภาษีใหม่',
     INPUT_TAX_RECONCILIATION_REQUIRED: 'ยังอนุมัติไม่ได้: ยอดใบรับสินค้าที่ผูกไว้ยังไม่ตรงกับยอดเอกสารภาษี',
   };

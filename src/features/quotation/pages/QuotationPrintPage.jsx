@@ -37,15 +37,17 @@ const date = (value) => value
 
 const unwrapBranch = (payload) => payload?.data ?? payload ?? null;
 
-const estimateLineHeightMm = (item = {}) => {
+const QUOTATION_TABLE_TARGET_ROWS = 18;
+const QUOTATION_FILLER_ROW_HEIGHT_MM = 6;
+
+const estimateLineRowUnits = (item = {}) => {
   const text = `${item.title || ''} ${item.description || ''}`.trim();
-  const visualLines = Math.max(1, Math.ceil(text.length / 62));
-  return Math.min(24, 6 + (visualLines * 3.5));
+  return Math.max(1, Math.ceil(text.length / 62));
 };
 
-const tableFillerHeightMm = (items = []) => {
-  const occupied = items.reduce((sum, item) => sum + estimateLineHeightMm(item), 0);
-  return Math.max(0, 130 - occupied);
+const quotationFillerRowCount = (items = []) => {
+  const occupiedRowUnits = items.reduce((sum, item) => sum + estimateLineRowUnits(item), 0);
+  return Math.max(0, QUOTATION_TABLE_TARGET_ROWS - occupiedRowUnits);
 };
 
 const buildLineDraft = (item = {}, sortOrder = 0) => ({
@@ -367,7 +369,7 @@ const QuotationPrintPage = () => {
     && normalizedContactName !== normalizedRecipientName
     && normalizedContactName !== normalizedCustomerName,
   );
-  const fillerHeight = tableFillerHeightMm(items);
+  const fillerRowCount = quotationFillerRowCount(items);
   const adjustedSubtotal = items.reduce(
     (sum, item) => sum + Math.max(0, Number(item.quantity || 0)) * Math.max(0, Number(item.unitPrice || 0)),
     0,
@@ -473,7 +475,17 @@ const QuotationPrintPage = () => {
 
               {editable ? <React.Fragment><tr className="quotation-add-line-row print:hidden"><td className="h-9 border border-slate-500 text-center text-slate-400">{items.length + 1}</td><td className="border border-slate-500 px-2 text-[9px] text-slate-400">เพิ่มรายการถัดไป</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500 p-1 text-center"><button type="button" onClick={beginNewLine} disabled={savingLine || editingLineId === 'NEW'} className="inline-flex h-7 w-7 items-center justify-center rounded border border-teal-400 bg-teal-50 text-teal-700 hover:bg-teal-100 disabled:cursor-not-allowed disabled:opacity-50" aria-label="เพิ่มรายการถัดไปบนใบเสนอราคา" title="เพิ่มรายการ"><Plus className="h-4 w-4" /></button></td></tr>{editingLineId === 'NEW' ? <tr className="print:hidden"><td colSpan="7" className="p-0">{renderLineEditor()}</td></tr> : null}</React.Fragment> : null}
 
-              {fillerHeight > 0 ? <tr className="quotation-table-filler" aria-hidden="true"><td className="border border-slate-500" style={{ height: `${fillerHeight}mm` }}>&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td><td className="border border-slate-500">&nbsp;</td>{editable ? <td className="border border-slate-500 print:hidden">&nbsp;</td> : null}</tr> : null}
+              {Array.from({ length: fillerRowCount }, (_, fillerIndex) => (
+                <tr key={`quotation-filler-${fillerIndex}`} className="quotation-table-filler-row" aria-hidden="true">
+                  <td className="border border-slate-500" style={{ height: `${QUOTATION_FILLER_ROW_HEIGHT_MM}mm` }}>&nbsp;</td>
+                  <td className="border border-slate-500">&nbsp;</td>
+                  <td className="border border-slate-500">&nbsp;</td>
+                  <td className="border border-slate-500">&nbsp;</td>
+                  <td className="border border-slate-500">&nbsp;</td>
+                  <td className="border border-slate-500">&nbsp;</td>
+                  {editable ? <td className="border border-slate-500 print:hidden">&nbsp;</td> : null}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

@@ -2,8 +2,8 @@ import React from 'react';
 import { RefreshCw, Search } from 'lucide-react';
 
 const formatOptions = [
-  { value: 'short', label: 'ใบกำกับภาษีอย่างย่อ' },
-  { value: 'full', label: 'ใบกำกับภาษีเต็มรูป' },
+  { value: 'short', label: 'พิมพ์รายการขายแบบย่อ' },
+  { value: 'full', label: 'พิมพ์รายการขายแบบเต็ม' },
 ];
 
 const BillSearchToolbar = ({
@@ -31,7 +31,7 @@ const BillSearchToolbar = ({
             value={keyword}
             onChange={(event) => onKeywordChange(event.target.value)}
             onKeyDown={(event) => event.key === 'Enter' && onSearch()}
-            placeholder="ชื่อลูกค้า เบอร์โทร หรือเลขที่บิล"
+            placeholder="ชื่อลูกค้า เลขที่เอกสาร เลขที่ขาย หรือเลขผู้เสียภาษี"
             className="h-11 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-teal-500 focus:ring-2 focus:ring-teal-100"
           />
         </div>
@@ -71,7 +71,7 @@ const BillSearchToolbar = ({
           })}
         </div>
         <div className="mt-1.5 text-[11px] text-slate-500">
-          เลือกรูปแบบการพิมพ์จากรายการขายเดียวกันได้ทั้งแบบย่อและเต็มรูป โดยไม่เปลี่ยนชนิดเอกสารภาษีที่ออกจริง
+          ตัวเลือกนี้ใช้กับรายการขาย/ใบเสร็จเดิมเท่านั้น เอกสารภาษีที่ออกเลขแล้วจะพิมพ์ตามชนิดเอกสารจริงโดยอัตโนมัติ
         </div>
       </div>
 

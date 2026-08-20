@@ -12,6 +12,12 @@ const money = (value) => Number(value || 0).toLocaleString('th-TH', {
 });
 
 const DOCUMENT_FONT_FAMILY = 'var(--document-font-family, "TH Sarabun New", "Sarabun", Tahoma, Arial, sans-serif)';
+const CREDIT_NOTE_TABLE_TARGET_ROWS = 12;
+
+const creditNoteFillerRowCount = (lines = []) => Math.max(
+  0,
+  CREDIT_NOTE_TABLE_TARGET_ROWS - (Array.isArray(lines) ? lines.length : 0),
+);
 
 const PrintCreditNotePage = () => {
   const { taxDocumentId, shopSlug = 'advancetech' } = useParams();
@@ -46,6 +52,8 @@ const PrintCreditNotePage = () => {
     return <main className="p-6"><div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">{error}</div></main>;
   }
   if (!projection) return <main className="p-6">กำลังเตรียมใบลดหนี้...</main>;
+
+  const fillerRowCount = creditNoteFillerRowCount(projection.lines);
 
   return (
     <div className="credit-note-print-shell min-h-screen bg-slate-100 px-4 py-6 print:min-h-0 print:bg-white print:p-0">
@@ -169,10 +177,18 @@ const PrintCreditNotePage = () => {
           <tbody>
             {projection.lines.map((line) => (
               <tr key={line.id}>
-                <td className="border border-black px-2 py-1.5">{line.description}</td>
-                <td className="border border-black px-2 py-1.5 text-right tabular-nums">{line.quantity}</td>
-                <td className="border border-black px-2 py-1.5 text-right tabular-nums">{money(line.lineAmount)}</td>
-                <td className="border border-black px-2 py-1.5 text-right tabular-nums">{money(line.vatAmount)}</td>
+                <td className="h-[24px] border border-black px-2 py-1.5">{line.description}</td>
+                <td className="h-[24px] border border-black px-2 py-1.5 text-right tabular-nums">{line.quantity}</td>
+                <td className="h-[24px] border border-black px-2 py-1.5 text-right tabular-nums">{money(line.lineAmount)}</td>
+                <td className="h-[24px] border border-black px-2 py-1.5 text-right tabular-nums">{money(line.vatAmount)}</td>
+              </tr>
+            ))}
+            {Array.from({ length: fillerRowCount }).map((_, idx) => (
+              <tr key={`credit-note-filler-${idx}`} className="credit-note-table-filler-row" aria-hidden="true">
+                <td className="h-[24px] border border-black">&nbsp;</td>
+                <td className="h-[24px] border border-black">&nbsp;</td>
+                <td className="h-[24px] border border-black">&nbsp;</td>
+                <td className="h-[24px] border border-black">&nbsp;</td>
               </tr>
             ))}
           </tbody>

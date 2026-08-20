@@ -8,6 +8,8 @@ import {
 } from '@/features/sales/documents/workspace';
 import { useSaleDocumentPreparation } from '@/features/sales/documents/preparation/hooks/useSaleDocumentPreparation';
 import { buildPreparationPrintableItems } from '@/features/sales/documents/preparation/adapters/saleDocumentPreparationAdapter';
+import { useSaleDocumentReplacement } from '@/features/sales/documents/replacement/hooks/useSaleDocumentReplacement';
+import { buildReplacementPrintableItems } from '@/features/sales/documents/replacement/adapters/saleDocumentReplacementAdapter';
 import { getConsolidatedDeliveryPrintable } from '@/features/combinedBilling/api/combinedBillingApi';
 import {
   buildConsolidatedSaleDocument,
@@ -16,6 +18,7 @@ import {
 import DeliveryNotePresentationFooter from '../components/DeliveryNotePresentationFooter';
 import DeliveryNoteDocumentState from '../components/workspace/DeliveryNoteDocumentState';
 import DeliveryNotePreparationPanel from '../components/workspace/DeliveryNotePreparationPanel';
+import DeliveryNoteReplacementPanel from '../components/workspace/DeliveryNoteReplacementPanel';
 import {
   applyDeliveryNoteHeaderPresentation,
   deliveryNoteTypographyPx,
@@ -76,6 +79,19 @@ const PrintDeliveryNotePage = () => {
   } = useSaleDocumentPreparation({
     saleId: isConsolidated ? null : sourceId,
     enabled: !isConsolidated,
+  });
+
+  const replacementEnabled = !isConsolidated && preparation?.status === 'LOCKED';
+  const {
+    replacement,
+    loading: replacementLoading,
+    saving: replacementSaving,
+    error: replacementError,
+    actions: replacementActions,
+  } = useSaleDocumentReplacement({
+    saleId: replacementEnabled ? sourceId : null,
+    enabled: replacementEnabled,
+    onLocked: loadCurrentDocument,
   });
 
   const legacyEditorEnabled = !isConsolidated && !preparation;
@@ -139,12 +155,18 @@ const PrintDeliveryNotePage = () => {
     () => prepareDeliveryNoteSaleItems(currentSale),
     [currentSale]
   );
-  const preparedSaleItems = useMemo(
-    () => preparation
-      ? buildPreparationPrintableItems(preparation)
-      : legacySaleItems,
-    [legacySaleItems, preparation]
+  const replacementAuthorityActive = Boolean(currentSale?.deliveryNoteAuthority?.document?.replacement);
+  const replacementSaleItems = useMemo(
+    () => replacementAuthorityActive
+      ? buildReplacementPrintableItems(currentSale?.deliveryNoteAuthority)
+      : [],
+    [currentSale?.deliveryNoteAuthority, replacementAuthorityActive]
   );
+  const preparedSaleItems = useMemo(() => {
+    if (replacementAuthorityActive) return replacementSaleItems;
+    if (preparation) return buildPreparationPrintableItems(preparation);
+    return legacySaleItems;
+  }, [legacySaleItems, preparation, replacementAuthorityActive, replacementSaleItems]);
   const presentation = useMemo(
     () => resolveDeliveryNotePresentation({
       authority: currentSale?.deliveryNoteAuthority,
@@ -176,7 +198,7 @@ const PrintDeliveryNotePage = () => {
   const openSourceQuotation = useCallback(() => {
     if (sourceQuotationPath) navigate(sourceQuotationPath);
   }, [navigate, sourceQuotationPath]);
-  const error = pageError || preparationError || (legacyEditorEnabled ? editorError : '');
+  const error = pageError || preparationError || replacementError || (legacyEditorEnabled ? editorError : '');
 
   if (isLoading) {
     return <DeliveryNoteDocumentState status="loading" message="ระบบกำลังโหลดข้อมูลและจัดเตรียมเอกสารสำหรับพิมพ์" />;
@@ -202,6 +224,16 @@ const PrintDeliveryNotePage = () => {
           onSave={preparationActions.saveLines}
           onLock={preparationActions.lock}
           onProjectTaxDrafts={preparationActions.projectTaxDrafts}
+        />
+      ) : null}
+      {replacementEnabled ? (
+        <DeliveryNoteReplacementPanel
+          replacement={replacement}
+          loading={replacementLoading}
+          saving={replacementSaving}
+          onCreate={replacementActions.create}
+          onSave={replacementActions.saveLines}
+          onLock={replacementActions.lock}
         />
       ) : null}
       <DeliveryNotePrintShell

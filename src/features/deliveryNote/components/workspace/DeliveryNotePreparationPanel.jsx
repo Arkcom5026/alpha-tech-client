@@ -14,6 +14,7 @@ const DeliveryNotePreparationPanel = ({
   saving = false,
   onCreate,
   onSave,
+  onLock,
 }) => {
   const [lines, setLines] = useState([]);
 
@@ -36,6 +37,8 @@ const DeliveryNotePreparationPanel = ({
   const sourceTotal = Number(preparation?.sourceTotal || 0);
   const outOfBudget = Math.max(sourceTotal - documentTotal, 0);
   const exceedsSource = documentTotal > sourceTotal + 0.005;
+  const isLocked = preparation?.status === 'LOCKED';
+  const canLock = !isLocked && !saving && !exceedsSource && lines.length > 0 && documentTotal > 0;
 
   if (!preparation) {
     return (
@@ -61,12 +64,14 @@ const DeliveryNotePreparationPanel = ({
   }
 
   const updateLine = (index, field, value) => {
+    if (isLocked) return;
     setLines((current) => current.map((line, lineIndex) => (
       lineIndex === index ? { ...line, [field]: value } : line
     )));
   };
 
   const removeLine = (index) => {
+    if (isLocked) return;
     setLines((current) => current.filter((_, lineIndex) => lineIndex !== index));
   };
 
@@ -75,29 +80,37 @@ const DeliveryNotePreparationPanel = ({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="font-semibold text-slate-900">แบบร่างรายการเอกสาร</h2>
-            <span className="rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800">DRAFT</span>
+            <h2 className="font-semibold text-slate-900">รายการเอกสารสำหรับหน่วยงาน</h2>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${isLocked ? 'bg-slate-200 text-slate-700' : 'bg-teal-100 text-teal-800'}`}>
+              {isLocked ? 'LOCKED' : 'DRAFT'}
+            </span>
           </div>
-          <p className="mt-1 text-sm text-slate-600">แก้ทับแบบร่างชุดเดิมได้จนกว่าจะยืนยันใน Wave ถัดไป</p>
+          <p className="mt-1 text-sm text-slate-600">
+            {isLocked
+              ? 'ชุดข้อมูลนี้ถูกยืนยันและล็อกแล้ว รายการสำหรับพิมพ์จะอ่านจาก snapshot ชุดนี้'
+              : 'แก้ทับแบบร่างชุดเดิมได้จนกว่าจะกดยืนยันแบบร่าง'}
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setLines(buildPreparationSeedLines(sourceSaleItems))}
-            disabled={saving}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
-          >
-            คัดลอกรายการขายเป็นจุดเริ่มต้น
-          </button>
-          <button
-            type="button"
-            onClick={() => setLines((current) => [...current, emptyLine()])}
-            disabled={saving}
-            className="rounded-xl border border-teal-300 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-800 hover:bg-teal-100 disabled:opacity-60"
-          >
-            + เพิ่มรายการ
-          </button>
-        </div>
+        {!isLocked ? (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setLines(buildPreparationSeedLines(sourceSaleItems))}
+              disabled={saving}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            >
+              คัดลอกรายการขายเป็นจุดเริ่มต้น
+            </button>
+            <button
+              type="button"
+              onClick={() => setLines((current) => [...current, emptyLine()])}
+              disabled={saving}
+              className="rounded-xl border border-teal-300 bg-teal-50 px-3 py-2 text-sm font-medium text-teal-800 hover:bg-teal-100 disabled:opacity-60"
+            >
+              + เพิ่มรายการ
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
@@ -121,8 +134,9 @@ const DeliveryNotePreparationPanel = ({
                 <td className="p-2">
                   <input
                     value={line.description}
+                    readOnly={isLocked}
                     onChange={(event) => updateLine(index, 'description', event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none focus:border-teal-500"
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none focus:border-teal-500 read-only:bg-slate-50"
                   />
                 </td>
                 <td className="p-2">
@@ -131,15 +145,17 @@ const DeliveryNotePreparationPanel = ({
                     min="0.001"
                     step="0.001"
                     value={line.quantity}
+                    readOnly={isLocked}
                     onChange={(event) => updateLine(index, 'quantity', event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right outline-none focus:border-teal-500"
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right outline-none focus:border-teal-500 read-only:bg-slate-50"
                   />
                 </td>
                 <td className="p-2">
                   <input
                     value={line.unitName}
+                    readOnly={isLocked}
                     onChange={(event) => updateLine(index, 'unitName', event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none focus:border-teal-500"
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none focus:border-teal-500 read-only:bg-slate-50"
                   />
                 </td>
                 <td className="p-2">
@@ -148,18 +164,21 @@ const DeliveryNotePreparationPanel = ({
                     min="0"
                     step="0.01"
                     value={line.unitPrice}
+                    readOnly={isLocked}
                     onChange={(event) => updateLine(index, 'unitPrice', event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right outline-none focus:border-teal-500"
+                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right outline-none focus:border-teal-500 read-only:bg-slate-50"
                   />
                 </td>
                 <td className="p-2 text-right">
-                  <button
-                    type="button"
-                    onClick={() => removeLine(index)}
-                    className="rounded-lg px-2 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                  >
-                    ลบ
-                  </button>
+                  {!isLocked ? (
+                    <button
+                      type="button"
+                      onClick={() => removeLine(index)}
+                      className="rounded-lg px-2 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
+                    >
+                      ลบ
+                    </button>
+                  ) : null}
                 </td>
               </tr>
             ))}
@@ -173,19 +192,33 @@ const DeliveryNotePreparationPanel = ({
           <span className="text-slate-500">ยอดเอกสารหน่วยงาน</span><span className="text-right font-medium">{money(documentTotal)}</span>
           <span className="text-slate-500">ยอดนอกงบประมาณ</span><span className="text-right font-semibold text-teal-700">{money(outOfBudget)}</span>
         </div>
-        <div className="text-right">
-          {exceedsSource ? (
-            <p className="mb-2 text-sm font-medium text-rose-600">ยอดเอกสารต้องไม่เกินยอดธุรกรรมจริง</p>
-          ) : null}
-          <button
-            type="button"
-            onClick={() => onSave?.(lines)}
-            disabled={saving || exceedsSource}
-            className="rounded-xl bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {saving ? 'กำลังบันทึก...' : 'บันทึกแบบร่าง'}
-          </button>
-        </div>
+        {!isLocked ? (
+          <div className="text-right">
+            {exceedsSource ? (
+              <p className="mb-2 text-sm font-medium text-rose-600">ยอดเอกสารต้องไม่เกินยอดธุรกรรมจริง</p>
+            ) : null}
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => onSave?.(lines)}
+                disabled={saving || exceedsSource}
+                className="rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {saving ? 'กำลังบันทึก...' : 'บันทึกแบบร่าง'}
+              </button>
+              <button
+                type="button"
+                onClick={onLock}
+                disabled={!canLock}
+                className="rounded-xl bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                ยืนยันแบบร่าง
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm font-medium text-slate-600">แบบร่างถูกล็อกแล้ว และไม่สามารถแก้รายการเดิมได้</p>
+        )}
       </div>
     </section>
   );

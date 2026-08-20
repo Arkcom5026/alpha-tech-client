@@ -11,6 +11,8 @@ import BillWorkspaceHeader from '../components/workspace/BillWorkspaceHeader';
 import BillSearchToolbar from '../components/workspace/BillSearchToolbar';
 import BillResultTable from '../components/workspace/BillResultTable';
 
+const TAX_DOCUMENT_SOURCE_TYPE = 'TAX_DOCUMENT';
+
 const toNumber = (value) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -77,15 +79,13 @@ const PrintBillListPage = () => {
         limit: clampLimit(limit),
       });
     } catch (error) {
-      setUiError(error?.message || 'ไม่สามารถค้นหารายการใบเสร็จได้');
+      setUiError(error?.message || 'ไม่สามารถค้นหารายการเอกสารขายได้');
     }
   }, [clampLimit, documentSearch.actions, fromDate, keyword, limit, toDate]);
 
   const getSortValue = (row, key) => {
     if (!row) return null;
     if (key === 'totalAmount') return toNumber(row?.grossAmount ?? row?.totalAmount);
-    if (key === 'paidAmount') return toNumber(row?.paidAmount);
-    if (key === 'changeAmount') return toNumber(row?.changeAmount);
     if (key === 'createdAt') return row.createdAt ? new Date(row.createdAt).getTime() : 0;
     return String(row?.[key] ?? '').toLowerCase();
   };
@@ -110,22 +110,31 @@ const PrintBillListPage = () => {
   const handlePrint = (row) => {
     const sourceType = row.documentSourceType || 'SALE';
     const sourceId = row.documentSourceId ?? row.id;
+
+    if (sourceType === TAX_DOCUMENT_SOURCE_TYPE) {
+      navigate(`../tax-document/print/${sourceId}`);
+      return;
+    }
+
     const sourceQuery = sourceType === CONSOLIDATED_DOCUMENT_SOURCE_TYPE
       ? `?sourceType=${CONSOLIDATED_DOCUMENT_SOURCE_TYPE}&sourceId=${encodeURIComponent(sourceId)}`
       : '';
 
-    // Bill workspace is presentation-first: one paid sale/document source may be
-    // printed in either short thermal or full A4 form. Issued TaxDocument
-    // authority remains enforced only inside dedicated tax-document routes.
     navigate(printFormat === 'full'
       ? `../bill/print-full/${sourceId}${sourceQuery}`
       : `../bill/print-short/${sourceId}${sourceQuery}`);
   };
 
+  const handleManageTaxDocument = useCallback((row) => {
+    const taxDocumentId = row?.taxDocumentId ?? row?.documentSourceId;
+    if (!taxDocumentId) return;
+    navigate(`../../finance/tax-intake?taxDocumentId=${encodeURIComponent(taxDocumentId)}`);
+  }, [navigate]);
+
   const handleDeliveryNote = useCallback(async (row) => {
     const sourceType = row?.documentSourceType || 'SALE';
     const sourceId = row?.documentSourceId ?? row?.id;
-    if (!sourceId) return;
+    if (!sourceId || sourceType === TAX_DOCUMENT_SOURCE_TYPE) return;
 
     if (sourceType === CONSOLIDATED_DOCUMENT_SOURCE_TYPE) {
       navigate(`../delivery-note/print/${sourceId}?sourceType=${CONSOLIDATED_DOCUMENT_SOURCE_TYPE}&sourceId=${encodeURIComponent(sourceId)}`);
@@ -194,6 +203,7 @@ const PrintBillListPage = () => {
         sortDir={sortDir}
         onSort={handleSort}
         onPrint={handlePrint}
+        onManageTaxDocument={handleManageTaxDocument}
         onDeliveryNote={handleDeliveryNote}
         deliveryBusyId={deliveryBusyId}
         formatMoney={formatMoney}

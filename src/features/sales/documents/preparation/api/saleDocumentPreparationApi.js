@@ -21,3 +21,12 @@ export const replaceSaleDocumentPreparationLines = async (saleId, lines) => {
   const response = await apiClient.put(`/sales/${saleId}/document-preparation/lines`, { lines });
   return unwrapPreparation(response);
 };
+
+export const lockSaleDocumentPreparation = async (saleId) => {
+  const response = await apiClient.post(`/sales/${saleId}/document-preparation/lock`);
+  return {
+    preparation: response?.data?.preparation || null,
+    finalSnapshot: response?.data?.finalSnapshot || null,
+    replayed: Boolean(response?.data?.replayed),
+  };
+};

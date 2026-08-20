@@ -10,11 +10,13 @@ const emptyLine = () => ({ description: '', quantity: 1, unitName: 'ชิ้น
 
 const DeliveryNotePreparationPanel = ({
   preparation,
+  taxProjectionResult = null,
   sourceSaleItems = [],
   saving = false,
   onCreate,
   onSave,
   onLock,
+  onProjectTaxDrafts,
 }) => {
   const [lines, setLines] = useState([]);
 
@@ -39,6 +41,7 @@ const DeliveryNotePreparationPanel = ({
   const exceedsSource = documentTotal > sourceTotal + 0.005;
   const isLocked = preparation?.status === 'LOCKED';
   const canLock = !isLocked && !saving && !exceedsSource && lines.length > 0 && documentTotal > 0;
+  const projectedDocuments = Array.isArray(taxProjectionResult?.results) ? taxProjectionResult.results : [];
 
   if (!preparation) {
     return (
@@ -132,53 +135,19 @@ const DeliveryNotePreparationPanel = ({
             ) : lines.map((line, index) => (
               <tr key={`preparation-line-${index}`} className="border-t border-slate-100">
                 <td className="p-2">
-                  <input
-                    value={line.description}
-                    readOnly={isLocked}
-                    onChange={(event) => updateLine(index, 'description', event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none focus:border-teal-500 read-only:bg-slate-50"
-                  />
+                  <input value={line.description} readOnly={isLocked} onChange={(event) => updateLine(index, 'description', event.target.value)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none focus:border-teal-500 read-only:bg-slate-50" />
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    min="0.001"
-                    step="0.001"
-                    value={line.quantity}
-                    readOnly={isLocked}
-                    onChange={(event) => updateLine(index, 'quantity', event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right outline-none focus:border-teal-500 read-only:bg-slate-50"
-                  />
+                  <input type="number" min="0.001" step="0.001" value={line.quantity} readOnly={isLocked} onChange={(event) => updateLine(index, 'quantity', event.target.value)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right outline-none focus:border-teal-500 read-only:bg-slate-50" />
                 </td>
                 <td className="p-2">
-                  <input
-                    value={line.unitName}
-                    readOnly={isLocked}
-                    onChange={(event) => updateLine(index, 'unitName', event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none focus:border-teal-500 read-only:bg-slate-50"
-                  />
+                  <input value={line.unitName} readOnly={isLocked} onChange={(event) => updateLine(index, 'unitName', event.target.value)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 outline-none focus:border-teal-500 read-only:bg-slate-50" />
                 </td>
                 <td className="p-2">
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={line.unitPrice}
-                    readOnly={isLocked}
-                    onChange={(event) => updateLine(index, 'unitPrice', event.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right outline-none focus:border-teal-500 read-only:bg-slate-50"
-                  />
+                  <input type="number" min="0" step="0.01" value={line.unitPrice} readOnly={isLocked} onChange={(event) => updateLine(index, 'unitPrice', event.target.value)} className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-right outline-none focus:border-teal-500 read-only:bg-slate-50" />
                 </td>
                 <td className="p-2 text-right">
-                  {!isLocked ? (
-                    <button
-                      type="button"
-                      onClick={() => removeLine(index)}
-                      className="rounded-lg px-2 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50"
-                    >
-                      ลบ
-                    </button>
-                  ) : null}
+                  {!isLocked ? <button type="button" onClick={() => removeLine(index)} className="rounded-lg px-2 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-50">ลบ</button> : null}
                 </td>
               </tr>
             ))}
@@ -194,30 +163,31 @@ const DeliveryNotePreparationPanel = ({
         </div>
         {!isLocked ? (
           <div className="text-right">
-            {exceedsSource ? (
-              <p className="mb-2 text-sm font-medium text-rose-600">ยอดเอกสารต้องไม่เกินยอดธุรกรรมจริง</p>
-            ) : null}
+            {exceedsSource ? <p className="mb-2 text-sm font-medium text-rose-600">ยอดเอกสารต้องไม่เกินยอดธุรกรรมจริง</p> : null}
             <div className="flex flex-wrap justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => onSave?.(lines)}
-                disabled={saving || exceedsSource}
-                className="rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving ? 'กำลังบันทึก...' : 'บันทึกแบบร่าง'}
-              </button>
-              <button
-                type="button"
-                onClick={onLock}
-                disabled={!canLock}
-                className="rounded-xl bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                ยืนยันแบบร่าง
-              </button>
+              <button type="button" onClick={() => onSave?.(lines)} disabled={saving || exceedsSource} className="rounded-xl border border-teal-300 bg-white px-4 py-2 text-sm font-semibold text-teal-800 hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-60">{saving ? 'กำลังบันทึก...' : 'บันทึกแบบร่าง'}</button>
+              <button type="button" onClick={onLock} disabled={!canLock} className="rounded-xl bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60">ยืนยันแบบร่าง</button>
             </div>
           </div>
         ) : (
-          <p className="text-sm font-medium text-slate-600">แบบร่างถูกล็อกแล้ว และไม่สามารถแก้รายการเดิมได้</p>
+          <div className="max-w-[360px] text-right">
+            <p className="text-sm font-medium text-slate-600">แบบร่างถูกล็อกแล้ว และไม่สามารถแก้รายการเดิมได้</p>
+            {projectedDocuments.length > 0 ? (
+              <div className="mt-2 rounded-xl border border-teal-200 bg-teal-50 px-3 py-2 text-left text-sm text-teal-900">
+                {projectedDocuments.map((entry) => (
+                  <div key={entry.portion} className="flex justify-between gap-4">
+                    <span>{entry.portion === 'IN_BUDGET' ? 'ใบกำกับภาษีเต็มรูป' : 'ใบกำกับภาษีอย่างย่อ (ค่าบริการ)'}</span>
+                    <span className="font-semibold">{money(entry.document?.totalAmount)}</span>
+                  </div>
+                ))}
+                <p className="mt-1 text-xs text-teal-700">สร้างเป็น Tax Draft แล้ว การออกเลขจริงดำเนินการต่อใน Tax Intake เดิม</p>
+              </div>
+            ) : (
+              <button type="button" onClick={onProjectTaxDrafts} disabled={saving} className="mt-3 rounded-xl bg-teal-600 px-5 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60">
+                {saving ? 'กำลังสร้างร่างภาษี...' : 'สร้างร่างใบกำกับภาษี'}
+              </button>
+            )}
+          </div>
         )}
       </div>
     </section>

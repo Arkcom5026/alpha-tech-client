@@ -25,7 +25,7 @@ assert.match(header, /ค้นหาและจัดการเอกสา�
 assert.match(toolbar, /ตัวเลือกนี้ใช้กับรายการขาย\/ใบเสร็จเดิมเท่านั้น/);
 
 assert.match(taxIntake, /searchParams\.get\('taxDocumentId'\)/);
-assert.match(taxIntake, /documents\.find\(\(item\) => Number\(item\?\.id\) === focusedTaxDocumentId\)/);
-assert.match(taxIntake, /openDocument\(document\)/);
+assert.match(taxIntake, /openDocument\(\{ id: focusedTaxDocumentId \}\)/);
+assert.doesNotMatch(taxIntake, /documents\.find\(/, 'deep link must not depend on the current list window');
 
 console.log('Sales Document Center tax lifecycle client contract: PASS');

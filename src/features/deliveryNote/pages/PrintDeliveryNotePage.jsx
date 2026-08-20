@@ -68,6 +68,7 @@ const PrintDeliveryNotePage = () => {
 
   const {
     preparation,
+    taxProjectionResult,
     loading: preparationLoading,
     saving: preparationSaving,
     error: preparationError,
@@ -194,11 +195,13 @@ const PrintDeliveryNotePage = () => {
       {!isConsolidated ? (
         <DeliveryNotePreparationPanel
           preparation={preparation}
+          taxProjectionResult={taxProjectionResult}
           sourceSaleItems={legacySaleItems}
           saving={preparationLoading || preparationSaving}
           onCreate={preparationActions.ensure}
           onSave={preparationActions.saveLines}
           onLock={preparationActions.lock}
+          onProjectTaxDrafts={preparationActions.projectTaxDrafts}
         />
       ) : null}
       <DeliveryNotePrintShell

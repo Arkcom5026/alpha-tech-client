@@ -30,6 +30,7 @@ import {
   buildDeliveryNoteBranchConfig,
   prepareDeliveryNoteSaleItems,
 } from '../print/workspace/policies/deliveryNotePrintPolicy';
+import { resolveDeliveryNotePrintableSale } from '../print/workspace/policies/deliveryNoteFinancialAuthority';
 
 const PrintDeliveryNotePage = () => {
   const navigate = useNavigate();
@@ -167,6 +168,12 @@ const PrintDeliveryNotePage = () => {
     if (preparation) return buildPreparationPrintableItems(preparation);
     return legacySaleItems;
   }, [legacySaleItems, preparation, replacementAuthorityActive, replacementSaleItems]);
+  const printableSale = useMemo(() => resolveDeliveryNotePrintableSale({
+    sale: currentSale,
+    printableItems: preparedSaleItems,
+    preparationStatus: preparation?.status,
+    replacementAuthorityActive,
+  }), [currentSale, preparation?.status, preparedSaleItems, replacementAuthorityActive]);
   const presentation = useMemo(
     () => resolveDeliveryNotePresentation({
       authority: currentSale?.deliveryNoteAuthority,
@@ -237,7 +244,7 @@ const PrintDeliveryNotePage = () => {
         />
       ) : null}
       <DeliveryNotePrintShell
-        sale={currentSale}
+        sale={printableSale}
         hideDate={hideDate}
         setHideDate={setHideDate}
         saleItems={preparedSaleItems}

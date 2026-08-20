@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle } from 'lucide-react';
 import TaxIntakeWorkspaceHeader from '../components/TaxIntakeWorkspaceHeader';
 import TaxIntakeWorkspaceSummary from '../components/TaxIntakeWorkspaceSummary';
@@ -9,6 +10,8 @@ import TaxIntakePeriodFilterBar from '../components/TaxIntakePeriodFilterBar';
 import useTaxIntakeWorkspaceController from '../hooks/useTaxIntakeWorkspaceController';
 
 const TaxIntakeWorkspacePage = () => {
+  const [searchParams] = useSearchParams();
+  const focusedDocumentRef = useRef(null);
   const {
     branchId,
     currentBranch,
@@ -37,6 +40,24 @@ const TaxIntakeWorkspacePage = () => {
     handleTransition,
     handleIssue,
   } = useTaxIntakeWorkspaceController();
+
+  const focusedTaxDocumentId = Number(searchParams.get('taxDocumentId') || 0) || null;
+
+  useEffect(() => {
+    if (!branchId || loading || !focusedTaxDocumentId) return;
+    if (Number(selectedDocument?.id) === focusedTaxDocumentId) {
+      focusedDocumentRef.current = `${branchId}:${focusedTaxDocumentId}`;
+      return;
+    }
+
+    const focusKey = `${branchId}:${focusedTaxDocumentId}`;
+    if (focusedDocumentRef.current === focusKey) return;
+    const document = documents.find((item) => Number(item?.id) === focusedTaxDocumentId);
+    if (!document) return;
+
+    focusedDocumentRef.current = focusKey;
+    openDocument(document);
+  }, [branchId, documents, focusedTaxDocumentId, loading, openDocument, selectedDocument?.id]);
 
   if (!branchId) {
     return (

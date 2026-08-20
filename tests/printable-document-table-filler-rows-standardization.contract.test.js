@@ -22,6 +22,8 @@ const quotation = read('src/features/quotation/pages/QuotationPrintPage.jsx');
 const deliveryNote = read('src/features/deliveryNote/components/DeliveryNoteForm.jsx');
 const fullTax = read('src/features/bill/components/FullTaxA4Document.jsx');
 const consolidatedFullTax = read('src/features/combinedBilling/bill/components/FullTaxA4Document.jsx');
+const purchaseOrder = read('src/features/purchaseOrder/print/workspace/components/PurchaseOrderPrintShell.jsx');
+const creditNote = read('src/features/sales/return/pages/PrintCreditNotePage.jsx');
 
 for (const token of [
   'const QUOTATION_TABLE_TARGET_ROWS = 18;',
@@ -50,7 +52,23 @@ for (const source of [deliveryNote, fullTax, consolidatedFullTax]) {
   }
 }
 
-for (const source of [quotation, deliveryNote, fullTax, consolidatedFullTax]) {
+for (const token of [
+  'const PURCHASE_ORDER_TABLE_TARGET_ROWS = 14;',
+  'const purchaseOrderFillerRowCount = (lines = []) =>',
+  'const fillerRowCount = purchaseOrderFillerRowCount(lines);',
+  'className="purchase-order-table-filler-row"',
+  'Array.from({ length: fillerRowCount })',
+]) includes(purchaseOrder, token, `Purchase order filler-row standard missing: ${token}`);
+
+for (const token of [
+  'const CREDIT_NOTE_TABLE_TARGET_ROWS = 12;',
+  'const creditNoteFillerRowCount = (lines = []) =>',
+  'const fillerRowCount = creditNoteFillerRowCount(projection.lines);',
+  'className="credit-note-table-filler-row"',
+  'Array.from({ length: fillerRowCount })',
+]) includes(creditNote, token, `Credit note filler-row standard missing: ${token}`);
+
+for (const source of [quotation, deliveryNote, fullTax, consolidatedFullTax, purchaseOrder, creditNote]) {
   excludes(source, 'createProduct(', 'Filler rows must never create product data');
   excludes(source, 'reserveStock(', 'Filler rows must never reserve stock');
   excludes(source, 'deductStock(', 'Filler rows must never deduct stock');

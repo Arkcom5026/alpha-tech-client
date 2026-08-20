@@ -30,3 +30,8 @@ export const lockSaleDocumentPreparation = async (saleId) => {
     replayed: Boolean(response?.data?.replayed),
   };
 };
+
+export const projectSaleDocumentPreparationTaxDrafts = async (saleId) => {
+  const response = await apiClient.post(`/sales/${saleId}/document-preparation/tax-candidates`);
+  return response?.data || null;
+};

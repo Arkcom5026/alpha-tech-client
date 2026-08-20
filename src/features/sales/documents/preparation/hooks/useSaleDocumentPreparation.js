@@ -3,6 +3,7 @@ import { feedback as toast } from '@/design-system';
 import {
   createSaleDocumentPreparation,
   getSaleDocumentPreparation,
+  lockSaleDocumentPreparation,
   replaceSaleDocumentPreparationLines,
 } from '../api/saleDocumentPreparationApi';
 
@@ -87,6 +88,25 @@ export const useSaleDocumentPreparation = ({ saleId, enabled = true } = {}) => {
     }
   }, [enabled, saleId, saving]);
 
+  const lock = useCallback(async () => {
+    if (!enabled || !saleId || saving) return null;
+    setSaving(true);
+    setError('');
+    try {
+      const result = await lockSaleDocumentPreparation(saleId);
+      setPreparation(result?.preparation || null);
+      toast.actionSuccess('ยืนยันแบบร่างเอกสารแล้ว', `sale-document-preparation:${saleId}:lock:success`);
+      return result;
+    } catch (requestError) {
+      const message = errorMessage(requestError);
+      setError(message);
+      toast.actionError(requestError, message, `sale-document-preparation:${saleId}:lock:error`);
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  }, [enabled, saleId, saving]);
+
   return {
     preparation,
     loading,
@@ -96,6 +116,7 @@ export const useSaleDocumentPreparation = ({ saleId, enabled = true } = {}) => {
       load,
       ensure,
       saveLines,
+      lock,
       clearError: () => setError(''),
     },
   };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileSearch } from 'lucide-react';
+import { FileSearch, RefreshCw } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import TaxIntakeReconciliationCard from './TaxIntakeReconciliationCard';
 import {
@@ -49,6 +49,7 @@ const TaxIntakeDocumentDetailPanel = ({
   document,
   transitioning,
   transitionError,
+  onRefreshRecipient,
   onTransition,
   onIssue,
 }) => {
@@ -139,9 +140,20 @@ const TaxIntakeDocumentDetailPanel = ({
           <div className="rounded-xl border border-blue-100 bg-white p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-sm font-black text-slate-900">ข้อมูลผู้รับสำหรับใบกำกับภาษีเต็มรูป</p>
-              <span className={`rounded-full px-2.5 py-1 text-xs font-black ${fullTaxReadiness.ready ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>
-                {fullTaxReadiness.ready ? 'ข้อมูลครบ' : 'ข้อมูลยังไม่ครบ'}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-xs font-black ${fullTaxReadiness.ready ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}`}>
+                  {fullTaxReadiness.ready ? 'ข้อมูลครบ' : 'ข้อมูลยังไม่ครบ'}
+                </span>
+                <button
+                  type="button"
+                  onClick={onRefreshRecipient}
+                  disabled={transitioning}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <RefreshCw size={14} />
+                  อัปเดตข้อมูลผู้รับจากลูกค้า
+                </button>
+              </div>
             </div>
             <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               <div><dt className="text-xs text-slate-500">ชื่อผู้รับ/นิติบุคคล</dt><dd className="font-bold text-slate-900">{fullTaxReadiness.recipient.legalName}</dd></div>

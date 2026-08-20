@@ -113,11 +113,35 @@ export const getTaxIssuerProfile = async ({ branchId }) => {
   return unwrapData(response);
 };
 
-export const saveTaxIssuerProfile = async ({ branchId, ...profile }) => {
-  const response = await apiClient.put('/tax/issuer-profile', {
-    ...profile,
-    branchId: requirePositiveId(branchId, 'branchId'),
-  });
+const buildTaxIssuerProfileSavePayload = ({
+  branchId,
+  legalName,
+  taxId,
+  registeredAddress,
+  branchCode,
+  isHeadOffice,
+  shortTaxInvoicePrefix,
+  fullTaxInvoicePrefix,
+  creditNotePrefix,
+  status,
+} = {}) => ({
+  branchId: requirePositiveId(branchId, 'branchId'),
+  legalName,
+  taxId,
+  registeredAddress,
+  branchCode,
+  isHeadOffice,
+  shortTaxInvoicePrefix,
+  fullTaxInvoicePrefix,
+  creditNotePrefix,
+  status,
+});
+
+export const saveTaxIssuerProfile = async (profile = {}) => {
+  const response = await apiClient.put(
+    '/tax/issuer-profile',
+    buildTaxIssuerProfileSavePayload(profile),
+  );
   return unwrapData(response);
 };
 

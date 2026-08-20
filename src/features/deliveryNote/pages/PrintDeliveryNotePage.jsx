@@ -167,6 +167,20 @@ const PrintDeliveryNotePage = () => {
     if (preparation) return buildPreparationPrintableItems(preparation);
     return legacySaleItems;
   }, [legacySaleItems, preparation, replacementAuthorityActive, replacementSaleItems]);
+  const preparedDocumentTotal = useMemo(() => {
+    const lockedDocumentAuthority = replacementAuthorityActive || preparation?.status === 'LOCKED';
+    if (!lockedDocumentAuthority) return null;
+
+    return preparedSaleItems.reduce((sum, item) => {
+      const quantity = Number(item?.quantity || 0);
+      const unitPrice = Number(item?.price || 0);
+      return sum + (Number.isFinite(quantity) && Number.isFinite(unitPrice) ? quantity * unitPrice : 0);
+    }, 0);
+  }, [preparation?.status, preparedSaleItems, replacementAuthorityActive]);
+  const printableSale = useMemo(() => {
+    if (!currentSale || preparedDocumentTotal == null) return currentSale;
+    return { ...currentSale, totalAmount: preparedDocumentTotal };
+  }, [currentSale, preparedDocumentTotal]);
   const presentation = useMemo(
     () => resolveDeliveryNotePresentation({
       authority: currentSale?.deliveryNoteAuthority,
@@ -237,7 +251,7 @@ const PrintDeliveryNotePage = () => {
         />
       ) : null}
       <DeliveryNotePrintShell
-        sale={currentSale}
+        sale={printableSale}
         hideDate={hideDate}
         setHideDate={setHideDate}
         saleItems={preparedSaleItems}

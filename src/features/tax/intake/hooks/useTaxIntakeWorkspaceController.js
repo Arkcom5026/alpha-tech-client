@@ -9,6 +9,7 @@ import {
   getTaxIntakeErrorMessage,
   listTaxCandidates,
   listTaxDocuments,
+  refreshDraftTaxRecipient,
   transitionTaxDocument,
   issueOutputTaxDocument,
 } from '../api/taxIntakeApi';
@@ -216,6 +217,38 @@ const useTaxIntakeWorkspaceController = () => {
     return listRefresh;
   }, [loadData]);
 
+  const handleRefreshRecipient = useCallback(async () => {
+    const branchIdSnapshot = branchId;
+    const taxDocumentId = selectedDocument?.id;
+    if (!branchIdSnapshot || !taxDocumentId || transitioning || transitionRef.current) return;
+
+    const eventKey = `tax-intake:${branchIdSnapshot}:document:${taxDocumentId}:recipient-refresh`;
+    transitionRef.current = true;
+    setTransitioning(true);
+    setTransitionError(null);
+    try {
+      await refreshDraftTaxRecipient({
+        branchId: branchIdSnapshot,
+        taxDocumentId,
+      });
+      await refreshAfterMutation({
+        branchIdSnapshot,
+        taxDocumentId,
+        successMessage: 'อัปเดตข้อมูลผู้รับจากลูกค้าล่าสุดแล้ว',
+        eventKey,
+      });
+    } catch (requestError) {
+      const message = getTaxIntakeErrorMessage(requestError);
+      if (branchIdRef.current === branchIdSnapshot) {
+        setTransitionError({ message, details: getTaxIntakeErrorDetails(requestError) });
+      }
+      toast.actionError(requestError, message, `${eventKey}:error`);
+    } finally {
+      transitionRef.current = false;
+      setTransitioning(false);
+    }
+  }, [branchId, refreshAfterMutation, selectedDocument?.id, transitioning]);
+
   const handleTransition = useCallback(async (targetStatus) => {
     const branchIdSnapshot = branchId;
     const taxDocumentId = selectedDocument?.id;
@@ -323,6 +356,7 @@ const useTaxIntakeWorkspaceController = () => {
     handleDocumentTypeChange,
     loadData,
     openDocument,
+    handleRefreshRecipient,
     handleTransition,
     handleIssue,
   };

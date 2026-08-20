@@ -18,7 +18,8 @@ includes('.quotation-table-wrap tbody td > div + div { font-size: 10px !importan
 includes('.quotation-settlement { font-size: 11px !important; }', 'Quotation totals and terms must remain readable');
 includes('.quotation-settlement section:last-child > div:last-child { font-size: 14px !important; }', 'Quotation grand total must retain strong visual hierarchy');
 includes('.quotation-signatures { font-size: 11px !important; }', 'Quotation signature labels must remain readable');
-includes('return Math.max(0, 130 - occupied);', 'Typography refinement must preserve the verified extended table depth');
+includes('const QUOTATION_TABLE_TARGET_ROWS = 18;', 'Typography refinement must preserve the verified extended table depth');
+includes('const QUOTATION_FILLER_ROW_HEIGHT_MM = 6;', 'Typography refinement must preserve the standardized filler-row geometry');
 includes('quotation-signatures absolute bottom-[5mm]', 'Typography refinement must preserve verified signature geometry');
 
 console.log('Quotation Print Typography Contract: PASS');

@@ -12,6 +12,11 @@ const includes = (source, token, message) => {
 const excludes = (source, token, message) => {
   if (source.includes(token)) throw new Error(message || `Unexpected token: ${token}`);
 };
+const hasRepeatedEmptyRowRenderer = (source) => (
+  source.includes('Array.from({ length: emptyRowCount })')
+  || source.includes('[...Array(emptyRowCount)]')
+  || source.includes('Array(emptyRowCount).fill')
+);
 
 const quotation = read('src/features/quotation/pages/QuotationPrintPage.jsx');
 const deliveryNote = read('src/features/deliveryNote/components/DeliveryNoteForm.jsx');
@@ -40,7 +45,9 @@ excludes(
 
 for (const source of [deliveryNote, fullTax, consolidatedFullTax]) {
   includes(source, 'const emptyRowCount = Math.max(', 'A4 item table must calculate presentation-only empty rows');
-  includes(source, 'Array(emptyRowCount)', 'A4 item table must render repeated physical empty rows');
+  if (!hasRepeatedEmptyRowRenderer(source)) {
+    throw new Error('A4 item table must render repeated physical empty rows');
+  }
 }
 
 for (const source of [quotation, deliveryNote, fullTax, consolidatedFullTax]) {

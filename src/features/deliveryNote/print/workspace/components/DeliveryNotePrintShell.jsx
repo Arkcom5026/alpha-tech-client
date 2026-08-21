@@ -42,7 +42,7 @@ const DeliveryNotePrintShell = ({
       {historicalPrintMeta ? (
         <div
           data-testid="delivery-note-historical-print-stamp"
-          className="pointer-events-none absolute right-8 top-8 z-20 rounded-md border border-amber-400 bg-white px-2.5 py-1.5 text-center text-[10px] font-bold leading-tight text-amber-800 shadow-sm print:right-[8mm] print:top-[8mm] print:shadow-none"
+          className="pointer-events-none hidden absolute right-8 top-8 z-20 rounded-md border border-amber-400 bg-white px-2.5 py-1.5 text-center text-[10px] font-bold leading-tight text-amber-800 shadow-sm print:block print:right-[8mm] print:top-[8mm] print:shadow-none"
         >
           <div>สำเนาประวัติ R{historicalPrintMeta.revisionNumber || '-'}</div>
           <div>HISTORICAL COPY</div>

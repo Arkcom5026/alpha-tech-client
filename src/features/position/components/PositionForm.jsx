@@ -4,6 +4,7 @@ import { TAX_PERIOD_CAPABILITY_GROUP } from './taxPeriodCapabilityGroup';
 import { TAX_CLOSING_HANDOFF_CAPABILITY_GROUP } from './taxClosingHandoffCapabilityGroup';
 import { ACCOUNTING_OFFICE_CAPABILITY_GROUP } from './accountingOfficeCapabilityGroup';
 import { TAX_READINESS_CAPABILITY_GROUP } from './taxReadinessCapabilityGroup';
+import { VAT_SETTLEMENT_CAPABILITY_GROUP } from './vatSettlementCapabilityGroup';
 
 const POSITION_CAPABILITY_GROUPS = Object.freeze([
   ...CAPABILITY_GROUPS,
@@ -11,6 +12,7 @@ const POSITION_CAPABILITY_GROUPS = Object.freeze([
   TAX_CLOSING_HANDOFF_CAPABILITY_GROUP,
   ACCOUNTING_OFFICE_CAPABILITY_GROUP,
   TAX_READINESS_CAPABILITY_GROUP,
+  VAT_SETTLEMENT_CAPABILITY_GROUP,
 ]);
 
 const PositionForm = ({

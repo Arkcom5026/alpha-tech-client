@@ -1,9 +1,9 @@
-
-// --- filepath: src/features/position/components/PositionForm.jsx
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+const EMPLOYEE_MANAGE_CAPABILITY = 'employee.manage';
+
 const PositionForm = ({
-  initialValues = { name: '', description: '' },
+  initialValues = { name: '', description: '', capabilities: [] },
   onSubmit,
   onCancel,
   submitting = false,
@@ -12,16 +12,20 @@ const PositionForm = ({
 }) => {
   const [name, setName] = useState(initialValues?.name || '');
   const [description, setDescription] = useState(initialValues?.description || '');
+  const [positionAuthorityEnabled, setPositionAuthorityEnabled] = useState(
+    Array.isArray(initialValues?.capabilities),
+  );
+  const [capabilities, setCapabilities] = useState(
+    Array.isArray(initialValues?.capabilities) ? initialValues.capabilities : [],
+  );
   const prevInitial = useRef(initialValues);
 
-  // update state when initialValues prop changes
   useEffect(() => {
-    if (
-      prevInitial.current.name !== initialValues.name ||
-      prevInitial.current.description !== initialValues.description
-    ) {
+    if (prevInitial.current !== initialValues) {
       setName(initialValues?.name || '');
       setDescription(initialValues?.description || '');
+      setPositionAuthorityEnabled(Array.isArray(initialValues?.capabilities));
+      setCapabilities(Array.isArray(initialValues?.capabilities) ? initialValues.capabilities : []);
       prevInitial.current = initialValues;
     }
   }, [initialValues]);
@@ -32,10 +36,26 @@ const PositionForm = ({
     return nm.length > 0 && !submitting;
   }, [name, submitting]);
 
+  const hasCapability = (key) => capabilities.includes(key);
+  const toggleCapability = (key) => {
+    if (mutationBusy) return;
+    setCapabilities((current) => (
+      current.includes(key)
+        ? current.filter((item) => item !== key)
+        : [...current, key]
+    ));
+  };
+
   const handleSubmit = (e) => {
     e?.preventDefault?.();
     if (!canSubmit || mutationOwnedRef?.current) return;
-    onSubmit?.({ name: String(name).trim(), description: String(description || '').trim() || null });
+
+    const payload = {
+      name: String(name).trim(),
+      description: String(description || '').trim() || null,
+    };
+    if (positionAuthorityEnabled) payload.capabilities = capabilities;
+    onSubmit?.(payload);
   };
 
   return (
@@ -69,6 +89,47 @@ const PositionForm = ({
           disabled={mutationBusy}
         />
       </div>
+
+      <section className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-sm font-semibold text-zinc-900">สิทธิ์ของตำแหน่งงาน</h2>
+            <p className="mt-1 text-xs leading-5 text-zinc-600">
+              ตำแหน่งงานจะเป็นแหล่งกำหนดสิทธิ์หลักของพนักงาน ส่วน v2Role จะคงไว้เป็นชั้นรองรับของระบบเดิมระหว่างการย้าย
+            </p>
+          </div>
+          {!positionAuthorityEnabled && (
+            <button
+              type="button"
+              disabled={mutationBusy}
+              onClick={() => setPositionAuthorityEnabled(true)}
+              className="shrink-0 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+            >
+              เริ่มใช้สิทธิ์จากตำแหน่งนี้
+            </button>
+          )}
+        </div>
+
+        {!positionAuthorityEnabled ? (
+          <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+            ตำแหน่งนี้ยังใช้สิทธิ์จากระบบเดิมอยู่ การกดเริ่มใช้สิทธิ์จากตำแหน่งจะย้าย authority ของตำแหน่งนี้แบบค่อยเป็นค่อยไป
+          </div>
+        ) : (
+          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 bg-white p-3">
+            <input
+              type="checkbox"
+              checked={hasCapability(EMPLOYEE_MANAGE_CAPABILITY)}
+              onChange={() => toggleCapability(EMPLOYEE_MANAGE_CAPABILITY)}
+              disabled={mutationBusy}
+              className="mt-0.5 h-4 w-4 accent-emerald-600"
+            />
+            <span>
+              <span className="block text-sm font-semibold text-zinc-900">เพิ่มและจัดการพนักงาน</span>
+              <span className="mt-0.5 block text-xs leading-5 text-zinc-600">อนุญาตให้พนักงานในตำแหน่งนี้จัดการ flow เพิ่มพนักงานของสาขา</span>
+            </span>
+          </label>
+        )}
+      </section>
 
       <div className="flex items-center justify-end gap-2 pt-2">
         <button type="button" className="px-3 py-2 rounded-md border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50" onClick={onCancel} disabled={mutationBusy}>ยกเลิก</button>

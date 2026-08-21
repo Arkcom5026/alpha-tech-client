@@ -11,6 +11,7 @@ import DeliveryNoteWorkspaceHeader from '../components/workspace/DeliveryNoteWor
 import DeliveryNoteSearchToolbar from '../components/workspace/DeliveryNoteSearchToolbar';
 import DeliveryNoteMetricGrid from '../components/workspace/DeliveryNoteMetricGrid';
 import DeliveryNoteResultTable from '../components/workspace/DeliveryNoteResultTable';
+import DeliveryNoteHistoryDialog from '../components/workspace/DeliveryNoteHistoryDialog';
 
 const createInitialDateRange = () => {
   const today = new Date();
@@ -38,6 +39,7 @@ const DeliveryNoteListPage = () => {
   const [sortKey, setSortKey] = useState('createdAt');
   const [sortDir, setSortDir] = useState('desc');
   const [lifecycleBySaleId, setLifecycleBySaleId] = useState({});
+  const [historyRow, setHistoryRow] = useState(null);
 
   const documentSearch = useSaleDocumentSearch({
     policy: DELIVERY_NOTE_SEARCH_POLICY,
@@ -210,6 +212,13 @@ const DeliveryNoteListPage = () => {
         sortDir={sortDir}
         onSort={toggleSort}
         onPrint={handlePrint}
+        onHistory={setHistoryRow}
+      />
+
+      <DeliveryNoteHistoryDialog
+        open={Boolean(historyRow)}
+        row={historyRow}
+        onClose={() => setHistoryRow(null)}
       />
 
       <p className="text-xs text-slate-500">

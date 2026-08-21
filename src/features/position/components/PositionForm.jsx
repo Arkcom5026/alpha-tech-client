@@ -28,6 +28,10 @@ const SALES_CAPABILITIES = Object.freeze({
   COMPLETE: 'sales.complete',
   RETURN: 'sales.return',
   RETURN_DEDUCTION_APPROVE: 'sales.return.deduction-approve',
+  PAYMENT_READ: 'sales.payment.read',
+  PAYMENT_MANAGE: 'sales.payment.manage',
+  PAYMENT_CANCEL: 'sales.payment.cancel',
+  SETTLEMENT_CLOSE: 'sales.settlement.close',
 });
 const PROCUREMENT_CAPABILITIES = Object.freeze({
   PURCHASE_ORDER: 'procurement.purchase-order',
@@ -161,7 +165,7 @@ const CAPABILITY_GROUPS = Object.freeze([
   {
     key: 'sales',
     title: 'การขายและหน้าขายสินค้า',
-    description: 'แยกสิทธิ์ใช้งานหน้าขายและประวัติการขายออกจาก authority การยืนยันขายที่ตัดสต๊อกและบันทึกการชำระ',
+    description: 'แยกสิทธิ์หน้าขาย การคืนสินค้า การรับชำระ และการปิดยอดออกจากกันตาม authority ของแต่ละขั้นตอน',
     options: [
       {
         key: SALES_CAPABILITIES.CORE,
@@ -182,6 +186,26 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: SALES_CAPABILITIES.RETURN_DEDUCTION_APPROVE,
         label: 'อนุมัติการหักยอดคืน',
         description: 'อนุญาตยืนยันการคืนที่มีการหักยอดเงินคืน โดยต้องมีสิทธิ์รับคืนสินค้าด้วย',
+      },
+      {
+        key: SALES_CAPABILITIES.PAYMENT_READ,
+        label: 'ดูข้อมูลการชำระเงิน',
+        description: 'ดูและค้นหารายการชำระเงินที่ใช้เป็นหลักฐานทางการเงินของการขาย',
+      },
+      {
+        key: SALES_CAPABILITIES.PAYMENT_MANAGE,
+        label: 'บันทึกการชำระเงิน',
+        description: 'สร้าง payment evidence สำหรับการรับชำระ รวมถึง flow ที่เชื่อมเงินมัดจำหรือลูกหนี้ตามกฎเดิมของระบบ',
+      },
+      {
+        key: SALES_CAPABILITIES.PAYMENT_CANCEL,
+        label: 'ยกเลิกรายการชำระเงิน',
+        description: 'ย้อนหรือยกเลิก payment evidence โดยต้องมีสิทธิ์บันทึกการชำระเงินด้วย',
+      },
+      {
+        key: SALES_CAPABILITIES.SETTLEMENT_CLOSE,
+        label: 'ปิดยอดการขาย',
+        description: 'อนุญาตใช้ mark-paid เพื่อปิดยอดจากหลักฐานการชำระที่ระบบตรวจสอบแล้ว แยกจากสิทธิ์สร้างหรือยกเลิก payment evidence',
       },
     ],
   },

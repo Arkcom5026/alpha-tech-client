@@ -5,11 +5,53 @@ const toNumber = (value) => {
 
 const round2 = (value) => Number(toNumber(value).toFixed(2));
 
+const normalizeText = (value) => String(value || '').trim();
+
 const sourceItemsByKey = (sale = {}) => {
   const map = new Map();
   for (const item of sale.items || []) map.set(`STOCK:${Number(item.id)}`, item);
   for (const item of sale.simpleItems || []) map.set(`SIMPLE:${Number(item.id)}`, item);
   return map;
+};
+
+const persistedRevisionPrintGroupKey = (item, index) => {
+  const productId = item?.productId == null ? null : String(item.productId);
+  const unitAmountKey = Math.round(round2(item?.price) * 100);
+  return [
+    productId ? `product-${productId}` : `unknown-${index}`,
+    `unit-${unitAmountKey}`,
+    `description-${normalizeText(item?.documentDescription)}`,
+    `unit-name-${normalizeText(item?.unit)}`,
+  ].join('|');
+};
+
+export const groupPersistedDeliveryNoteRevisionItems = (items = []) => {
+  const grouped = new Map();
+
+  for (const [index, item] of (Array.isArray(items) ? items : []).entries()) {
+    const key = persistedRevisionPrintGroupKey(item, index);
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        ...item,
+        id: `delivery-note-revision-group-${grouped.size}`,
+        documentLineKey: key,
+        saleItemIds: [...(item?.saleItemIds || [])],
+        simpleItemIds: [...(item?.simpleItemIds || [])],
+        quantity: 0,
+        lineAmount: 0,
+      });
+    } else {
+      const aggregate = grouped.get(key);
+      aggregate.saleItemIds.push(...(item?.saleItemIds || []));
+      aggregate.simpleItemIds.push(...(item?.simpleItemIds || []));
+    }
+
+    const aggregate = grouped.get(key);
+    aggregate.quantity = round2(aggregate.quantity + round2(item?.quantity));
+    aggregate.lineAmount = round2(aggregate.lineAmount + round2(item?.lineAmount));
+  }
+
+  return Array.from(grouped.values());
 };
 
 export const hasPersistedDeliveryNoteRevision = (authority) => (
@@ -21,7 +63,7 @@ export const buildPersistedDeliveryNoteRevisionItems = ({ sale, authority } = {}
   if (!hasPersistedDeliveryNoteRevision(authority)) return [];
   const sources = sourceItemsByKey(sale);
 
-  return authority.lines.map((line, index) => {
+  const revisionItems = authority.lines.map((line, index) => {
     const sourceLineType = String(line?.sourceLineType || '').toUpperCase();
     const sourceLineId = Number(line?.sourceLineId);
     const source = sources.get(`${sourceLineType}:${sourceLineId}`) || {};
@@ -54,6 +96,8 @@ export const buildPersistedDeliveryNoteRevisionItems = ({ sale, authority } = {}
       serialNumber: '-',
     };
   });
+
+  return groupPersistedDeliveryNoteRevisionItems(revisionItems);
 };
 
 export const applyPersistedDeliveryNoteRevisionToSale = ({ sale, authority } = {}) => {

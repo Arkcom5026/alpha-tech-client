@@ -32,6 +32,10 @@ const SALES_CAPABILITIES = Object.freeze({
   PAYMENT_MANAGE: 'sales.payment.manage',
   PAYMENT_CANCEL: 'sales.payment.cancel',
   SETTLEMENT_CLOSE: 'sales.settlement.close',
+  DOCUMENT_PREPARE: 'sales.document.prepare',
+  DOCUMENT_LOCK: 'sales.document.lock',
+  DOCUMENT_REPLACE: 'sales.document.replace',
+  DOCUMENT_TAX_PUBLISH: 'sales.document.tax-publish',
 });
 const PROCUREMENT_CAPABILITIES = Object.freeze({
   PURCHASE_ORDER: 'procurement.purchase-order',
@@ -165,7 +169,7 @@ const CAPABILITY_GROUPS = Object.freeze([
   {
     key: 'sales',
     title: 'การขายและหน้าขายสินค้า',
-    description: 'แยกสิทธิ์หน้าขาย การคืนสินค้า การรับชำระ และการปิดยอดออกจากกันตาม authority ของแต่ละขั้นตอน',
+    description: 'แยกสิทธิ์หน้าขาย การคืนสินค้า การรับชำระ การปิดยอด และการกำกับเอกสารออกจากกันตาม authority ของแต่ละขั้นตอน',
     options: [
       {
         key: SALES_CAPABILITIES.CORE,
@@ -206,6 +210,26 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: SALES_CAPABILITIES.SETTLEMENT_CLOSE,
         label: 'ปิดยอดการขาย',
         description: 'อนุญาตใช้ mark-paid เพื่อปิดยอดจากหลักฐานการชำระที่ระบบตรวจสอบแล้ว แยกจากสิทธิ์สร้างหรือยกเลิก payment evidence',
+      },
+      {
+        key: SALES_CAPABILITIES.DOCUMENT_PREPARE,
+        label: 'จัดเตรียมเอกสารการขาย',
+        description: 'ดู สร้าง และแก้ไขร่างเอกสาร รวมถึงบรรทัดและข้อความประกอบ โดยไม่รวมการล็อกหรือเผยแพร่ภาษี',
+      },
+      {
+        key: SALES_CAPABILITIES.DOCUMENT_LOCK,
+        label: 'ล็อกเอกสารการขาย',
+        description: 'ยืนยัน snapshot ของเอกสารที่จัดเตรียมหรือเอกสารทดแทน โดยต้องมีสิทธิ์ของ flow เอกสารนั้นร่วมด้วย',
+      },
+      {
+        key: SALES_CAPABILITIES.DOCUMENT_REPLACE,
+        label: 'จัดทำเอกสารทดแทน',
+        description: 'สร้าง ดู และแก้ไขเอกสารทดแทนภายใต้ financial lock ของเอกสารเดิม โดยยังไม่รวมการล็อกเอกสาร',
+      },
+      {
+        key: SALES_CAPABILITIES.DOCUMENT_TAX_PUBLISH,
+        label: 'เผยแพร่เอกสารเข้าสู่ภาษี',
+        description: 'อนุญาตลงทะเบียน tax candidate จากเอกสารที่จัดเตรียมแล้ว โดยแยกจากสิทธิ์ออกใบส่งของและ tax lifecycle อื่น',
       },
     ],
   },

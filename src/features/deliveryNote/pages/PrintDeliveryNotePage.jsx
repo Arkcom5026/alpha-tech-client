@@ -33,6 +33,11 @@ import {
   prepareDeliveryNoteSaleItems,
 } from '../print/workspace/policies/deliveryNotePrintPolicy';
 import { resolveDeliveryNotePrintableSale } from '../print/workspace/policies/deliveryNoteFinancialAuthority';
+import {
+  applyPersistedDeliveryNoteRevisionToSale,
+  buildPersistedDeliveryNoteRevisionItems,
+  hasPersistedDeliveryNoteRevision,
+} from '../print/workspace/policies/deliveryNoteRevisionPresentation';
 
 const PrintDeliveryNotePage = () => {
   const navigate = useNavigate();
@@ -98,7 +103,9 @@ const PrintDeliveryNotePage = () => {
     onLocked: loadCurrentDocument,
   });
 
-  const legacyEditorEnabled = !isConsolidated && !preparation;
+  const persistedRevisionActive = !isConsolidated
+    && hasPersistedDeliveryNoteRevision(currentSale?.deliveryNoteAuthority);
+  const legacyEditorEnabled = !isConsolidated && !preparation && !persistedRevisionActive;
   const {
     editingLineKey,
     lineDrafts,
@@ -159,6 +166,20 @@ const PrintDeliveryNotePage = () => {
     () => prepareDeliveryNoteSaleItems(currentSale),
     [currentSale]
   );
+  const persistedRevisionSaleItems = useMemo(
+    () => buildPersistedDeliveryNoteRevisionItems({
+      sale: currentSale,
+      authority: currentSale?.deliveryNoteAuthority,
+    }),
+    [currentSale]
+  );
+  const revisionAwareSale = useMemo(
+    () => applyPersistedDeliveryNoteRevisionToSale({
+      sale: currentSale,
+      authority: currentSale?.deliveryNoteAuthority,
+    }),
+    [currentSale]
+  );
   const replacementAuthorityActive = Boolean(currentSale?.deliveryNoteAuthority?.document?.replacement);
   const replacementSaleItems = useMemo(
     () => replacementAuthorityActive
@@ -167,16 +188,17 @@ const PrintDeliveryNotePage = () => {
     [currentSale?.deliveryNoteAuthority, replacementAuthorityActive]
   );
   const preparedSaleItems = useMemo(() => {
+    if (persistedRevisionActive) return persistedRevisionSaleItems;
     if (replacementAuthorityActive) return replacementSaleItems;
     if (preparation) return buildPreparationPrintableItems(preparation);
     return legacySaleItems;
-  }, [legacySaleItems, preparation, replacementAuthorityActive, replacementSaleItems]);
+  }, [legacySaleItems, persistedRevisionActive, persistedRevisionSaleItems, preparation, replacementAuthorityActive, replacementSaleItems]);
   const printableSale = useMemo(() => resolveDeliveryNotePrintableSale({
-    sale: currentSale,
+    sale: revisionAwareSale,
     printableItems: preparedSaleItems,
     preparationStatus: preparation?.status,
     replacementAuthorityActive,
-  }), [currentSale, preparation?.status, preparedSaleItems, replacementAuthorityActive]);
+  }), [preparation?.status, preparedSaleItems, replacementAuthorityActive, revisionAwareSale]);
   const presentation = useMemo(
     () => resolveDeliveryNotePresentation({
       authority: currentSale?.deliveryNoteAuthority,
@@ -261,7 +283,7 @@ const PrintDeliveryNotePage = () => {
   return (
     <StoreDocumentHeaderScope config={preparedConfig}>
       {hasReturnAdjustment ? (
-        <div className="mx-auto mb-4 flex w-full max-w-[980px] flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div className="mx-auto mb-4 flex w-full max-w-[980px] flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm md:flex-row md:items-center md:justify-between print:hidden">
           <div>
             <div className="font-semibold">รายการนี้มีการคืนสินค้าแล้ว</div>
             <div className="mt-1 text-amber-800">

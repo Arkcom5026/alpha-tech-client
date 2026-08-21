@@ -44,6 +44,13 @@ const TAX_OUTPUT_CAPABILITIES = Object.freeze({
   CREDIT_NOTE: 'tax.output.credit-note',
   LIFECYCLE: 'tax.output.lifecycle',
 });
+const TAX_INPUT_CAPABILITIES = Object.freeze({
+  READ: 'tax.input.read',
+  REVIEW: 'tax.input.review',
+  FILING: 'tax.input.filing',
+  AUDIT: 'tax.input.audit',
+  PERIOD_CONTROL: 'tax.input.period-control',
+});
 const PROCUREMENT_CAPABILITIES = Object.freeze({
   PURCHASE_ORDER: 'procurement.purchase-order',
   PURCHASE_ORDER_CONTROL: 'procurement.purchase-order.control',
@@ -269,6 +276,38 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: TAX_OUTPUT_CAPABILITIES.LIFECYCLE,
         label: 'ควบคุมสถานะเอกสารภาษี',
         description: 'ดำเนิน transition ของเอกสารภาษีผ่าน canonical lifecycle โดยไม่เปลี่ยนกฎ transition เดิม',
+      },
+    ],
+  },
+  {
+    key: 'tax-input',
+    title: 'ภาษีซื้อและการยื่นภาษี',
+    description: 'แยกสิทธิ์อ่าน ตรวจสอบ จัดชุดยื่น ตรวจสอบหลักฐาน และควบคุมงวดภาษีซื้อออกจากกัน',
+    options: [
+      {
+        key: TAX_INPUT_CAPABILITIES.READ,
+        label: 'ดูข้อมูลภาษีซื้อ',
+        description: 'ดูภาพรวม เอกสาร และข้อมูลที่ใช้ประกอบการตรวจสอบภาษีซื้อ รวมถึง export ที่ไม่แก้สถานะ',
+      },
+      {
+        key: TAX_INPUT_CAPABILITIES.REVIEW,
+        label: 'ตรวจสอบและตัดสินใจภาษีซื้อ',
+        description: 'Review เอกสาร ตัดสินรายการซ้ำ เชื่อมเอกสารทดแทน และปิด investigation ตามกฎเดิมของระบบ',
+      },
+      {
+        key: TAX_INPUT_CAPABILITIES.FILING,
+        label: 'จัดชุดและยื่นภาษีซื้อ',
+        description: 'เลือกหรือถอนเอกสารจากชุดยื่น เตรียม filing batch และยืนยันการยื่นภาษีซื้อ',
+      },
+      {
+        key: TAX_INPUT_CAPABILITIES.AUDIT,
+        label: 'จัดทำชุดตรวจสอบภาษีซื้อ',
+        description: 'สร้าง audit package และหลักฐานประกอบสำหรับการตรวจสอบภาษีซื้อ โดยไม่ให้สิทธิ์ควบคุมงวดอัตโนมัติ',
+      },
+      {
+        key: TAX_INPUT_CAPABILITIES.PERIOD_CONTROL,
+        label: 'ควบคุมงวดภาษีซื้อ',
+        description: 'ดำเนิน privileged period control เช่น reopen งวด โดยแยกจากสิทธิ์อ่าน ตรวจสอบ และ filing',
       },
     ],
   },

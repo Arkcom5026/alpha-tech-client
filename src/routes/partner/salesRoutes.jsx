@@ -10,6 +10,7 @@ import {
 } from '@/features/sales/return';
 import CreateSalePage from '@/features/sales/create/pages/CreateSalePage';
 import PrintDeliveryNotePage from '@/features/deliveryNote/pages/PrintDeliveryNotePage';
+import PrintHistoricalDeliveryNoteRevisionPage from '@/features/deliveryNote/pages/PrintHistoricalDeliveryNoteRevisionPage';
 import CombinedBillingPage from '@/features/combinedBilling/pages/CombinedBillingPage';
 import PrintConsolidatedTaxPage from '@/features/combinedBilling/pages/PrintConsolidatedTaxPage';
 import PrintConsolidatedDeliveryPage from '@/features/combinedBilling/pages/PrintConsolidatedDeliveryPage';
@@ -58,6 +59,7 @@ const salesRoutes = {
       path: 'delivery-note',
       children: [
         { index: true, element: <DeliveryNoteListPage /> },
+        { path: 'print/:saleId/revisions/:revisionId', element: <PrintHistoricalDeliveryNoteRevisionPage /> },
         { path: 'print/:saleId', element: <PrintDeliveryNotePage /> },
       ],
     },

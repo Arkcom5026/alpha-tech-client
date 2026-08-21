@@ -19,6 +19,7 @@ const INVENTORY_CAPABILITIES = Object.freeze({
   AUDIT_FINALIZE: 'inventory.audit.finalize',
   RECEIVE: 'inventory.receive',
   LIFECYCLE: 'inventory.lifecycle',
+  QUICK_STOCK: 'inventory.quick-stock',
 });
 
 const CAPABILITY_GROUPS = Object.freeze([
@@ -120,6 +121,11 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: INVENTORY_CAPABILITIES.LIFECYCLE,
         label: 'จัดการสถานะรายการสต๊อก',
         description: 'อนุญาตเปลี่ยนสถานะรายการสต๊อกแบบ manual และลบรายการที่ยังไม่ถูกขาย โดยไม่ครอบคลุมการตัดขายจาก flow การขาย',
+      },
+      {
+        key: INVENTORY_CAPABILITIES.QUICK_STOCK,
+        label: 'เพิ่มสต๊อกด่วน',
+        description: 'อนุญาตใช้ Quick Stock แบบ one-shot เพื่อเพิ่มบาร์โค้ด รับสินค้าเดิม หรือสร้างสินค้าและรับเข้าสต๊อกในขั้นตอนเดียว โดยไม่รวม Quick Receipt Session',
       },
     ],
   },

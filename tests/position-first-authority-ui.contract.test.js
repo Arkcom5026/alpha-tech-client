@@ -15,10 +15,12 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain("WORKFLOW: 'repair.workflow'");
     expect(form).toContain("PARTS: 'repair.parts'");
     expect(form).toContain("HANDOVER: 'repair.handover'");
+    expect(form).toContain("CUSTOMER_OVERRIDE: 'repair.customer-override'");
     expect(form).toContain('งานซ่อมและเคลม');
     expect(form).toContain('ดำเนินขั้นตอนงานซ่อม');
     expect(form).toContain('จัดการอะไหล่ในงานซ่อม');
     expect(form).toContain('ส่งมอบงานซ่อม');
+    expect(form).toContain('อนุญาตรับงานกรณีเจ้าของอุปกรณ์ไม่ตรง');
     expect(form).toContain('CAPABILITY_GROUPS.map');
     expect(form).toContain('สิทธิ์ของตำแหน่งงาน');
     expect(form).toContain('เริ่มใช้สิทธิ์จากตำแหน่งนี้');

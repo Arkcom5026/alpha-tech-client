@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import {
@@ -6,6 +6,7 @@ import {
   useSaleDocumentSearch,
 } from '@/features/sales/documents/search';
 import { CONSOLIDATED_DOCUMENT_SOURCE_TYPE } from '@/features/combinedBilling/adapters/consolidatedDocumentAdapter';
+import { loadDeliveryNoteListLifecycleSummaries } from '../api/deliveryNoteListLifecycleApi';
 import DeliveryNoteWorkspaceHeader from '../components/workspace/DeliveryNoteWorkspaceHeader';
 import DeliveryNoteSearchToolbar from '../components/workspace/DeliveryNoteSearchToolbar';
 import DeliveryNoteMetricGrid from '../components/workspace/DeliveryNoteMetricGrid';
@@ -36,6 +37,7 @@ const DeliveryNoteListPage = () => {
   const [uiError, setUiError] = useState(null);
   const [sortKey, setSortKey] = useState('createdAt');
   const [sortDir, setSortDir] = useState('desc');
+  const [lifecycleBySaleId, setLifecycleBySaleId] = useState({});
 
   const documentSearch = useSaleDocumentSearch({
     policy: DELIVERY_NOTE_SEARCH_POLICY,
@@ -46,6 +48,38 @@ const DeliveryNoteListPage = () => {
       limit: 100,
     },
   });
+
+  useEffect(() => {
+    let active = true;
+    const saleIds = documentSearch.rows
+      .filter((row) => (row?.documentSourceType || 'SALE') === 'SALE')
+      .map((row) => row?.documentSourceId ?? row?.id)
+      .filter(Boolean);
+
+    if (saleIds.length === 0) {
+      setLifecycleBySaleId({});
+      return () => {
+        active = false;
+      };
+    }
+
+    loadDeliveryNoteListLifecycleSummaries({ saleIds })
+      .then((summaries) => {
+        if (!active) return;
+        const next = {};
+        for (const summary of Array.isArray(summaries) ? summaries : []) {
+          if (summary?.saleId != null) next[String(summary.saleId)] = summary;
+        }
+        setLifecycleBySaleId(next);
+      })
+      .catch(() => {
+        if (active) setLifecycleBySaleId({});
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [documentSearch.rows]);
 
   const clampLimit = useCallback((value) => {
     const parsed = parseInt(value, 10);
@@ -74,6 +108,14 @@ const DeliveryNoteListPage = () => {
     }
   }, [clampLimit, documentSearch.actions, fromDate, limit, search, toDate]);
 
+  const rowsWithLifecycle = useMemo(() => documentSearch.rows.map((row) => {
+    const sourceId = row?.documentSourceId ?? row?.id;
+    const lifecycleSummary = (row?.documentSourceType || 'SALE') === 'SALE'
+      ? lifecycleBySaleId[String(sourceId)] || null
+      : null;
+    return { ...row, deliveryNoteLifecycleSummary: lifecycleSummary };
+  }), [documentSearch.rows, lifecycleBySaleId]);
+
   const getSortValue = (row, key) => {
     if (!row) return null;
     if (['totalAmount', 'paidAmount', 'balanceAmount', 'agingDays'].includes(key)) {
@@ -96,14 +138,14 @@ const DeliveryNoteListPage = () => {
   };
 
   const sortedRows = useMemo(() => {
-    return [...documentSearch.rows].sort((left, right) => {
+    return [...rowsWithLifecycle].sort((left, right) => {
       const leftValue = getSortValue(left, sortKey);
       const rightValue = getSortValue(right, sortKey);
       if (leftValue === rightValue) return 0;
       const direction = sortDir === 'asc' ? 1 : -1;
       return leftValue > rightValue ? direction : -direction;
     });
-  }, [documentSearch.rows, sortDir, sortKey]);
+  }, [rowsWithLifecycle, sortDir, sortKey]);
 
   const summary = useMemo(() => {
     const count = sortedRows.length;

@@ -23,7 +23,9 @@ describe('delivery note print workspace behavior contract', () => {
   it('keeps editable document-line runtime wired through the sales workspace without mutating persisted revisions', () => {
     expect(page).toContain('const persistedRevisionActive = !isConsolidated');
     expect(page).toContain('&& hasPersistedDeliveryNoteRevision(currentSale?.deliveryNoteAuthority);');
-    expect(page).toContain('const legacyEditorEnabled = !isConsolidated && !preparation && !persistedRevisionActive;');
+    expect(page).toContain('const preparationEnabled = !isConsolidated');
+    expect(page).toContain('&& !persistedRevisionActive;');
+    expect(page).toContain('const legacyEditorEnabled = preparationEnabled && !preparation;');
     expect(page).toContain('saleId: legacyEditorEnabled ? saleId : null');
     expect(page).toContain('reload: loadCurrentDocument');
     expect(page).toContain('documentLineActions.clearError();');

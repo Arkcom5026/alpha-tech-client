@@ -49,6 +49,9 @@ const EditPositionPage = () => {
       name: String(payload?.name || '').trim(),
       description: String(payload?.description || '').trim() || null,
     };
+    if (Array.isArray(payload?.capabilities)) {
+      payloadSnapshot.capabilities = payload.capabilities;
+    }
     if (!payloadSnapshot.name) return;
 
     submittingRef.current = true;
@@ -89,7 +92,11 @@ const EditPositionPage = () => {
         {showForm && (
           <PositionForm
             key={current.id}
-            initialValues={{ name: current?.name || '', description: current?.description || '' }}
+            initialValues={{
+              name: current?.name || '',
+              description: current?.description || '',
+              capabilities: Array.isArray(current?.capabilities) ? current.capabilities : null,
+            }}
             onSubmit={handleSubmit}
             onCancel={() => !loading && !submittingRef.current && navigate(-1)}
             submitting={loading}

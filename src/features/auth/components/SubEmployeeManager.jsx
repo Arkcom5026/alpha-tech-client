@@ -17,8 +17,8 @@ import {
 } from 'react-icons/fa';
 
 const roleDetails = {
-  CASHIER: { label: 'แคชเชียร์', description: 'ขายสินค้า เปิดกะ รับชำระเงิน และออกใบเสร็จหน้าร้าน' },
-  MANAGER: { label: 'ผู้จัดการร้าน', description: 'ดูแลงานขาย คลังสินค้า และรายงานภายในสาขา' },
+  CASHIER: { label: 'แคชเชียร์', description: 'สิทธิ์พื้นฐานของระบบเดิม' },
+  MANAGER: { label: 'ผู้จัดการร้าน', description: 'สิทธิ์จัดการระดับสาขาของระบบเดิม' },
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -49,6 +49,7 @@ const SubEmployeeManager = () => {
     () => positions.find((position) => Number(position.id) === Number(form.positionId)) || null,
     [form.positionId, positions],
   );
+  const usesPositionAuthority = Array.isArray(selectedPosition?.capabilities);
 
   const updateField = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -66,12 +67,12 @@ const SubEmployeeManager = () => {
       email: form.email.trim().toLowerCase(),
       password: form.password,
       phone: form.phone.trim(),
-      v2Role: form.v2Role,
       positionId: Number(form.positionId),
+      ...(!usesPositionAuthority ? { v2Role: form.v2Role } : {}),
     };
 
     if (!payload.name || !payload.email || !payload.password.trim() || !payload.positionId) {
-      setError('กรุณากรอกข้อมูลบัญชี บทบาทในร้าน และตำแหน่งงานให้ครบถ้วน');
+      setError('กรุณากรอกข้อมูลบัญชีและตำแหน่งงานให้ครบถ้วน');
       return;
     }
     if (!EMAIL_PATTERN.test(payload.email)) {
@@ -104,7 +105,6 @@ const SubEmployeeManager = () => {
       `ชื่อ: ${createdEmployee.name}`,
       `อีเมล: ${createdEmployee.email}`,
       `รหัสผ่านเริ่มต้น: ${createdEmployee.password}`,
-      `บทบาทในร้าน: ${roleDetails[createdEmployee.v2Role]?.label || createdEmployee.v2Role}`,
       `ตำแหน่งงาน: ${createdEmployee.position?.name || 'ไม่ระบุ'}`,
     ].join('\n');
 
@@ -125,7 +125,7 @@ const SubEmployeeManager = () => {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-600">Employee onboarding</p>
             <h3 className="mt-1 text-xl font-black text-slate-900">เพิ่มพนักงานใหม่</h3>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">สร้างบัญชี กำหนดบทบาทและตำแหน่งงาน พร้อมส่งข้อมูลเข้าสู่ระบบให้พนักงานในครั้งเดียว</p>
+            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">สร้างบัญชีและเลือกตำแหน่งงาน ระบบจะใช้สิทธิ์ที่กำหนดไว้กับตำแหน่งนั้นโดยอัตโนมัติ</p>
           </div>
         </div>
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800">สร้างแล้วใช้งานได้ทันที · ไม่ต้องอนุมัติซ้ำ</div>
@@ -134,7 +134,7 @@ const SubEmployeeManager = () => {
       <div className="grid grid-cols-1 gap-3 py-6 sm:grid-cols-3">
         {[
           ['1', 'กรอกข้อมูลบัญชี', 'ชื่อ อีเมล รหัสผ่าน และเบอร์โทร'],
-          ['2', 'กำหนดงานและสิทธิ์', 'เลือกบทบาทในร้านและตำแหน่งงาน'],
+          ['2', 'เลือกตำแหน่งงาน', 'หน้าที่และสิทธิ์มาจากตำแหน่งงาน'],
           ['3', 'ส่งข้อมูลให้พนักงาน', 'พนักงานเข้าสู่ระบบและใช้งานได้ทันที'],
         ].map(([number, title, description]) => (
           <div key={number} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
@@ -155,7 +155,6 @@ const SubEmployeeManager = () => {
           <dl className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[
               ['ชื่อพนักงาน', createdEmployee.name],
-              ['บทบาทในร้าน', roleDetails[createdEmployee.v2Role]?.label || createdEmployee.v2Role],
               ['ตำแหน่งงาน', createdEmployee.position?.name || '-'],
               ['อีเมลเข้าสู่ระบบ', createdEmployee.email],
               ['รหัสผ่านเริ่มต้น', createdEmployee.password],
@@ -178,17 +177,23 @@ const SubEmployeeManager = () => {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="เบอร์โทรศัพท์ติดต่อ (ไม่บังคับ)" icon={<FaPhone />}><input value={form.phone} onChange={(e) => updateField('phone', e.target.value)} disabled={isLoading} placeholder="เช่น 0812345678" className="w-full bg-transparent px-3 py-3 text-sm font-semibold outline-none" /></Field>
-            <div><label className="mb-2 block text-xs font-black text-slate-700">บทบาทในร้าน</label><select value={form.v2Role} onChange={(e) => updateField('v2Role', e.target.value)} disabled={isLoading} className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-3 text-sm font-bold outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100"><option value="CASHIER">แคชเชียร์</option><option value="MANAGER">ผู้จัดการร้าน</option></select><p className="mt-1.5 text-[11px] leading-5 text-slate-500">{selectedRole.description}</p></div>
+            {!usesPositionAuthority && (
+              <div>
+                <label className="mb-2 block text-xs font-black text-amber-800">สิทธิ์ระบบเดิม (ชั่วคราว)</label>
+                <select value={form.v2Role} onChange={(e) => updateField('v2Role', e.target.value)} disabled={isLoading} className="w-full rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-3 text-sm font-bold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"><option value="CASHIER">แคชเชียร์</option><option value="MANAGER">ผู้จัดการร้าน</option></select>
+                <p className="mt-1.5 text-[11px] leading-5 text-amber-700">{selectedRole.description} · จะแสดงเฉพาะตำแหน่งที่ยังไม่ได้ย้ายมาใช้สิทธิ์จากตำแหน่งงาน</p>
+              </div>
+            )}
           </div>
 
-          <div><label className="mb-2 block text-xs font-black text-slate-700">ตำแหน่งงาน</label><div className="flex items-center rounded-xl border border-slate-300 bg-white px-3.5 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-100"><FaBriefcase className="text-sm text-slate-400" /><select value={form.positionId} onChange={(e) => updateField('positionId', e.target.value)} disabled={isLoading || positions.length === 0} className="w-full bg-transparent px-3 py-3 text-sm font-bold outline-none">{positions.length === 0 ? <option value="">กำลังโหลดตำแหน่งงาน...</option> : positions.map((position) => <option key={position.id} value={position.id}>{position.name}</option>)}</select></div><p className="mt-1.5 text-[11px] text-slate-500">ตำแหน่งนี้จะแสดงในหน้าจัดการพนักงานทันที</p></div>
+          <div><label className="mb-2 block text-xs font-black text-slate-700">ตำแหน่งงาน</label><div className="flex items-center rounded-xl border border-slate-300 bg-white px-3.5 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-100"><FaBriefcase className="text-sm text-slate-400" /><select value={form.positionId} onChange={(e) => updateField('positionId', e.target.value)} disabled={isLoading || positions.length === 0} className="w-full bg-transparent px-3 py-3 text-sm font-bold outline-none">{positions.length === 0 ? <option value="">กำลังโหลดตำแหน่งงาน...</option> : positions.map((position) => <option key={position.id} value={position.id}>{position.name}</option>)}</select></div><p className="mt-1.5 text-[11px] text-slate-500">{usesPositionAuthority ? 'ระบบจะใช้สิทธิ์ที่กำหนดไว้กับตำแหน่งนี้โดยอัตโนมัติ' : 'ตำแหน่งนี้ยังอยู่ในช่วง compatibility และควรย้ายสิทธิ์ในหน้าตำแหน่งงาน'}</p></div>
 
           <button type="submit" disabled={isLoading || positions.length === 0} className={`inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-5 text-sm font-black text-white ${isLoading || positions.length === 0 ? 'cursor-not-allowed bg-emerald-300' : 'bg-emerald-500 hover:bg-emerald-600'}`}>{isLoading ? <><FaSpinner className="animate-spin" />กำลังสร้างบัญชีพนักงาน...</> : <><FaUserPlus />สร้างบัญชีพนักงาน</>}</button>
         </form>
 
         <aside className="space-y-4 lg:col-span-5">
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-600"><FaShieldAlt /></div><div><h4 className="text-sm font-black text-slate-900">สิ่งที่ระบบทำให้อัตโนมัติ</h4><p className="mt-0.5 text-xs text-slate-600">ไม่มีขั้นตอนซ่อนหลังจากกดสร้างบัญชี</p></div></div><ul className="mt-4 space-y-3 text-sm leading-6 text-slate-700"><li>• สร้างบัญชีผู้ใช้และโปรไฟล์ที่เกี่ยวข้องพร้อมกัน</li><li>• ผูกสาขา บทบาท และตำแหน่งใน transaction เดียว</li><li>• เปิดใช้งานทันทีโดยไม่ต้องอนุมัติซ้ำ</li><li>• แสดงข้อมูลครบในหน้าจัดการพนักงาน</li></ul></div>
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5"><h4 className="text-sm font-black text-amber-950">บทบาทในร้านและตำแหน่งงาน</h4><p className="mt-2 text-xs leading-6 text-amber-900">บทบาทกำหนดขอบเขตงานหลัก ส่วนตำแหน่งใช้แสดงโครงสร้างหน้าที่ ทั้งสองค่าถูกบันทึกพร้อมกันตั้งแต่สร้างบัญชี</p></div>
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-blue-600"><FaShieldAlt /></div><div><h4 className="text-sm font-black text-slate-900">สิทธิ์มาจากตำแหน่งงาน</h4><p className="mt-0.5 text-xs text-slate-600">ผู้ใช้เลือกตำแหน่ง ระบบเป็นผู้กำหนด authority ที่เกี่ยวข้อง</p></div></div><ul className="mt-4 space-y-3 text-sm leading-6 text-slate-700"><li>• สร้างบัญชีผู้ใช้และโปรไฟล์ที่เกี่ยวข้องพร้อมกัน</li><li>• ผูกสาขาและตำแหน่งใน transaction เดียว</li><li>• ตำแหน่งที่ย้ายแล้วไม่ต้องเลือกบทบาทซ้ำ</li><li>• v2Role ยังถูกเก็บไว้ภายในเพื่อ compatibility ระหว่างการย้าย</li></ul></div>
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5"><h4 className="text-sm font-black text-amber-950">ตำแหน่งที่ยังใช้ระบบเดิม</h4><p className="mt-2 text-xs leading-6 text-amber-900">ถ้ายังเห็นช่อง “สิทธิ์ระบบเดิม” ให้ไปกำหนดสิทธิ์ที่เมนูตำแหน่งงานก่อน เมื่อย้ายแล้วช่องนี้จะหายไปโดยอัตโนมัติ</p></div>
         </aside>
       </div>
     </div>

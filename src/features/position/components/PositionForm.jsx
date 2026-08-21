@@ -24,6 +24,8 @@ const INVENTORY_CAPABILITIES = Object.freeze({
   QUICK_RECEIPT_FINALIZE: 'inventory.quick-receipt.finalize',
 });
 const PROCUREMENT_CAPABILITIES = Object.freeze({
+  PURCHASE_ORDER: 'procurement.purchase-order',
+  PURCHASE_ORDER_CONTROL: 'procurement.purchase-order.control',
   RECEIPT: 'procurement.receipt',
   RECEIPT_FINALIZE: 'procurement.receipt.finalize',
 });
@@ -148,8 +150,18 @@ const CAPABILITY_GROUPS = Object.freeze([
   {
     key: 'procurement',
     title: 'จัดซื้อและใบรับสินค้า',
-    description: 'กำหนดสิทธิ์สำหรับการจัดทำใบรับสินค้าจาก PO และการยืนยันผลที่กระทบสต๊อก',
+    description: 'กำหนดสิทธิ์สำหรับการจัดทำใบสั่งซื้อ การรับสินค้าจาก PO และ action ที่มีผลต่อสถานะหรือสต๊อก',
     options: [
+      {
+        key: PROCUREMENT_CAPABILITIES.PURCHASE_ORDER,
+        label: 'จัดทำใบสั่งซื้อ',
+        description: 'ดู สร้าง แก้ไข และพิมพ์ใบสั่งซื้อ รวมถึงค้นหา PO ตาม Supplier โดยยังไม่อนุญาตลบหรือเปลี่ยนสถานะเอกสาร',
+      },
+      {
+        key: PROCUREMENT_CAPABILITIES.PURCHASE_ORDER_CONTROL,
+        label: 'ควบคุมสถานะหรือลบใบสั่งซื้อ',
+        description: 'อนุญาตเปลี่ยนสถานะหรือลบใบสั่งซื้อ โดยต้องมีสิทธิ์จัดทำใบสั่งซื้อด้วย',
+      },
       {
         key: PROCUREMENT_CAPABILITIES.RECEIPT,
         label: 'จัดทำใบรับสินค้าจาก PO',

@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CAPABILITY_GROUPS } from './positionCapabilityCatalog';
+import { TAX_PERIOD_CAPABILITY_GROUP } from './taxPeriodCapabilityGroup';
+
+const POSITION_CAPABILITY_GROUPS = Object.freeze([
+  ...CAPABILITY_GROUPS,
+  TAX_PERIOD_CAPABILITY_GROUP,
+]);
 
 const PositionForm = ({
   initialValues = { name: '', description: '', capabilities: [] },
@@ -115,7 +121,7 @@ const PositionForm = ({
           </div>
         ) : (
           <div className="mt-4 space-y-4">
-            {CAPABILITY_GROUPS.map((group) => (
+            {POSITION_CAPABILITY_GROUPS.map((group) => (
               <div key={group.key} className="rounded-xl border border-zinc-200 bg-white p-3">
                 <div>
                   <h3 className="text-sm font-semibold text-zinc-900">{group.title}</h3>

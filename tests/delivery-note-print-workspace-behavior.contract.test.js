@@ -20,13 +20,17 @@ describe('delivery note print workspace behavior contract', () => {
     expect(page).toContain("'ไม่สามารถโหลดข้อมูลใบส่งสินค้าได้'");
   });
 
-  it('keeps editable document-line runtime wired through the sales workspace', () => {
-    expect(page).toContain('saleId: isConsolidated ? null : saleId');
+  it('keeps editable document-line runtime wired through the sales workspace without mutating persisted revisions', () => {
+    expect(page).toContain('const persistedRevisionActive = !isConsolidated');
+    expect(page).toContain('&& hasPersistedDeliveryNoteRevision(currentSale?.deliveryNoteAuthority);');
+    expect(page).toContain('const legacyEditorEnabled = !isConsolidated && !preparation && !persistedRevisionActive;');
+    expect(page).toContain('saleId: legacyEditorEnabled ? saleId : null');
     expect(page).toContain('reload: loadCurrentDocument');
     expect(page).toContain('documentLineActions.clearError();');
-    expect(page).toContain('onToggleDocumentLineEdit={isConsolidated ? undefined : documentLineActions.toggle}');
-    expect(page).toContain('onChangeDocumentLineDraft={isConsolidated ? undefined : documentLineActions.change}');
-    expect(page).toContain('onSaveDocumentLine={isConsolidated ? undefined : documentLineActions.save}');
+    expect(page).toContain('editableDocumentLines={legacyEditorEnabled}');
+    expect(page).toContain('onToggleDocumentLineEdit={legacyEditorEnabled ? documentLineActions.toggle : undefined}');
+    expect(page).toContain('onChangeDocumentLineDraft={legacyEditorEnabled ? documentLineActions.change : undefined}');
+    expect(page).toContain('onSaveDocumentLine={legacyEditorEnabled ? documentLineActions.save : undefined}');
   });
 
   it('preserves sale-line fallback across saleLines, items, and simpleItems', () => {

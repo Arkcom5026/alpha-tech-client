@@ -25,6 +25,7 @@ const CreatePositionPage = () => {
     const payloadSnapshot = {
       name: String(payload?.name || '').trim(),
       description: String(payload?.description || '').trim() || null,
+      capabilities: Array.isArray(payload?.capabilities) ? payload.capabilities : [],
     };
     if (!payloadSnapshot.name) return;
 
@@ -54,7 +55,7 @@ const CreatePositionPage = () => {
         {message && <div className="mb-3 text-sm text-green-600">{message}</div>}
 
         <PositionForm
-          initialValues={{ name: '', description: '' }}
+          initialValues={{ name: '', description: '', capabilities: [] }}
           onSubmit={handleSubmit}
           onCancel={() => !loading && !submittingRef.current && navigate(-1)}
           submitting={loading}

@@ -5,6 +5,10 @@
 
 import { create } from 'zustand';
 import { getProvinces, getDistricts, getSubdistricts, resolveAddressBySubdistrictCode } from '@/features/address/api/addressApi';
+import { createKeyedRequestDeduper } from './keyedRequestDeduper';
+
+const districtRequestDeduper = createKeyedRequestDeduper();
+const subdistrictRequestDeduper = createKeyedRequestDeduper();
 
 const initialState = {
   provinces: [],
@@ -55,17 +59,23 @@ export const useAddressStore = create((set, get) => ({
     const { districtsByProvince } = get();
     if (Array.isArray(districtsByProvince[key])) return; // cached
 
-    set((s) => ({ loading: { ...s.loading, districts: true }, error: { ...s.error, districts: '' } }));
-    try {
-      const items = await getDistricts(key);
-      set((s) => ({
-        districtsByProvince: { ...s.districtsByProvince, [key]: items },
-        loading: { ...s.loading, districts: false },
-      }));
-    } catch (err) {
-      console.error('[addressStore] error', err);
-      set((s) => ({ loading: { ...s.loading, districts: false }, error: { ...s.error, districts: 'โหลดอำเภอไม่สำเร็จ' } }));
-    }
+    return districtRequestDeduper.run(key, async () => {
+      // A second caller may have reached the deduper immediately after the first
+      // request completed and populated the cache. Re-check before issuing I/O.
+      if (Array.isArray(get().districtsByProvince[key])) return;
+
+      set((s) => ({ loading: { ...s.loading, districts: true }, error: { ...s.error, districts: '' } }));
+      try {
+        const items = await getDistricts(key);
+        set((s) => ({
+          districtsByProvince: { ...s.districtsByProvince, [key]: items },
+          loading: { ...s.loading, districts: false },
+        }));
+      } catch (err) {
+        console.error('[addressStore] error', err);
+        set((s) => ({ loading: { ...s.loading, districts: false }, error: { ...s.error, districts: 'โหลดอำเภอไม่สำเร็จ' } }));
+      }
+    });
   },
 
   // 🟢 FIXED: ซ่อมแซมกลไกเก็บแคชและโหลดข้อมูลตำบลย่อยให้ตรงตามสเปก
@@ -75,17 +85,21 @@ export const useAddressStore = create((set, get) => ({
     const { subdistrictsByDistrict } = get();
     if (Array.isArray(subdistrictsByDistrict[key])) return; // cached
 
-    set((s) => ({ loading: { ...s.loading, subdistricts: true }, error: { ...s.error, subdistricts: '' } }));
-    try {
-      const items = await getSubdistricts(key);
-      set((s) => ({
-        subdistrictsByDistrict: { ...s.subdistrictsByDistrict, [key]: items },
-        loading: { ...s.loading, subdistricts: false },
-      }));
-    } catch (err) {
-      console.error('[addressStore] error', err);
-      set((s) => ({ loading: { ...s.loading, subdistricts: false }, error: { ...s.error, subdistricts: 'โหลดตำบลไม่สำเร็จ' } }));
-    }
+    return subdistrictRequestDeduper.run(key, async () => {
+      if (Array.isArray(get().subdistrictsByDistrict[key])) return;
+
+      set((s) => ({ loading: { ...s.loading, subdistricts: true }, error: { ...s.error, subdistricts: '' } }));
+      try {
+        const items = await getSubdistricts(key);
+        set((s) => ({
+          subdistrictsByDistrict: { ...s.subdistrictsByDistrict, [key]: items },
+          loading: { ...s.loading, subdistricts: false },
+        }));
+      } catch (err) {
+        console.error('[addressStore] error', err);
+        set((s) => ({ loading: { ...s.loading, subdistricts: false }, error: { ...s.error, subdistricts: 'โหลดตำบลไม่สำเร็จ' } }));
+      }
+    });
   },
 
   // --- Helpers -------------------------------------------------

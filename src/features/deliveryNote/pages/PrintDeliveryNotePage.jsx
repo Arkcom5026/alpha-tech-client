@@ -78,6 +78,12 @@ const PrintDeliveryNotePage = () => {
     return sale || null;
   }, [isConsolidated, loadStandardSale, sourceId]);
 
+  const persistedRevisionActive = !isConsolidated
+    && hasPersistedDeliveryNoteRevision(currentSale?.deliveryNoteAuthority);
+  const preparationEnabled = !isConsolidated
+    && Boolean(currentSale)
+    && !persistedRevisionActive;
+
   const {
     preparation,
     taxProjectionResult,
@@ -86,11 +92,11 @@ const PrintDeliveryNotePage = () => {
     error: preparationError,
     actions: preparationActions,
   } = useSaleDocumentPreparation({
-    saleId: isConsolidated ? null : sourceId,
-    enabled: !isConsolidated,
+    saleId: preparationEnabled ? sourceId : null,
+    enabled: preparationEnabled,
   });
 
-  const replacementEnabled = !isConsolidated && preparation?.status === 'LOCKED';
+  const replacementEnabled = preparationEnabled && preparation?.status === 'LOCKED';
   const {
     replacement,
     loading: replacementLoading,
@@ -103,9 +109,7 @@ const PrintDeliveryNotePage = () => {
     onLocked: loadCurrentDocument,
   });
 
-  const persistedRevisionActive = !isConsolidated
-    && hasPersistedDeliveryNoteRevision(currentSale?.deliveryNoteAuthority);
-  const legacyEditorEnabled = !isConsolidated && !preparation && !persistedRevisionActive;
+  const legacyEditorEnabled = preparationEnabled && !preparation;
   const {
     editingLineKey,
     lineDrafts,
@@ -307,7 +311,7 @@ const PrintDeliveryNotePage = () => {
           ) : null}
         </div>
       ) : null}
-      {!isConsolidated ? (
+      {preparationEnabled ? (
         <DeliveryNotePreparationPanel
           preparation={preparation}
           taxProjectionResult={taxProjectionResult}

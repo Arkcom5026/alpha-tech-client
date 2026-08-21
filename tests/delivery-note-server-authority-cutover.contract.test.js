@@ -42,9 +42,11 @@ describe('Delivery Note server authority cutover contract', () => {
     expect(page).toContain('setCurrentSale(null)');
   });
 
-  it('reloads from the server through the shared editor after mutation', () => {
+  it('reloads from the server through the shared editor after mutation while respecting persisted revision authority', () => {
     expect(page).toContain('reload: loadCurrentDocument');
-    expect(page).toContain('saleId: isConsolidated ? null : saleId');
+    expect(page).toContain('const persistedRevisionActive = !isConsolidated');
+    expect(page).toContain('const legacyEditorEnabled = !isConsolidated && !preparation && !persistedRevisionActive;');
+    expect(page).toContain('saleId: legacyEditorEnabled ? saleId : null');
     expect(page).toContain('useSaleDocumentLineEditor');
     expect(page).not.toContain('updateSaleDocumentLinesAction');
   });

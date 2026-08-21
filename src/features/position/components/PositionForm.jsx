@@ -37,6 +37,13 @@ const SALES_CAPABILITIES = Object.freeze({
   DOCUMENT_REPLACE: 'sales.document.replace',
   DOCUMENT_TAX_PUBLISH: 'sales.document.tax-publish',
 });
+const TAX_OUTPUT_CAPABILITIES = Object.freeze({
+  READ: 'tax.output.read',
+  PREPARE: 'tax.output.prepare',
+  ISSUE: 'tax.output.issue',
+  CREDIT_NOTE: 'tax.output.credit-note',
+  LIFECYCLE: 'tax.output.lifecycle',
+});
 const PROCUREMENT_CAPABILITIES = Object.freeze({
   PURCHASE_ORDER: 'procurement.purchase-order',
   PURCHASE_ORDER_CONTROL: 'procurement.purchase-order.control',
@@ -230,6 +237,38 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: SALES_CAPABILITIES.DOCUMENT_TAX_PUBLISH,
         label: 'เผยแพร่เอกสารเข้าสู่ภาษี',
         description: 'อนุญาตลงทะเบียน tax candidate จากเอกสารที่จัดเตรียมแล้ว โดยแยกจากสิทธิ์ออกใบส่งของและ tax lifecycle อื่น',
+      },
+    ],
+  },
+  {
+    key: 'tax-output',
+    title: 'ภาษีขายและเอกสารภาษี',
+    description: 'แยกสิทธิ์อ่าน เตรียม ออกเอกสาร เครดิตโน้ต และควบคุม lifecycle ของเอกสารภาษีขายออกจากกัน',
+    options: [
+      {
+        key: TAX_OUTPUT_CAPABILITIES.READ,
+        label: 'ดูข้อมูลภาษีขาย',
+        description: 'ดู tax candidate รายการเอกสาร รายละเอียด และเอกสารพร้อมพิมพ์ภายในสาขา',
+      },
+      {
+        key: TAX_OUTPUT_CAPABILITIES.PREPARE,
+        label: 'เตรียมเอกสารภาษีขาย',
+        description: 'ลงทะเบียน tax candidate จากแหล่งที่รองรับและรีเฟรชข้อมูลผู้รับในเอกสารร่าง',
+      },
+      {
+        key: TAX_OUTPUT_CAPABILITIES.ISSUE,
+        label: 'ออกเอกสารภาษีขาย',
+        description: 'ออกใบกำกับภาษีหรือเอกสารภาษีขายผ่าน atomic issuance authority ของระบบ',
+      },
+      {
+        key: TAX_OUTPUT_CAPABILITIES.CREDIT_NOTE,
+        label: 'ออกใบลดหนี้ภาษีขาย',
+        description: 'ออก credit note จากเอกสารภาษีหรือ Sale Return ตาม eligibility และหลักฐานเดิมของระบบ',
+      },
+      {
+        key: TAX_OUTPUT_CAPABILITIES.LIFECYCLE,
+        label: 'ควบคุมสถานะเอกสารภาษี',
+        description: 'ดำเนิน transition ของเอกสารภาษีผ่าน canonical lifecycle โดยไม่เปลี่ยนกฎ transition เดิม',
       },
     ],
   },

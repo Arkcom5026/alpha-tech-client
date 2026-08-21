@@ -8,6 +8,7 @@ import { VAT_SETTLEMENT_CAPABILITY_GROUP } from './vatSettlementCapabilityGroup'
 import { VAT_CARRY_FORWARD_CAPABILITY_GROUP } from './vatCarryForwardCapabilityGroup';
 import { WITHHOLDING_TAX_CAPABILITY_GROUP } from './withholdingTaxCapabilityGroup';
 import { TAX_ISSUER_PROFILE_CAPABILITY_GROUP } from './taxIssuerProfileCapabilityGroup';
+import { TAX_PUBLICATION_RETRY_CAPABILITY_GROUP } from './taxPublicationRetryCapabilityGroup';
 
 const POSITION_CAPABILITY_GROUPS = Object.freeze([
   ...CAPABILITY_GROUPS,
@@ -19,6 +20,7 @@ const POSITION_CAPABILITY_GROUPS = Object.freeze([
   VAT_CARRY_FORWARD_CAPABILITY_GROUP,
   WITHHOLDING_TAX_CAPABILITY_GROUP,
   TAX_ISSUER_PROFILE_CAPABILITY_GROUP,
+  TAX_PUBLICATION_RETRY_CAPABILITY_GROUP,
 ]);
 
 const PositionForm = ({

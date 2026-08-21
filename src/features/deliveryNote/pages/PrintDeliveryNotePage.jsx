@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import StoreDocumentHeaderScope from '@/features/branch/documentHeader/StoreDocumentHeaderScope';
 import {
+  createSaleDeliveryNoteRevision,
   loadSaleDeliveryNoteAuthority,
   loadSaleDocument,
   useSaleDocumentLineEditor,
@@ -15,6 +16,7 @@ import {
   buildConsolidatedSaleDocument,
   isConsolidatedDocumentSource,
 } from '@/features/combinedBilling/adapters/consolidatedDocumentAdapter';
+import { feedback } from '@/design-system/feedback';
 import DeliveryNotePresentationFooter from '../components/DeliveryNotePresentationFooter';
 import DeliveryNoteDocumentState from '../components/workspace/DeliveryNoteDocumentState';
 import DeliveryNotePreparationPanel from '../components/workspace/DeliveryNotePreparationPanel';
@@ -43,6 +45,7 @@ const PrintDeliveryNotePage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [pageError, setPageError] = useState('');
   const [hideDate, setHideDate] = useState(false);
+  const [revisionCreating, setRevisionCreating] = useState(false);
 
   const loadStandardSale = useCallback(async () => {
     const [sale, deliveryNoteAuthority] = await Promise.all([
@@ -205,6 +208,42 @@ const PrintDeliveryNotePage = () => {
   const openSourceQuotation = useCallback(() => {
     if (sourceQuotationPath) navigate(sourceQuotationPath);
   }, [navigate, sourceQuotationPath]);
+
+  const deliveryNoteLifecycle = currentSale?.deliveryNoteAuthority?.deliveryNoteLifecycle || null;
+  const hasReturnAdjustment = !isConsolidated && deliveryNoteLifecycle?.lifecycleState === 'ADJUSTED';
+  const canCreateAdjustedRevision = hasReturnAdjustment
+    && deliveryNoteLifecycle?.actions?.canCreateAdjustedRevision === true;
+  const requiresStatutoryCorrection = hasReturnAdjustment
+    && deliveryNoteLifecycle?.actions?.requiresStatutoryCorrection === true;
+
+  const handleCreateAdjustedRevision = useCallback(async () => {
+    if (!sourceId || !canCreateAdjustedRevision || revisionCreating) return;
+    setRevisionCreating(true);
+    setPageError('');
+    try {
+      const revision = await createSaleDeliveryNoteRevision({ saleId: sourceId });
+      const documentNumber = revision?.documentNumber || 'ฉบับปรับปรุง';
+      feedback.actionSuccess(
+        `สร้างใบส่งของ ${documentNumber} เรียบร้อย`,
+        `sale:${sourceId}:delivery-note:revision:create:success`,
+      );
+      await loadCurrentDocument();
+    } catch (error) {
+      const message = error?.response?.data?.message
+        || error?.response?.data?.error
+        || error?.message
+        || 'ไม่สามารถสร้างใบส่งของฉบับใหม่ได้';
+      setPageError(message);
+      feedback.actionError(
+        error,
+        message,
+        `sale:${sourceId}:delivery-note:revision:create:error`,
+      );
+    } finally {
+      setRevisionCreating(false);
+    }
+  }, [canCreateAdjustedRevision, loadCurrentDocument, revisionCreating, sourceId]);
+
   const error = pageError || preparationError || replacementError || (legacyEditorEnabled ? editorError : '');
 
   if (isLoading) {
@@ -221,6 +260,31 @@ const PrintDeliveryNotePage = () => {
 
   return (
     <StoreDocumentHeaderScope config={preparedConfig}>
+      {hasReturnAdjustment ? (
+        <div className="mx-auto mb-4 flex w-full max-w-[980px] flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 shadow-sm md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="font-semibold">รายการนี้มีการคืนสินค้าแล้ว</div>
+            <div className="mt-1 text-amber-800">
+              ใบส่งของฉบับเดิมยังคงเป็นหลักฐานตามรายการและยอดเดิม ไม่แก้ไขย้อนหลัง
+              {canCreateAdjustedRevision
+                ? ' หากต้องการเอกสารตามยอดคงเหลือปัจจุบัน สามารถสร้างใบส่งของฉบับใหม่ได้'
+                : requiresStatutoryCorrection
+                  ? ' รายการนี้มีเอกสารภาษีแล้ว จึงต้องดำเนินการผ่านขั้นตอนแก้ไขเอกสารตามสิทธิ์ที่เกี่ยวข้อง'
+                  : ' ขณะนี้ไม่มีรายการคงเหลือที่สามารถสร้างเป็นใบส่งของฉบับใหม่ได้'}
+            </div>
+          </div>
+          {canCreateAdjustedRevision ? (
+            <button
+              type="button"
+              onClick={handleCreateAdjustedRevision}
+              disabled={revisionCreating}
+              className="shrink-0 rounded-xl bg-amber-600 px-4 py-2 font-semibold text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {revisionCreating ? 'กำลังสร้าง...' : 'สร้างใบส่งของฉบับใหม่'}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {!isConsolidated ? (
         <DeliveryNotePreparationPanel
           preparation={preparation}

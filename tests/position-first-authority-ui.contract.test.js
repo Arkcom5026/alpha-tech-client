@@ -9,6 +9,7 @@ describe('position-first employee authority UI contract', () => {
   it('makes position the capability configuration surface without removing compatibility yet', () => {
     const form = read('src/features/position/components/PositionForm.jsx');
     const catalog = read('src/features/position/components/positionCapabilityCatalog.js');
+    const taxPeriodGroup = read('src/features/position/components/taxPeriodCapabilityGroup.js');
     const createWorkspace = read('src/features/position/workspace/CreatePositionWorkspace.jsx');
     const editWorkspace = read('src/features/position/workspace/EditPositionWorkspace.jsx');
 
@@ -114,8 +115,17 @@ describe('position-first employee authority UI contract', () => {
     expect(catalog).toContain('จัดทำใบรับสินค้าจาก PO');
     expect(catalog).toContain('ยืนยันหรือลบใบรับสินค้า');
 
+    expect(taxPeriodGroup).toContain("READ: 'tax.period.read'");
+    expect(taxPeriodGroup).toContain("MANAGE: 'tax.period.manage'");
+    expect(taxPeriodGroup).toContain("REOPEN: 'tax.period.reopen'");
+    expect(taxPeriodGroup).toContain('งวดภาษีและการปิดงวด');
+    expect(taxPeriodGroup).toContain('ดูข้อมูลงวดภาษี');
+    expect(taxPeriodGroup).toContain('จัดการและปิดงวดภาษี');
+    expect(taxPeriodGroup).toContain('เปิดงวดภาษีอีกครั้ง');
+
     expect(form).toContain("import { CAPABILITY_GROUPS } from './positionCapabilityCatalog'");
-    expect(form).toContain('CAPABILITY_GROUPS.map');
+    expect(form).toContain("import { TAX_PERIOD_CAPABILITY_GROUP } from './taxPeriodCapabilityGroup'");
+    expect(form).toContain('POSITION_CAPABILITY_GROUPS.map');
     expect(form).toContain('สิทธิ์ของตำแหน่งงาน');
     expect(form).toContain('เริ่มใช้สิทธิ์จากตำแหน่งนี้');
     expect(form).toContain('v2Role จะคงไว้เป็นชั้นรองรับของระบบเดิมระหว่างการย้าย');

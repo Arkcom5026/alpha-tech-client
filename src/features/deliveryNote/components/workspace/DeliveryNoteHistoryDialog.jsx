@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { History, X } from 'lucide-react';
+import { History, Printer, X } from 'lucide-react';
 
 import {
   loadDeliveryNoteRevisionDetail,
@@ -23,7 +23,7 @@ const revisionStateMeta = (state) => {
   return { label: normalized || '-', className: 'border-slate-200 bg-slate-50 text-slate-600' };
 };
 
-const DeliveryNoteHistoryDialog = ({ open, row, onClose }) => {
+const DeliveryNoteHistoryDialog = ({ open, row, onClose, onPrintRevision }) => {
   const saleId = row?.documentSourceId ?? row?.id ?? null;
   const [history, setHistory] = useState(null);
   const [selectedRevisionId, setSelectedRevisionId] = useState(null);
@@ -164,9 +164,22 @@ const DeliveryNoteHistoryDialog = ({ open, row, onClose }) => {
                       <div className="text-base font-semibold text-slate-950">{detail.documentNumber || '-'}</div>
                       <div className="mt-1 text-sm text-slate-500">R{detail.revisionNumber} · {revisionKindLabel(detail.revisionKind)} · วันที่ {formatDate(detail.issuedAt)}</div>
                     </div>
-                    <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${revisionStateMeta(detail.state).className}`}>
-                      {revisionStateMeta(detail.state).label}
-                    </span>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${revisionStateMeta(detail.state).className}`}>
+                        {revisionStateMeta(detail.state).label}
+                      </span>
+                      {onPrintRevision ? (
+                        <button
+                          type="button"
+                          data-testid="delivery-note-history-print-revision"
+                          onClick={() => onPrintRevision({ row, revisionId: detail.id, revision: detail })}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-teal-800"
+                        >
+                          <Printer className="h-3.5 w-3.5" />
+                          พิมพ์ฉบับนี้
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-3 text-sm">
                     <div className="rounded-xl bg-slate-50 p-3"><div className="text-xs text-slate-500">ยอดเดิม</div><div className="mt-1 font-semibold tabular-nums">฿{formatMoney(detail.grossAmount)}</div></div>

@@ -15,6 +15,8 @@ const REPAIR_CAPABILITIES = Object.freeze({
 const INVENTORY_CAPABILITIES = Object.freeze({
   ADJUST: 'inventory.adjust',
   TRANSFER: 'inventory.transfer',
+  AUDIT: 'inventory.audit',
+  AUDIT_FINALIZE: 'inventory.audit.finalize',
 });
 
 const CAPABILITY_GROUPS = Object.freeze([
@@ -85,7 +87,7 @@ const CAPABILITY_GROUPS = Object.freeze([
   {
     key: 'inventory',
     title: 'สต๊อกและการเคลื่อนไหวสินค้า',
-    description: 'กำหนดสิทธิ์การปรับยอดและโอนสต๊อกแบบ Simple แยกจากชื่อบทบาทเดิม',
+    description: 'กำหนดสิทธิ์งานสต๊อกแบบ privileged แยกจากชื่อบทบาทเดิม',
     options: [
       {
         key: INVENTORY_CAPABILITIES.ADJUST,
@@ -96,6 +98,16 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: INVENTORY_CAPABILITIES.TRANSFER,
         label: 'โอนสต๊อกระหว่างสาขา',
         description: 'อนุญาตสร้างรายการโอนสต๊อกแบบ Simple จากสาขาปัจจุบันไปยังสาขาปลายทาง',
+      },
+      {
+        key: INVENTORY_CAPABILITIES.AUDIT,
+        label: 'ตรวจนับสต๊อก',
+        description: 'ดูรอบตรวจนับ เริ่มรอบใหม่ และสแกนสินค้า/หมายเลขเครื่องภายในรอบตรวจนับ',
+      },
+      {
+        key: INVENTORY_CAPABILITIES.AUDIT_FINALIZE,
+        label: 'ยืนยันหรือยกเลิกรอบตรวจนับ',
+        description: 'อนุญาตยืนยันผลหรือล้มเลิกรอบตรวจนับสต๊อก โดยต้องมีสิทธิ์ตรวจนับสต๊อกด้วย',
       },
     ],
   },

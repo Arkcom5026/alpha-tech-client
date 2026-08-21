@@ -16,11 +16,19 @@ const sourceItemsByKey = (sale = {}) => {
 
 const persistedRevisionPrintGroupKey = (item, index) => {
   const productId = item?.productId == null ? null : String(item.productId);
+  const description = normalizeText(item?.documentDescription);
+  const productName = normalizeText(item?.productName);
+  const fallbackProductIdentity = description || productName;
+  const productIdentity = productId
+    ? `product-${productId}`
+    : fallbackProductIdentity
+      ? `product-text-${fallbackProductIdentity}`
+      : `unknown-${index}`;
   const unitAmountKey = Math.round(round2(item?.price) * 100);
   return [
-    productId ? `product-${productId}` : `unknown-${index}`,
+    productIdentity,
     `unit-${unitAmountKey}`,
-    `description-${normalizeText(item?.documentDescription)}`,
+    `description-${description}`,
     `unit-name-${normalizeText(item?.unit)}`,
   ].join('|');
 };

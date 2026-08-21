@@ -17,6 +17,7 @@ const DeliveryNotePrintShell = ({
   onChangeDocumentLineDraft,
   onSaveDocumentLine,
   editableDocumentLines = true,
+  historicalPrintMeta = null,
 }) => (
   <main className="a4-standard-delivery-shell min-h-screen bg-slate-100 px-3 py-5 text-black print:bg-white print:p-0 md:px-6 md:py-8">
     {sale?.sourceQuotation ? (
@@ -38,6 +39,15 @@ const DeliveryNotePrintShell = ({
       </div>
     ) : null}
     <section className="a4-standard-delivery-frame relative mx-auto max-w-[210mm] rounded-2xl bg-white p-3 shadow-sm print:rounded-none print:p-0 print:shadow-none md:p-5">
+      {historicalPrintMeta ? (
+        <div
+          data-testid="delivery-note-historical-print-stamp"
+          className="pointer-events-none absolute right-8 top-8 z-20 rounded-md border border-amber-400 bg-white px-2.5 py-1.5 text-center text-[10px] font-bold leading-tight text-amber-800 shadow-sm print:right-[8mm] print:top-[8mm] print:shadow-none"
+        >
+          <div>สำเนาประวัติ R{historicalPrintMeta.revisionNumber || '-'}</div>
+          <div>HISTORICAL COPY</div>
+        </div>
+      ) : null}
       <DeliveryNoteForm
         sale={sale}
         hideDate={hideDate}

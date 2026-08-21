@@ -23,6 +23,10 @@ const INVENTORY_CAPABILITIES = Object.freeze({
   QUICK_RECEIPT: 'inventory.quick-receipt',
   QUICK_RECEIPT_FINALIZE: 'inventory.quick-receipt.finalize',
 });
+const SALES_CAPABILITIES = Object.freeze({
+  CORE: 'sales.core',
+  COMPLETE: 'sales.complete',
+});
 const PROCUREMENT_CAPABILITIES = Object.freeze({
   PURCHASE_ORDER: 'procurement.purchase-order',
   PURCHASE_ORDER_CONTROL: 'procurement.purchase-order.control',
@@ -149,6 +153,23 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: INVENTORY_CAPABILITIES.QUICK_RECEIPT_FINALIZE,
         label: 'ยืนยันหรือยกเลิกใบรับสินค้าด่วน',
         description: 'อนุญาต Complete, Finalize หรือ Cancel Quick Receipt Session โดยต้องมีสิทธิ์จัดทำใบรับสินค้าด่วนด้วย',
+      },
+    ],
+  },
+  {
+    key: 'sales',
+    title: 'การขายและหน้าขายสินค้า',
+    description: 'แยกสิทธิ์ใช้งานหน้าขายและประวัติการขายออกจาก authority การยืนยันขายที่ตัดสต๊อกและบันทึกการชำระ',
+    options: [
+      {
+        key: SALES_CAPABILITIES.CORE,
+        label: 'ใช้งานการขาย',
+        description: 'ค้นหาสินค้า ใช้ตะกร้าพัก สร้างรายการขาย และดูประวัติ/รายละเอียดการขาย โดยยังไม่รวมการยืนยันขาย',
+      },
+      {
+        key: SALES_CAPABILITIES.COMPLETE,
+        label: 'ยืนยันการขาย',
+        description: 'อนุญาตยืนยันการขายผ่าน completion flow ที่ตัดสต๊อก บันทึก payment evidence และเผยแพร่ tax candidate โดยต้องมีสิทธิ์ใช้งานการขายด้วย',
       },
     ],
   },

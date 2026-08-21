@@ -27,6 +27,8 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain("QUICK_RECEIPT_FINALIZE: 'inventory.quick-receipt.finalize'");
     expect(form).toContain("PURCHASE_ORDER: 'procurement.purchase-order'");
     expect(form).toContain("PURCHASE_ORDER_CONTROL: 'procurement.purchase-order.control'");
+    expect(form).toContain("SUPPLIER: 'procurement.supplier'");
+    expect(form).toContain("SUPPLIER_DELETE: 'procurement.supplier.delete'");
     expect(form).toContain("SUPPLIER_PAYMENT_READ: 'procurement.supplier-payment.read'");
     expect(form).toContain("SUPPLIER_PAYMENT_MANAGE: 'procurement.supplier-payment.manage'");
     expect(form).toContain("SUPPLIER_PAYMENT_VOID: 'procurement.supplier-payment.void'");
@@ -48,6 +50,8 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain('จัดทำใบรับสินค้าด่วน');
     expect(form).toContain('ยืนยันหรือยกเลิกใบรับสินค้าด่วน');
     expect(form).toContain('จัดซื้อและใบรับสินค้า');
+    expect(form).toContain('จัดการข้อมูล Supplier');
+    expect(form).toContain('ลบข้อมูล Supplier');
     expect(form).toContain('จัดทำใบสั่งซื้อ');
     expect(form).toContain('ควบคุมสถานะหรือลบใบสั่งซื้อ');
     expect(form).toContain('ดูข้อมูลการชำระ Supplier');

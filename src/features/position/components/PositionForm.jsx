@@ -12,6 +12,10 @@ const REPAIR_CAPABILITIES = Object.freeze({
   CUSTOMER_ACCESS: 'repair.customer-access',
   CUSTOMER_OVERRIDE: 'repair.customer-override',
 });
+const INVENTORY_CAPABILITIES = Object.freeze({
+  ADJUST: 'inventory.adjust',
+  TRANSFER: 'inventory.transfer',
+});
 
 const CAPABILITY_GROUPS = Object.freeze([
   {
@@ -75,6 +79,23 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: REPAIR_CAPABILITIES.CUSTOMER_OVERRIDE,
         label: 'อนุญาตรับงานกรณีเจ้าของอุปกรณ์ไม่ตรง',
         description: 'อนุญาต override เจ้าของอุปกรณ์เดิมเมื่อมีเหตุผลและผู้ใช้เลือกยืนยันอย่างชัดเจน',
+      },
+    ],
+  },
+  {
+    key: 'inventory',
+    title: 'สต๊อกและการเคลื่อนไหวสินค้า',
+    description: 'กำหนดสิทธิ์การปรับยอดและโอนสต๊อกแบบ Simple แยกจากชื่อบทบาทเดิม',
+    options: [
+      {
+        key: INVENTORY_CAPABILITIES.ADJUST,
+        label: 'ปรับยอดสต๊อก',
+        description: 'อนุญาตเพิ่มหรือลดยอดสต๊อกแบบ Simple เมื่อมีเหตุผลและหลักฐานประกอบ',
+      },
+      {
+        key: INVENTORY_CAPABILITIES.TRANSFER,
+        label: 'โอนสต๊อกระหว่างสาขา',
+        description: 'อนุญาตสร้างรายการโอนสต๊อกแบบ Simple จากสาขาปัจจุบันไปยังสาขาปลายทาง',
       },
     ],
   },

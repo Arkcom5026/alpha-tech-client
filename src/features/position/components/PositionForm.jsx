@@ -27,6 +27,8 @@ const PROCUREMENT_CAPABILITIES = Object.freeze({
   PURCHASE_ORDER: 'procurement.purchase-order',
   PURCHASE_ORDER_CONTROL: 'procurement.purchase-order.control',
   SUPPLIER_PAYMENT_READ: 'procurement.supplier-payment.read',
+  SUPPLIER_PAYMENT_MANAGE: 'procurement.supplier-payment.manage',
+  SUPPLIER_PAYMENT_VOID: 'procurement.supplier-payment.void',
   RECEIPT: 'procurement.receipt',
   RECEIPT_FINALIZE: 'procurement.receipt.finalize',
 });
@@ -151,7 +153,7 @@ const CAPABILITY_GROUPS = Object.freeze([
   {
     key: 'procurement',
     title: 'จัดซื้อและใบรับสินค้า',
-    description: 'กำหนดสิทธิ์สำหรับการจัดทำใบสั่งซื้อ การรับสินค้า และการดูประวัติการชำระ Supplier โดย action ทางการเงินยังคงปิดตาม authority เดิม',
+    description: 'กำหนดสิทธิ์สำหรับใบสั่งซื้อ การรับสินค้า และ authority การชำระ Supplier โดยแยกการดู การจ่าย และการยกเลิกออกจากกัน',
     options: [
       {
         key: PROCUREMENT_CAPABILITIES.PURCHASE_ORDER,
@@ -166,7 +168,17 @@ const CAPABILITY_GROUPS = Object.freeze([
       {
         key: PROCUREMENT_CAPABILITIES.SUPPLIER_PAYMENT_READ,
         label: 'ดูข้อมูลการชำระ Supplier',
-        description: 'ดูประวัติการชำระ เงินจ่ายล่วงหน้า และรายการตาม Supplier หรือ PO เท่านั้น ไม่ใช่สิทธิ์สร้าง ลบ หรือยกเลิกรายการทางการเงิน',
+        description: 'ดูประวัติการชำระ เงินจ่ายล่วงหน้า และรายการตาม Supplier หรือ PO ผ่านพื้นผิว read-only เดิม',
+      },
+      {
+        key: PROCUREMENT_CAPABILITIES.SUPPLIER_PAYMENT_MANAGE,
+        label: 'จัดการการชำระ Supplier',
+        description: 'ดูรายการใน payment-allocation authority และสร้างการชำระที่ยืนยันแล้วเพื่อจัดสรรยอดให้เจ้าหนี้ Supplier ตามขอบเขตเดิมของ OWNER/MANAGER',
+      },
+      {
+        key: PROCUREMENT_CAPABILITIES.SUPPLIER_PAYMENT_VOID,
+        label: 'ยกเลิกรายการชำระ Supplier',
+        description: 'อนุญาต void การชำระที่ยืนยันแล้วและย้อน allocation อย่างมีประวัติ โดย route ยังต้องผ่านสิทธิ์จัดการการชำระ Supplier ด้วย',
       },
       {
         key: PROCUREMENT_CAPABILITIES.RECEIPT,

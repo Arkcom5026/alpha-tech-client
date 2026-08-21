@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, ChevronUp, Printer } from 'lucide-react';
+import { ChevronDown, ChevronUp, History, Printer } from 'lucide-react';
 
 const formatMoney = (value) => Number(value || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 });
 
@@ -36,7 +36,9 @@ const lifecycleMeta = (row) => {
   };
 };
 
-const DeliveryNoteResultTable = ({ rows, sortKey, sortDir, onSort, onPrint }) => {
+const hasRevisionHistory = (row) => Boolean(row?.deliveryNoteLifecycleSummary?.currentRevision?.id);
+
+const DeliveryNoteResultTable = ({ rows, sortKey, sortDir, onSort, onPrint, onHistory }) => {
   const indicator = (key) => {
     if (sortKey !== key) return null;
     return sortDir === 'asc' ? <ChevronUp className="inline h-3.5 w-3.5" /> : <ChevronDown className="inline h-3.5 w-3.5" />;
@@ -51,7 +53,7 @@ const DeliveryNoteResultTable = ({ rows, sortKey, sortDir, onSort, onPrint }) =>
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
-        <table className="min-w-[1260px] w-full text-left text-sm">
+        <table className="min-w-[1320px] w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs font-semibold text-slate-600">
             <tr>
               <th className="px-4 py-3 cursor-pointer" onClick={() => onSort('code')}>เลขที่ใบขาย {indicator('code')}</th>
@@ -92,9 +94,16 @@ const DeliveryNoteResultTable = ({ rows, sortKey, sortDir, onSort, onPrint }) =>
                   <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${agingClass(Number(row.agingDays || 0))}`}>{Number(row.agingDays || 0)} วัน</span></td>
                   <td className="px-4 py-3 text-slate-500">{row.employeeName || '-'}</td>
                   <td className="px-4 py-3 text-center">
-                    <button type="button" onClick={() => onPrint(row)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-teal-50 px-3 text-xs font-semibold text-teal-800 hover:bg-teal-100">
-                      <Printer className="h-3.5 w-3.5" /> พิมพ์
-                    </button>
+                    <div className="inline-flex items-center gap-1.5">
+                      {hasRevisionHistory(row) ? (
+                        <button type="button" onClick={() => onHistory(row)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-slate-100 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-200">
+                          <History className="h-3.5 w-3.5" /> ประวัติ
+                        </button>
+                      ) : null}
+                      <button type="button" onClick={() => onPrint(row)} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-teal-50 px-3 text-xs font-semibold text-teal-800 hover:bg-teal-100">
+                        <Printer className="h-3.5 w-3.5" /> พิมพ์
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );

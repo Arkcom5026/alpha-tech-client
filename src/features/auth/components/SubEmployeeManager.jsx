@@ -1,7 +1,7 @@
 // src/features/auth/components/SubEmployeeManager.jsx
 
 import React, { useEffect, useMemo, useState } from 'react';
-import apiClient from '@/utils/apiClient';
+import { createOnboardedEmployee } from '@/features/employee/api/employeeApi';
 import useEmployeeStore from '@/features/employee/store/employeeStore';
 import {
   FaBriefcase,
@@ -20,6 +20,8 @@ const roleDetails = {
   CASHIER: { label: 'แคชเชียร์', description: 'ขายสินค้า เปิดกะ รับชำระเงิน และออกใบเสร็จหน้าร้าน' },
   MANAGER: { label: 'ผู้จัดการร้าน', description: 'ดูแลงานขาย คลังสินค้า และรายงานภายในสาขา' },
 };
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const emptyForm = (positionId = '') => ({
   name: '', email: '', password: '', phone: '', v2Role: 'CASHIER', positionId,
@@ -72,6 +74,10 @@ const SubEmployeeManager = () => {
       setError('กรุณากรอกข้อมูลบัญชี บทบาทในร้าน และตำแหน่งงานให้ครบถ้วน');
       return;
     }
+    if (!EMAIL_PATTERN.test(payload.email)) {
+      setError('กรุณากรอกอีเมลสำหรับเข้าสู่ระบบให้ถูกต้อง');
+      return;
+    }
     if (payload.password.length < 8) {
       setError('รหัสผ่านเริ่มต้นต้องมีความยาวอย่างน้อย 8 ตัวอักษร');
       return;
@@ -79,8 +85,8 @@ const SubEmployeeManager = () => {
 
     setIsLoading(true);
     try {
-      const response = await apiClient.post('/auth/add-sub-employee', payload);
-      const data = response?.data?.data || {};
+      const response = await createOnboardedEmployee(payload);
+      const data = response?.data || {};
       setCreatedEmployee({ ...payload, ...data, position: data.position || selectedPosition });
       setForm(emptyForm(positions[0]?.id ? String(positions[0].id) : ''));
     } catch (requestError) {

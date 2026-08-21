@@ -42,6 +42,9 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain("ISSUE: 'tax.output.issue'");
     expect(form).toContain("CREDIT_NOTE: 'tax.output.credit-note'");
     expect(form).toContain("LIFECYCLE: 'tax.output.lifecycle'");
+    expect(form).toContain("FILING_READ: 'tax.output.filing.read'");
+    expect(form).toContain("FILING_PREPARE: 'tax.output.filing.prepare'");
+    expect(form).toContain("FILING_SUBMIT: 'tax.output.filing.submit'");
     expect(form).toContain("READ: 'tax.input.read'");
     expect(form).toContain("REVIEW: 'tax.input.review'");
     expect(form).toContain("FILING: 'tax.input.filing'");
@@ -90,6 +93,9 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain('ออกเอกสารภาษีขาย');
     expect(form).toContain('ออกใบลดหนี้ภาษีขาย');
     expect(form).toContain('ควบคุมสถานะเอกสารภาษี');
+    expect(form).toContain('ดูชุดยื่นภาษีขาย');
+    expect(form).toContain('เตรียมชุดยื่นภาษีขาย');
+    expect(form).toContain('ยืนยันการยื่นภาษีขาย');
     expect(form).toContain('ภาษีซื้อและการยื่นภาษี');
     expect(form).toContain('ดูข้อมูลภาษีซื้อ');
     expect(form).toContain('ตรวจสอบและตัดสินใจภาษีซื้อ');

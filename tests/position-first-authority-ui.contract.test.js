@@ -42,6 +42,11 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain("ISSUE: 'tax.output.issue'");
     expect(form).toContain("CREDIT_NOTE: 'tax.output.credit-note'");
     expect(form).toContain("LIFECYCLE: 'tax.output.lifecycle'");
+    expect(form).toContain("READ: 'tax.input.read'");
+    expect(form).toContain("REVIEW: 'tax.input.review'");
+    expect(form).toContain("FILING: 'tax.input.filing'");
+    expect(form).toContain("AUDIT: 'tax.input.audit'");
+    expect(form).toContain("PERIOD_CONTROL: 'tax.input.period-control'");
     expect(form).toContain("PURCHASE_ORDER: 'procurement.purchase-order'");
     expect(form).toContain("PURCHASE_ORDER_CONTROL: 'procurement.purchase-order.control'");
     expect(form).toContain("SUPPLIER: 'procurement.supplier'");
@@ -85,6 +90,12 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain('ออกเอกสารภาษีขาย');
     expect(form).toContain('ออกใบลดหนี้ภาษีขาย');
     expect(form).toContain('ควบคุมสถานะเอกสารภาษี');
+    expect(form).toContain('ภาษีซื้อและการยื่นภาษี');
+    expect(form).toContain('ดูข้อมูลภาษีซื้อ');
+    expect(form).toContain('ตรวจสอบและตัดสินใจภาษีซื้อ');
+    expect(form).toContain('จัดชุดและยื่นภาษีซื้อ');
+    expect(form).toContain('จัดทำชุดตรวจสอบภาษีซื้อ');
+    expect(form).toContain('ควบคุมงวดภาษีซื้อ');
     expect(form).toContain('จัดซื้อและใบรับสินค้า');
     expect(form).toContain('จัดการข้อมูล Supplier');
     expect(form).toContain('ลบข้อมูล Supplier');

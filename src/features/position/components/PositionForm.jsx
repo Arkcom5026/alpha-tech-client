@@ -26,6 +26,7 @@ const INVENTORY_CAPABILITIES = Object.freeze({
 const PROCUREMENT_CAPABILITIES = Object.freeze({
   PURCHASE_ORDER: 'procurement.purchase-order',
   PURCHASE_ORDER_CONTROL: 'procurement.purchase-order.control',
+  SUPPLIER_PAYMENT_READ: 'procurement.supplier-payment.read',
   RECEIPT: 'procurement.receipt',
   RECEIPT_FINALIZE: 'procurement.receipt.finalize',
 });
@@ -150,7 +151,7 @@ const CAPABILITY_GROUPS = Object.freeze([
   {
     key: 'procurement',
     title: 'จัดซื้อและใบรับสินค้า',
-    description: 'กำหนดสิทธิ์สำหรับการจัดทำใบสั่งซื้อ การรับสินค้าจาก PO และ action ที่มีผลต่อสถานะหรือสต๊อก',
+    description: 'กำหนดสิทธิ์สำหรับการจัดทำใบสั่งซื้อ การรับสินค้า และการดูประวัติการชำระ Supplier โดย action ทางการเงินยังคงปิดตาม authority เดิม',
     options: [
       {
         key: PROCUREMENT_CAPABILITIES.PURCHASE_ORDER,
@@ -161,6 +162,11 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: PROCUREMENT_CAPABILITIES.PURCHASE_ORDER_CONTROL,
         label: 'ควบคุมสถานะหรือลบใบสั่งซื้อ',
         description: 'อนุญาตเปลี่ยนสถานะหรือลบใบสั่งซื้อ โดยต้องมีสิทธิ์จัดทำใบสั่งซื้อด้วย',
+      },
+      {
+        key: PROCUREMENT_CAPABILITIES.SUPPLIER_PAYMENT_READ,
+        label: 'ดูข้อมูลการชำระ Supplier',
+        description: 'ดูประวัติการชำระ เงินจ่ายล่วงหน้า และรายการตาม Supplier หรือ PO เท่านั้น ไม่ใช่สิทธิ์สร้าง ลบ หรือยกเลิกรายการทางการเงิน',
       },
       {
         key: PROCUREMENT_CAPABILITIES.RECEIPT,

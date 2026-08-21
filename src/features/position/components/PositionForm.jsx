@@ -18,6 +18,7 @@ const INVENTORY_CAPABILITIES = Object.freeze({
   AUDIT: 'inventory.audit',
   AUDIT_FINALIZE: 'inventory.audit.finalize',
   RECEIVE: 'inventory.receive',
+  LIFECYCLE: 'inventory.lifecycle',
 });
 
 const CAPABILITY_GROUPS = Object.freeze([
@@ -114,6 +115,11 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: INVENTORY_CAPABILITIES.RECEIVE,
         label: 'รับสินค้าเข้าสต๊อก',
         description: 'อนุญาตรับสินค้าจากเอกสารรับเข้า บันทึกบาร์โค้ด/หมายเลขเครื่อง และยืนยันสินค้าเข้าสู่สต๊อก',
+      },
+      {
+        key: INVENTORY_CAPABILITIES.LIFECYCLE,
+        label: 'จัดการสถานะรายการสต๊อก',
+        description: 'อนุญาตเปลี่ยนสถานะรายการสต๊อกแบบ manual และลบรายการที่ยังไม่ถูกขาย โดยไม่ครอบคลุมการตัดขายจาก flow การขาย',
       },
     ],
   },

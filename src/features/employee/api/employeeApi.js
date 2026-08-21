@@ -26,6 +26,11 @@ export const createEmployee = async (data) => {
   return res.data;
 };
 
+export const createOnboardedEmployee = async (data) => {
+  const res = await apiClient.post('/auth/add-sub-employee', data);
+  return res.data;
+};
+
 export const updateEmployee = async (id, data) => {
   const res = await apiClient.put(`/employees/${id}`, data);
   return res.data;

@@ -20,6 +20,8 @@ const INVENTORY_CAPABILITIES = Object.freeze({
   RECEIVE: 'inventory.receive',
   LIFECYCLE: 'inventory.lifecycle',
   QUICK_STOCK: 'inventory.quick-stock',
+  QUICK_RECEIPT: 'inventory.quick-receipt',
+  QUICK_RECEIPT_FINALIZE: 'inventory.quick-receipt.finalize',
 });
 
 const CAPABILITY_GROUPS = Object.freeze([
@@ -126,6 +128,16 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: INVENTORY_CAPABILITIES.QUICK_STOCK,
         label: 'เพิ่มสต๊อกด่วน',
         description: 'อนุญาตใช้ Quick Stock แบบ one-shot เพื่อเพิ่มบาร์โค้ด รับสินค้าเดิม หรือสร้างสินค้าและรับเข้าสต๊อกในขั้นตอนเดียว โดยไม่รวม Quick Receipt Session',
+      },
+      {
+        key: INVENTORY_CAPABILITIES.QUICK_RECEIPT,
+        label: 'จัดทำใบรับสินค้าด่วน',
+        description: 'ดู สร้าง และแก้ไข Quick Receipt Session รวมถึงเพิ่มหรือลบรายการในร่าง โดยยังไม่อนุญาตปิดรอบ',
+      },
+      {
+        key: INVENTORY_CAPABILITIES.QUICK_RECEIPT_FINALIZE,
+        label: 'ยืนยันหรือยกเลิกใบรับสินค้าด่วน',
+        description: 'อนุญาต Complete, Finalize หรือ Cancel Quick Receipt Session โดยต้องมีสิทธิ์จัดทำใบรับสินค้าด่วนด้วย',
       },
     ],
   },

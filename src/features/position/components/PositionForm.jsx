@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { CAPABILITY_GROUPS } from './positionCapabilityCatalog';
+import { QUOTATION_CAPABILITY_GROUP } from './quotationCapabilityGroup';
 import { TAX_PERIOD_CAPABILITY_GROUP } from './taxPeriodCapabilityGroup';
 import { TAX_CLOSING_HANDOFF_CAPABILITY_GROUP } from './taxClosingHandoffCapabilityGroup';
 import { ACCOUNTING_OFFICE_CAPABILITY_GROUP } from './accountingOfficeCapabilityGroup';
@@ -12,6 +13,7 @@ import { TAX_PUBLICATION_RETRY_CAPABILITY_GROUP } from './taxPublicationRetryCap
 
 const POSITION_CAPABILITY_GROUPS = Object.freeze([
   ...CAPABILITY_GROUPS,
+  QUOTATION_CAPABILITY_GROUP,
   TAX_PERIOD_CAPABILITY_GROUP,
   TAX_CLOSING_HANDOFF_CAPABILITY_GROUP,
   ACCOUNTING_OFFICE_CAPABILITY_GROUP,

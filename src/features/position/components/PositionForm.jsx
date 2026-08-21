@@ -10,6 +10,7 @@ const REPAIR_CAPABILITIES = Object.freeze({
   CLAIM: 'repair.claim',
   HANDOVER: 'repair.handover',
   CUSTOMER_ACCESS: 'repair.customer-access',
+  CUSTOMER_OVERRIDE: 'repair.customer-override',
 });
 
 const CAPABILITY_GROUPS = Object.freeze([
@@ -69,6 +70,11 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: REPAIR_CAPABILITIES.CUSTOMER_ACCESS,
         label: 'จัดการการเข้าถึงของลูกค้า',
         description: 'สร้างและจัดการข้อมูลสำหรับติดตามงานซ่อมจากฝั่งลูกค้า',
+      },
+      {
+        key: REPAIR_CAPABILITIES.CUSTOMER_OVERRIDE,
+        label: 'อนุญาตรับงานกรณีเจ้าของอุปกรณ์ไม่ตรง',
+        description: 'อนุญาต override เจ้าของอุปกรณ์เดิมเมื่อมีเหตุผลและผู้ใช้เลือกยืนยันอย่างชัดเจน',
       },
     ],
   },

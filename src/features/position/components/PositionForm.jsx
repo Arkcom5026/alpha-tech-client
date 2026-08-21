@@ -17,6 +17,7 @@ const INVENTORY_CAPABILITIES = Object.freeze({
   TRANSFER: 'inventory.transfer',
   AUDIT: 'inventory.audit',
   AUDIT_FINALIZE: 'inventory.audit.finalize',
+  RECEIVE: 'inventory.receive',
 });
 
 const CAPABILITY_GROUPS = Object.freeze([
@@ -108,6 +109,11 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: INVENTORY_CAPABILITIES.AUDIT_FINALIZE,
         label: 'ยืนยันหรือยกเลิกรอบตรวจนับ',
         description: 'อนุญาตยืนยันผลหรือล้มเลิกรอบตรวจนับสต๊อก โดยต้องมีสิทธิ์ตรวจนับสต๊อกด้วย',
+      },
+      {
+        key: INVENTORY_CAPABILITIES.RECEIVE,
+        label: 'รับสินค้าเข้าสต๊อก',
+        description: 'อนุญาตรับสินค้าจากเอกสารรับเข้า บันทึกบาร์โค้ด/หมายเลขเครื่อง และยืนยันสินค้าเข้าสู่สต๊อก',
       },
     ],
   },

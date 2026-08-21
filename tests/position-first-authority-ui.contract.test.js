@@ -20,6 +20,7 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain("TRANSFER: 'inventory.transfer'");
     expect(form).toContain("AUDIT: 'inventory.audit'");
     expect(form).toContain("AUDIT_FINALIZE: 'inventory.audit.finalize'");
+    expect(form).toContain("RECEIVE: 'inventory.receive'");
     expect(form).toContain('งานซ่อมและเคลม');
     expect(form).toContain('ดำเนินขั้นตอนงานซ่อม');
     expect(form).toContain('จัดการอะไหล่ในงานซ่อม');
@@ -30,6 +31,7 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain('โอนสต๊อกระหว่างสาขา');
     expect(form).toContain('ตรวจนับสต๊อก');
     expect(form).toContain('ยืนยันหรือยกเลิกรอบตรวจนับ');
+    expect(form).toContain('รับสินค้าเข้าสต๊อก');
     expect(form).toContain('CAPABILITY_GROUPS.map');
     expect(form).toContain('สิทธิ์ของตำแหน่งงาน');
     expect(form).toContain('เริ่มใช้สิทธิ์จากตำแหน่งนี้');

@@ -174,6 +174,17 @@ const DeliveryNoteListPage = () => {
     navigate(`print/${sourceId}`);
   };
 
+  const handlePrintRevision = useCallback(({ row, revisionId }) => {
+    const sourceType = row?.documentSourceType || 'SALE';
+    const sourceId = row?.documentSourceId ?? row?.id;
+    const normalizedRevisionId = Number(revisionId);
+    if (sourceType !== 'SALE' || !sourceId || !Number.isInteger(normalizedRevisionId) || normalizedRevisionId <= 0) {
+      return;
+    }
+    setHistoryRow(null);
+    navigate(`print/${sourceId}/revisions/${normalizedRevisionId}`);
+  }, [navigate]);
+
   const error = uiError || documentSearch.error;
 
   return (
@@ -219,6 +230,7 @@ const DeliveryNoteListPage = () => {
         open={Boolean(historyRow)}
         row={historyRow}
         onClose={() => setHistoryRow(null)}
+        onPrintRevision={handlePrintRevision}
       />
 
       <p className="text-xs text-slate-500">

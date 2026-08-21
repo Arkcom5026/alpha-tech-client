@@ -23,6 +23,10 @@ const INVENTORY_CAPABILITIES = Object.freeze({
   QUICK_RECEIPT: 'inventory.quick-receipt',
   QUICK_RECEIPT_FINALIZE: 'inventory.quick-receipt.finalize',
 });
+const PROCUREMENT_CAPABILITIES = Object.freeze({
+  RECEIPT: 'procurement.receipt',
+  RECEIPT_FINALIZE: 'procurement.receipt.finalize',
+});
 
 const CAPABILITY_GROUPS = Object.freeze([
   {
@@ -138,6 +142,23 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: INVENTORY_CAPABILITIES.QUICK_RECEIPT_FINALIZE,
         label: 'ยืนยันหรือยกเลิกใบรับสินค้าด่วน',
         description: 'อนุญาต Complete, Finalize หรือ Cancel Quick Receipt Session โดยต้องมีสิทธิ์จัดทำใบรับสินค้าด่วนด้วย',
+      },
+    ],
+  },
+  {
+    key: 'procurement',
+    title: 'จัดซื้อและใบรับสินค้า',
+    description: 'กำหนดสิทธิ์สำหรับการจัดทำใบรับสินค้าจาก PO และการยืนยันผลที่กระทบสต๊อก',
+    options: [
+      {
+        key: PROCUREMENT_CAPABILITIES.RECEIPT,
+        label: 'จัดทำใบรับสินค้าจาก PO',
+        description: 'ดู สร้าง และแก้ไขใบรับสินค้า รายการสินค้า บาร์โค้ด และข้อมูลประกอบ โดยยังไม่อนุญาตปิดหรือ commit เอกสาร',
+      },
+      {
+        key: PROCUREMENT_CAPABILITIES.RECEIPT_FINALIZE,
+        label: 'ยืนยันหรือลบใบรับสินค้า',
+        description: 'อนุญาต Finalize, Commit เข้าสต๊อก หรือลบใบรับสินค้าทั้งใบ โดยต้องมีสิทธิ์จัดทำใบรับสินค้าจาก PO ด้วย',
       },
     ],
   },

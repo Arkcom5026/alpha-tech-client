@@ -34,7 +34,9 @@ describe('delivery note return-adjustment handoff contract', () => {
   });
 
   it('prevents legacy sale-line editing from mutating a persisted revision presentation', () => {
-    expect(page).toContain('!preparation && !persistedRevisionActive');
+    expect(page).toContain('const preparationEnabled = !isConsolidated');
+    expect(page).toContain('&& !persistedRevisionActive;');
+    expect(page).toContain('const legacyEditorEnabled = preparationEnabled && !preparation;');
     expect(page).toContain('editableDocumentLines={legacyEditorEnabled}');
   });
 

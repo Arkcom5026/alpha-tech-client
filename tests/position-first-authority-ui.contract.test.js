@@ -25,6 +25,8 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain("QUICK_STOCK: 'inventory.quick-stock'");
     expect(form).toContain("QUICK_RECEIPT: 'inventory.quick-receipt'");
     expect(form).toContain("QUICK_RECEIPT_FINALIZE: 'inventory.quick-receipt.finalize'");
+    expect(form).toContain("RECEIPT: 'procurement.receipt'");
+    expect(form).toContain("RECEIPT_FINALIZE: 'procurement.receipt.finalize'");
     expect(form).toContain('งานซ่อมและเคลม');
     expect(form).toContain('ดำเนินขั้นตอนงานซ่อม');
     expect(form).toContain('จัดการอะไหล่ในงานซ่อม');
@@ -40,6 +42,9 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain('เพิ่มสต๊อกด่วน');
     expect(form).toContain('จัดทำใบรับสินค้าด่วน');
     expect(form).toContain('ยืนยันหรือยกเลิกใบรับสินค้าด่วน');
+    expect(form).toContain('จัดซื้อและใบรับสินค้า');
+    expect(form).toContain('จัดทำใบรับสินค้าจาก PO');
+    expect(form).toContain('ยืนยันหรือลบใบรับสินค้า');
     expect(form).toContain('CAPABILITY_GROUPS.map');
     expect(form).toContain('สิทธิ์ของตำแหน่งงาน');
     expect(form).toContain('เริ่มใช้สิทธิ์จากตำแหน่งนี้');

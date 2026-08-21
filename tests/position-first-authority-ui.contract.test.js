@@ -10,6 +10,7 @@ describe('position-first employee authority UI contract', () => {
     const form = read('src/features/position/components/PositionForm.jsx');
     const catalog = read('src/features/position/components/positionCapabilityCatalog.js');
     const taxPeriodGroup = read('src/features/position/components/taxPeriodCapabilityGroup.js');
+    const taxClosingHandoffGroup = read('src/features/position/components/taxClosingHandoffCapabilityGroup.js');
     const createWorkspace = read('src/features/position/workspace/CreatePositionWorkspace.jsx');
     const editWorkspace = read('src/features/position/workspace/EditPositionWorkspace.jsx');
 
@@ -123,8 +124,15 @@ describe('position-first employee authority UI contract', () => {
     expect(taxPeriodGroup).toContain('จัดการและปิดงวดภาษี');
     expect(taxPeriodGroup).toContain('เปิดงวดภาษีอีกครั้ง');
 
+    expect(taxClosingHandoffGroup).toContain("READ: 'tax.closing-handoff.read'");
+    expect(taxClosingHandoffGroup).toContain("FINALIZE: 'tax.closing-handoff.finalize'");
+    expect(taxClosingHandoffGroup).toContain('ส่งมอบงานปิดภาษี');
+    expect(taxClosingHandoffGroup).toContain('ดูชุดส่งมอบงานปิดภาษี');
+    expect(taxClosingHandoffGroup).toContain('ยืนยันชุดส่งมอบงานปิดภาษี');
+
     expect(form).toContain("import { CAPABILITY_GROUPS } from './positionCapabilityCatalog'");
     expect(form).toContain("import { TAX_PERIOD_CAPABILITY_GROUP } from './taxPeriodCapabilityGroup'");
+    expect(form).toContain("import { TAX_CLOSING_HANDOFF_CAPABILITY_GROUP } from './taxClosingHandoffCapabilityGroup'");
     expect(form).toContain('POSITION_CAPABILITY_GROUPS.map');
     expect(form).toContain('สิทธิ์ของตำแหน่งงาน');
     expect(form).toContain('เริ่มใช้สิทธิ์จากตำแหน่งนี้');

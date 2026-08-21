@@ -26,6 +26,8 @@ const INVENTORY_CAPABILITIES = Object.freeze({
 const SALES_CAPABILITIES = Object.freeze({
   CORE: 'sales.core',
   COMPLETE: 'sales.complete',
+  RETURN: 'sales.return',
+  RETURN_DEDUCTION_APPROVE: 'sales.return.deduction-approve',
 });
 const PROCUREMENT_CAPABILITIES = Object.freeze({
   PURCHASE_ORDER: 'procurement.purchase-order',
@@ -170,6 +172,16 @@ const CAPABILITY_GROUPS = Object.freeze([
         key: SALES_CAPABILITIES.COMPLETE,
         label: 'ยืนยันการขาย',
         description: 'อนุญาตยืนยันการขายผ่าน completion flow ที่ตัดสต๊อก บันทึก payment evidence และเผยแพร่ tax candidate โดยต้องมีสิทธิ์ใช้งานการขายด้วย',
+      },
+      {
+        key: SALES_CAPABILITIES.RETURN,
+        label: 'รับคืนสินค้า',
+        description: 'ดูสิทธิ์คืนสินค้า ประวัติรายการคืน และยืนยันการคืนที่คืนสต๊อกและบันทึก refund evidence',
+      },
+      {
+        key: SALES_CAPABILITIES.RETURN_DEDUCTION_APPROVE,
+        label: 'อนุมัติการหักยอดคืน',
+        description: 'อนุญาตยืนยันการคืนที่มีการหักยอดเงินคืน โดยต้องมีสิทธิ์รับคืนสินค้าด้วย',
       },
     ],
   },

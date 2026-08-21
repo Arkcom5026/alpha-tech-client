@@ -1,6 +1,78 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const EMPLOYEE_MANAGE_CAPABILITY = 'employee.manage';
+const REPAIR_CAPABILITIES = Object.freeze({
+  READ: 'repair.read',
+  INTAKE: 'repair.intake',
+  WORKFLOW: 'repair.workflow',
+  PARTS: 'repair.parts',
+  ESTIMATE: 'repair.estimate',
+  CLAIM: 'repair.claim',
+  HANDOVER: 'repair.handover',
+  CUSTOMER_ACCESS: 'repair.customer-access',
+});
+
+const CAPABILITY_GROUPS = Object.freeze([
+  {
+    key: 'employee',
+    title: 'การจัดการพนักงาน',
+    description: 'สิทธิ์ด้านบัญชีและโครงสร้างพนักงานภายในสาขา',
+    options: [
+      {
+        key: EMPLOYEE_MANAGE_CAPABILITY,
+        label: 'เพิ่มและจัดการพนักงาน',
+        description: 'อนุญาตให้พนักงานในตำแหน่งนี้จัดการ flow เพิ่มพนักงานของสาขา',
+      },
+    ],
+  },
+  {
+    key: 'repair',
+    title: 'งานซ่อมและเคลม',
+    description: 'กำหนดขอบเขตงานซ่อมเป็นรายหน้าที่ โดยไม่อิงชื่อหรือตำแหน่งแบบตายตัว',
+    options: [
+      {
+        key: REPAIR_CAPABILITIES.READ,
+        label: 'ดูข้อมูลงานซ่อม',
+        description: 'ดูรายการงานซ่อม รายละเอียด และข้อมูลประกอบที่อยู่ในสาขา',
+      },
+      {
+        key: REPAIR_CAPABILITIES.INTAKE,
+        label: 'รับงานซ่อมและรับอุปกรณ์',
+        description: 'สร้างงานรับซ่อมและบันทึกข้อมูลการรับอุปกรณ์จากลูกค้า',
+      },
+      {
+        key: REPAIR_CAPABILITIES.WORKFLOW,
+        label: 'ดำเนินขั้นตอนงานซ่อม',
+        description: 'รับงาน วินิจฉัย เริ่มซ่อม เปลี่ยนสถานะ และดำเนิน workflow ของช่าง',
+      },
+      {
+        key: REPAIR_CAPABILITIES.PARTS,
+        label: 'จัดการอะไหล่ในงานซ่อม',
+        description: 'เพิ่มหรือเบิกอะไหล่และเชื่อมการใช้สต๊อกเข้ากับงานซ่อม',
+      },
+      {
+        key: REPAIR_CAPABILITIES.ESTIMATE,
+        label: 'จัดการการประเมินราคา',
+        description: 'จัดทำและส่งข้อมูลประเมินราคาหรือข้อตกลงก่อนดำเนินงาน',
+      },
+      {
+        key: REPAIR_CAPABILITIES.CLAIM,
+        label: 'จัดการงานเคลม',
+        description: 'เปิด ติดตาม และดำเนินสถานะงานเคลมที่เกี่ยวข้องกับงานซ่อม',
+      },
+      {
+        key: REPAIR_CAPABILITIES.HANDOVER,
+        label: 'ส่งมอบงานซ่อม',
+        description: 'ยืนยันการส่งมอบอุปกรณ์และปิดขั้นตอน custody กับลูกค้า',
+      },
+      {
+        key: REPAIR_CAPABILITIES.CUSTOMER_ACCESS,
+        label: 'จัดการการเข้าถึงของลูกค้า',
+        description: 'สร้างและจัดการข้อมูลสำหรับติดตามงานซ่อมจากฝั่งลูกค้า',
+      },
+    ],
+  },
+]);
 
 const PositionForm = ({
   initialValues = { name: '', description: '', capabilities: [] },
@@ -115,19 +187,33 @@ const PositionForm = ({
             ตำแหน่งนี้ยังใช้สิทธิ์จากระบบเดิมอยู่ การกดเริ่มใช้สิทธิ์จากตำแหน่งจะย้าย authority ของตำแหน่งนี้แบบค่อยเป็นค่อยไป
           </div>
         ) : (
-          <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 bg-white p-3">
-            <input
-              type="checkbox"
-              checked={hasCapability(EMPLOYEE_MANAGE_CAPABILITY)}
-              onChange={() => toggleCapability(EMPLOYEE_MANAGE_CAPABILITY)}
-              disabled={mutationBusy}
-              className="mt-0.5 h-4 w-4 accent-emerald-600"
-            />
-            <span>
-              <span className="block text-sm font-semibold text-zinc-900">เพิ่มและจัดการพนักงาน</span>
-              <span className="mt-0.5 block text-xs leading-5 text-zinc-600">อนุญาตให้พนักงานในตำแหน่งนี้จัดการ flow เพิ่มพนักงานของสาขา</span>
-            </span>
-          </label>
+          <div className="mt-4 space-y-4">
+            {CAPABILITY_GROUPS.map((group) => (
+              <div key={group.key} className="rounded-xl border border-zinc-200 bg-white p-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-zinc-900">{group.title}</h3>
+                  <p className="mt-0.5 text-xs leading-5 text-zinc-600">{group.description}</p>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+                  {group.options.map((option) => (
+                    <label key={option.key} className="flex cursor-pointer items-start gap-3 rounded-lg border border-zinc-200 bg-zinc-50/60 p-3">
+                      <input
+                        type="checkbox"
+                        checked={hasCapability(option.key)}
+                        onChange={() => toggleCapability(option.key)}
+                        disabled={mutationBusy}
+                        className="mt-0.5 h-4 w-4 accent-emerald-600"
+                      />
+                      <span>
+                        <span className="block text-sm font-semibold text-zinc-900">{option.label}</span>
+                        <span className="mt-0.5 block text-xs leading-5 text-zinc-600">{option.description}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </section>
 

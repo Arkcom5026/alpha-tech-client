@@ -26,6 +26,8 @@ const INVENTORY_CAPABILITIES = Object.freeze({
 const PROCUREMENT_CAPABILITIES = Object.freeze({
   PURCHASE_ORDER: 'procurement.purchase-order',
   PURCHASE_ORDER_CONTROL: 'procurement.purchase-order.control',
+  SUPPLIER: 'procurement.supplier',
+  SUPPLIER_DELETE: 'procurement.supplier.delete',
   SUPPLIER_PAYMENT_READ: 'procurement.supplier-payment.read',
   SUPPLIER_PAYMENT_MANAGE: 'procurement.supplier-payment.manage',
   SUPPLIER_PAYMENT_VOID: 'procurement.supplier-payment.void',
@@ -153,8 +155,18 @@ const CAPABILITY_GROUPS = Object.freeze([
   {
     key: 'procurement',
     title: 'จัดซื้อและใบรับสินค้า',
-    description: 'กำหนดสิทธิ์สำหรับใบสั่งซื้อ การรับสินค้า และ authority การชำระ Supplier โดยแยกการดู การจ่าย และการยกเลิกออกจากกัน',
+    description: 'กำหนดสิทธิ์สำหรับ Supplier, ใบสั่งซื้อ การรับสินค้า และ authority การชำระ โดยแยกงานทั่วไป งานลบ และงานการเงินจริงออกจากกัน',
     options: [
+      {
+        key: PROCUREMENT_CAPABILITIES.SUPPLIER,
+        label: 'จัดการข้อมูล Supplier',
+        description: 'ดู เพิ่ม และแก้ไขข้อมูล Supplier ของสาขา โดยยังไม่อนุญาตลบ Supplier',
+      },
+      {
+        key: PROCUREMENT_CAPABILITIES.SUPPLIER_DELETE,
+        label: 'ลบข้อมูล Supplier',
+        description: 'อนุญาตลบ Supplier ที่ไม่ใช่ Supplier ระบบและไม่มีเอกสารจัดซื้ออ้างอิง โดยต้องมีสิทธิ์จัดการข้อมูล Supplier ด้วย',
+      },
       {
         key: PROCUREMENT_CAPABILITIES.PURCHASE_ORDER,
         label: 'จัดทำใบสั่งซื้อ',

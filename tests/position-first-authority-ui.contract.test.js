@@ -29,6 +29,10 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain("COMPLETE: 'sales.complete'");
     expect(form).toContain("RETURN: 'sales.return'");
     expect(form).toContain("RETURN_DEDUCTION_APPROVE: 'sales.return.deduction-approve'");
+    expect(form).toContain("PAYMENT_READ: 'sales.payment.read'");
+    expect(form).toContain("PAYMENT_MANAGE: 'sales.payment.manage'");
+    expect(form).toContain("PAYMENT_CANCEL: 'sales.payment.cancel'");
+    expect(form).toContain("SETTLEMENT_CLOSE: 'sales.settlement.close'");
     expect(form).toContain("PURCHASE_ORDER: 'procurement.purchase-order'");
     expect(form).toContain("PURCHASE_ORDER_CONTROL: 'procurement.purchase-order.control'");
     expect(form).toContain("SUPPLIER: 'procurement.supplier'");
@@ -58,6 +62,10 @@ describe('position-first employee authority UI contract', () => {
     expect(form).toContain('ยืนยันการขาย');
     expect(form).toContain('รับคืนสินค้า');
     expect(form).toContain('อนุมัติการหักยอดคืน');
+    expect(form).toContain('ดูข้อมูลการชำระเงิน');
+    expect(form).toContain('บันทึกการชำระเงิน');
+    expect(form).toContain('ยกเลิกรายการชำระเงิน');
+    expect(form).toContain('ปิดยอดการขาย');
     expect(form).toContain('จัดซื้อและใบรับสินค้า');
     expect(form).toContain('จัดการข้อมูล Supplier');
     expect(form).toContain('ลบข้อมูล Supplier');

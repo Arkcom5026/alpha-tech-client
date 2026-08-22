@@ -1,0 +1,34 @@
+name: Procurement Sellable Stock Targeted CI
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-procurement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Run procurement continuity and authority contracts
+        run: >-
+          npx vitest run
+          tests/purchase-order-receipt-stock-authority.contract.test.js
+          tests/procurement-rc-to-barcode-continuity.contract.test.js
+          tests/procurement-barcode-to-stock-continuity.contract.test.js
+          tests/procurement-to-stock-pipeline-certification.contract.test.js
+      - name: Run purchase workspace regressions
+        run: |
+          npm run test:purchase-receipt-workspace-standard
+          npm run test:purchase-barcode-workspace-standard
+          npm run test:purchase-stock-intake-workspace-standard
+      - name: Production build
+        run: npm run build

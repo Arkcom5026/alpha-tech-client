@@ -5,6 +5,7 @@ import { SUPPLIER_ADVANCE_CAPABILITY_GROUP } from './supplierAdvanceCapabilityGr
 import { SUPPLIER_PAYABLE_CAPABILITY_GROUP } from './supplierPayableCapabilityGroup';
 import { BANK_CAPABILITY_GROUP } from './bankCapabilityGroup';
 import { FINANCE_RECEIVABLES_CAPABILITY_GROUP } from './financeReceivablesCapabilityGroup';
+import { DAILY_CLOSING_CAPABILITY_GROUP } from './dailyClosingCapabilityGroup';
 import { TAX_PERIOD_CAPABILITY_GROUP } from './taxPeriodCapabilityGroup';
 import { TAX_CLOSING_HANDOFF_CAPABILITY_GROUP } from './taxClosingHandoffCapabilityGroup';
 import { ACCOUNTING_OFFICE_CAPABILITY_GROUP } from './accountingOfficeCapabilityGroup';
@@ -22,6 +23,7 @@ const POSITION_CAPABILITY_GROUPS = Object.freeze([
   SUPPLIER_PAYABLE_CAPABILITY_GROUP,
   BANK_CAPABILITY_GROUP,
   FINANCE_RECEIVABLES_CAPABILITY_GROUP,
+  DAILY_CLOSING_CAPABILITY_GROUP,
   TAX_PERIOD_CAPABILITY_GROUP,
   TAX_CLOSING_HANDOFF_CAPABILITY_GROUP,
   ACCOUNTING_OFFICE_CAPABILITY_GROUP,

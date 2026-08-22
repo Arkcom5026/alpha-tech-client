@@ -9,7 +9,7 @@ describe('Operational residual position authority UI contract', () => {
     const groupSource = read('src/features/position/components/operationalResidualCapabilityGroups.js');
     const formSource = read('src/features/position/components/PositionForm.jsx');
 
-    expect(groupSource).toContain("ACCESS: 'communication.access'");
+    expect(groupSource).toContain("USE: 'communication.use'");
     expect(groupSource).toContain("PROFILE_MANAGE: 'communication.profile.manage'");
     expect(groupSource).toContain("READ: 'store-experience.read'");
     expect(groupSource).toContain("MANAGE: 'store-experience.manage'");

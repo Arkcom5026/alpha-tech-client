@@ -3,6 +3,7 @@ import { CAPABILITY_GROUPS } from './positionCapabilityCatalog';
 import { QUOTATION_CAPABILITY_GROUP } from './quotationCapabilityGroup';
 import { SUPPLIER_ADVANCE_CAPABILITY_GROUP } from './supplierAdvanceCapabilityGroup';
 import { SUPPLIER_PAYABLE_CAPABILITY_GROUP } from './supplierPayableCapabilityGroup';
+import { BANK_CAPABILITY_GROUP } from './bankCapabilityGroup';
 import { TAX_PERIOD_CAPABILITY_GROUP } from './taxPeriodCapabilityGroup';
 import { TAX_CLOSING_HANDOFF_CAPABILITY_GROUP } from './taxClosingHandoffCapabilityGroup';
 import { ACCOUNTING_OFFICE_CAPABILITY_GROUP } from './accountingOfficeCapabilityGroup';
@@ -18,6 +19,7 @@ const POSITION_CAPABILITY_GROUPS = Object.freeze([
   QUOTATION_CAPABILITY_GROUP,
   SUPPLIER_ADVANCE_CAPABILITY_GROUP,
   SUPPLIER_PAYABLE_CAPABILITY_GROUP,
+  BANK_CAPABILITY_GROUP,
   TAX_PERIOD_CAPABILITY_GROUP,
   TAX_CLOSING_HANDOFF_CAPABILITY_GROUP,
   ACCOUNTING_OFFICE_CAPABILITY_GROUP,

@@ -1,5 +1,5 @@
 export const COMMUNICATION_CAPABILITIES = Object.freeze({
-  ACCESS: 'communication.access',
+  USE: 'communication.use',
   PROFILE_MANAGE: 'communication.profile.manage',
 });
 
@@ -19,7 +19,7 @@ export const COMMUNICATION_CAPABILITY_GROUP = Object.freeze({
   description: 'กำหนดสิทธิ์ใช้งานช่องทางสื่อสารและการตั้งค่าโปรไฟล์การสื่อสารของสาขา',
   options: Object.freeze([
     Object.freeze({
-      key: COMMUNICATION_CAPABILITIES.ACCESS,
+      key: COMMUNICATION_CAPABILITIES.USE,
       label: 'ใช้งานข้อมูลการสื่อสาร',
       description: 'ดูและบันทึกช่องทางติดต่อ ความต้องการติดต่อ และกิจกรรมการสื่อสารที่เกี่ยวข้องกับงานบริการ',
     }),
